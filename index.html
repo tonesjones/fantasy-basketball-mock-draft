@@ -111,6 +111,7 @@ body{background:radial-gradient(ellipse at top right,#19352f66,transparent 55%),
 #md .draftbtn{min-height:36px;padding:7px 14px}
 #md .prank{font-variant-numeric:tabular-nums}
 #md .teamtag{display:inline-block;border-radius:4px;background:#223247;padding:1px 5px;margin-left:3px;letter-spacing:.4px}
+#md .injtag{display:inline-block;border-radius:4px;background:#5a1f1f;color:#ffb4ab;padding:1px 5px;margin-left:3px;letter-spacing:.4px;font-weight:700;cursor:help}
 #md .rrow{padding:11px 12px;min-height:43px}
 #md .rpick{font-size:10px;font-weight:700;letter-spacing:.8px;width:48px}
 #md .rlist{max-height:470px;background:#0d172466}
@@ -222,7 +223,9 @@ var PLAYERS=[
 ["Keaton Wagler",['SG'],"LAC"],["Mikel Brown Jr.",['PG'],"BKN"],["Nate Ament",['SF'],"MIL"]
 ];
 PLAYERS.forEach(function(p,i){p.r=i+1;p.n=p[0];p.p=p[1];p.t=p[2]||"\u2014";});
-PLAYERS.forEach(function(p){var d=(typeof PDATA!=="undefined"&&PDATA[p.n])||null;p.adp=d&&d.adp!=null?d.adp:null;p.last=d&&d.last!=null?d.last:null;p.lastTotal=d&&d.lastTotal!=null?d.lastTotal:null;});
+PLAYERS.forEach(function(p){var d=(typeof PDATA!=="undefined"&&PDATA[p.n])||null;p.adp=d&&d.adp!=null?d.adp:null;p.last=d&&d.last!=null?d.last:null;p.lastTotal=d&&d.lastTotal!=null?d.lastTotal:null;p.inj=(typeof INJ!=="undefined"&&INJ[p.n])||null;});
+function injTitle(inj){return "INJURED — "+inj.injury+". "+inj.detail+" Expected return: "+inj.ret+". Source: "+inj.src+".";}
+function injBadge(p){return p.inj?'<span class="injtag" title="'+esc(injTitle(p.inj))+'">INJ</span>':'';}
 var CATS={
 "Nikola Jokic":["PTS","REB","AST","STL","FG%"],
 "Victor Wembanyama":["PTS","REB","BLK","STL","3PM"],
@@ -541,7 +544,7 @@ function pickLabel(idx){var r=Math.floor(idx/TEAMS)+1;var w=idx%TEAMS+1;return "
 var HEALTH=window.DataHealth.audit(PLAYERS,typeof PDATA!=="undefined"?PDATA:{},CATS);
 function renderDataHealth(){
   var h='<details class="scarcity"><summary><b>Data health</b> &middot; '+(HEALTH.players-HEALTH.missingAdp.length)+'/'+HEALTH.players+' players with ADP &middot; bundled snapshot</summary>';
-  h+='<p class="muted">Snapshot '+esc(DATA_VERSION)+'. Yahoo ADP, NBA team, and Yahoo position eligibility refreshed from Hashtag Basketball\'s 2026-27 ADP table (Yahoo columns, updated 11 September 2026). Prior-season per-game ranks via Basketball Monster / Hashtag Basketball, and prior-season totals ranks derived from Basketball-Reference 2025-26 season totals (9-cat, not a published rank), are historical and unchanged. Category values are BM-style per-game z-scores (see README). This audit checks internal consistency; NBA player-pool completeness remains unverified.</p>';
+  h+='<p class="muted">Snapshot '+esc(DATA_VERSION)+'. Yahoo ADP, NBA team, and Yahoo position eligibility refreshed from Hashtag Basketball\'s 2026-27 ADP table (Yahoo columns, updated 11 September 2026). A red INJ badge marks the 9 players currently injured (as of 12 September 2026) â hover it for the injury, context, expected return, and source. No pool players have retired. Prior-season per-game ranks via Basketball Monster / Hashtag Basketball, and prior-season totals ranks derived from Basketball-Reference 2025-26 season totals (9-cat, not a published rank), are historical and unchanged. Category values are BM-style per-game z-scores (see README). This audit checks internal consistency; NBA player-pool completeness remains unverified.</p>';
   h+='<p>'+HEALTH.missingAdp.length+' missing ADP (CPUs fall back to built-in rank); '+HEALTH.missingLast.length+' missing prior-season rank; '+HEALTH.untagged.length+' without category tags; '+HEALTH.placeholderTeams.length+' unknown teams.</p>';
   h+='<p class="muted">Built-in rank is the original list order, not a fresh projection. Missing ranks stay blank. Category tags are manual strengths, not nine-category projections.</p>';
   if(HEALTH.errors.length||HEALTH.missingData.length||HEALTH.orphanData.length)h+='<p>Data consistency issues: '+(HEALTH.errors.length+HEALTH.missingData.length+HEALTH.orphanData.length)+'. Run node audit-data.js for details.</p>';
@@ -636,7 +639,7 @@ function renderList(){
     var rlabel=srt==="cons"?consRank(pl2).toFixed(1):pl2.r;
     var sub='<span>ADP '+disp(pl2.adp)+'</span><span>Last '+disp(pl2.last)+'</span><span>Tot '+disp(pl2.lastTotal)+'</span><span>'+posBadges(pl2.p)+'</span>';
     if(pl2.c.length)sub+='<span>'+pl2.c.slice(0,3).join(" · ")+'</span>';
-    rows.push('<div class="prow"><div class="l1"><span class="prank">'+rlabel+'</span><span class="pname">'+esc(pl2.n)+' <span class="teamtag">'+esc(pl2.t)+'</span></span><button class="draftbtn" data-pi="'+i+'" aria-label="Draft '+esc(pl2.n)+'"'+(ut?'':' disabled')+'>Draft</button></div><div class="l2">'+sub+'</div></div>');
+    rows.push('<div class="prow"><div class="l1"><span class="prank">'+rlabel+'</span><span class="pname">'+esc(pl2.n)+' <span class="teamtag">'+esc(pl2.t)+'</span>'+injBadge(pl2)+'</span><button class="draftbtn" data-pi="'+i+'" aria-label="Draft '+esc(pl2.n)+'"'+(ut?'':' disabled')+'>Draft</button></div><div class="l2">'+sub+'</div></div>');
   }
   if(!cands.length)rows.push('<div class="prow"><div class="l1"><span class="muted">No players match.</span></div></div>');
   el("mdplist").innerHTML=rows.join("");
@@ -672,13 +675,13 @@ function renderSide(){
     var ros=myRoster();
     var h2='<h3>Roster</h3><div class="rlist">';
     ros.slots.forEach(function(e){
-      h2+='<div class="rrow"><span class="rpick">'+e.slot+'</span><span class="pname">'+(e.player?esc(e.player.player.n)+' <span class="teamtag">'+esc(e.player.player.t)+'</span>':'<span class="muted">empty</span>')+'</span>'+(e.player?'<span class="ppos">'+posBadges(e.player.player.p)+'</span>':'')+'</div>';});
+      h2+='<div class="rrow"><span class="rpick">'+e.slot+'</span><span class="pname">'+(e.player?esc(e.player.player.n)+' <span class="teamtag">'+esc(e.player.player.t)+'</span>'+injBadge(e.player.player):'<span class="muted">empty</span>')+'</span>'+(e.player?'<span class="ppos">'+posBadges(e.player.player.p)+'</span>':'')+'</div>';});
     h2+='</div>';
     if(ros.overflow.length){h2+='<h3>Overflow</h3><div class="rlist">';ros.overflow.forEach(function(e){h2+='<div class="rrow"><span class="pname">'+esc(e.player.n)+'</span></div>';});h2+='</div>';}
     h2+='<h3>My team ('+mine.length+'/'+state.rounds+')</h3><div class="rlist">';
     if(!mine.length)h2+='<div class="rrow"><span class="muted">No picks yet.</span></div>';
     mine.forEach(function(m){var pl=PLAYERS[m.pi];
-      h2+='<div class="rrow"><span class="rpick">'+pickLabel(m.idx)+'</span><span class="pname">'+esc(pl.n)+' <span class="teamtag">'+esc(pl.t)+'</span>'+vBadge(m.pi,m.idx)+'</span><span class="ppos">'+posBadges(pl.p)+'</span></div>';});
+      h2+='<div class="rrow"><span class="rpick">'+pickLabel(m.idx)+'</span><span class="pname">'+esc(pl.n)+' <span class="teamtag">'+esc(pl.t)+'</span>'+injBadge(pl)+vBadge(m.pi,m.idx)+'</span><span class="ppos">'+posBadges(pl.p)+'</span></div>';});
     s.innerHTML=h2+'</div>';
   }
 }

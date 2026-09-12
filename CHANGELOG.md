@@ -1,9 +1,23 @@
 # Changelog — changes since the GitHub push (2026-09-12)
 
-Everything below was added locally *after* the version pushed to
-`github.com/tonesjones/fantasy-basketball-mock-draft`
-(that push had: standalone-safe loading, two-line mobile player rows,
-scarcity counts tied to the draftable pool).
+The data refresh below was pushed to
+`github.com/tonesjones/fantasy-basketball-mock-draft` on 2026-09-12
+(commit `47c17da`); the injury-tag section after it is local and unpushed.
+
+## Injury tags (2026-09-12)
+- **New `INJ` data in `player-data.js`** — 9 pool players currently injured,
+  researched from current (Sep 2026) reporting: Mark Williams (labrum,
+  surgery Sep 10), Brandon Miller (shoulder), Cam Whitmore (DVT),
+  Dereck Lively II (foot), Jimmy Butler (ACL), Moses Moody (patellar
+  tendon), Donte DiVincenzo (Achilles), Shaedon Sharpe (meniscus),
+  Jalen Suggs (knee). Each entry carries injury, evidence/context,
+  expected return (honest "unknown" where unreported), and source.
+- **Red INJ badge** next to injured players in the draft list, roster view,
+  and draft log. Hovering shows the injury, context, expected return date,
+  and source.
+- **Retirement sweep: nothing to remove.** Russell Westbrook is not in the
+  237-player pool at all; no pool player has retired (Batum only hinted).
+  Pool stays 237, `DATA_VERSION` unchanged.
 
 ## Data refresh — Yahoo ADP / teams / eligibility (2026-09-12)
 - **Refreshed from Hashtag Basketball's 2026-27 ADP table (Yahoo columns,

@@ -39,6 +39,8 @@ The category-scarcity panel shows, for each of the nine categories, the share of
 
 The setup and draft screens include a **Data health** disclosure with coverage counts and limitations. Hovering a scarcity category chip lists the top three remaining contributors in that category.
 
+A red **INJ** badge next to a player's name marks the 9 players currently injured (as of 12 September 2026, from current reporting). Hovering the badge shows the injury, evidence/context, expected return date, and source.
+
 ```bash
 node audit-data.js
 node audit-data.js --json

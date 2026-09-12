@@ -269,3 +269,18 @@ var PDATA={
 "Mikel Brown Jr.":{adp:122.4,last:null,lastTotal:null},
 "Nate Ament":{adp:115.3,last:null,lastTotal:null}
 };
+// injury data current as of 2026-09-12, from current web reporting.
+// injury: brief label shown on hover; detail: evidence/context; return: expected
+// return date or status (honest "unknown/no timetable" where unreported);
+// src: outlet + report date.
+var INJ={
+"Mark Williams":{injury:"Torn left-shoulder labrum",detail:"Injured in offseason workout; underwent successful surgery on Sept 10, 2026. No timetable given.",ret:"Extended absence; ESPN estimates Feb 2027",src:"Arizona Republic, 11 Sep 2026"},
+"Brandon Miller":{injury:"Left-shoulder instability (subluxation Oct 2025; surgery May 2026)",detail:"Not fully cleared for basketball activity as of Aug 28, 2026.",ret:"Could miss start of the season (ESPN lists Day-To-Day, est. Oct 1)",src:"NBC Sports, 28 Aug 2026"},
+"Cam Whitmore":{injury:"Deep vein thrombosis, right shoulder",detail:"Diagnosed Dec 23, 2025; ruled out for the rest of the 2025-26 season.",ret:"Unknown (no timeline as of Sep 2026)",src:"Reuters, 24 Dec 2025"},
+"Dereck Lively II":{injury:"Right foot (season-ending surgery Dec 2025)",detail:"Played only 7 games in 2025-26; still not running as of late June 2026.",ret:"Unclear; training-camp participation in doubt",src:"CBS Sports, Sep 2026"},
+"Jimmy Butler":{injury:"Torn right ACL (reconstruction Feb 9, 2026)",detail:"Progress reported Sept 8, 2026 but extensive rehab remains; limited to individual work in camp.",ret:"Dec 2026 at earliest; Jan/Feb 2027 an optimistic target",src:"Hoops Rumors / ESPN's Anthony Slater, 8 Sep 2026"},
+"Moses Moody":{injury:"Torn left patellar tendon (surgery Mar 28, 2026)",detail:"Not cleared to run or resume on-court activity as of Aug 2, 2026.",ret:"At least half the season (ESPN estimates Dec 2026)",src:"NBC Sports, 2 Aug 2026"},
+"Donte DiVincenzo":{injury:"Ruptured right Achilles (surgery Apr 27, 2026)",detail:"Injured in Game 4 vs Nuggets on Apr 25, 2026; significant 2026-27 absence expected.",ret:"No timetable; ESPN estimates Apr 2027",src:"NBC Sports, 4 Sep 2026"},
+"Shaedon Sharpe":{injury:"Torn right-knee meniscus (surgery Aug 27, 2026)",detail:"Torn in offseason workout; team announced reevaluation in ~6 months.",ret:"Late Feb / Mar 2027 (~6 months)",src:"Reuters, 27 Aug 2026"},
+"Jalen Suggs":{injury:"Left-knee arthroscopic surgery (cartilage fragment)",detail:"Surgery early Aug 2026 ended his 2025-26 season; out indefinitely with return based on rehab.",ret:"Unclear; opening-night availability in doubt",src:"ClutchPoints, Aug 2026"}
+};
