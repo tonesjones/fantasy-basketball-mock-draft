@@ -4,7 +4,7 @@ const vm=require('node:vm');
 const core=require('./draft-core');
 const dataContext={};vm.createContext(dataContext);vm.runInContext(fs.readFileSync('player-data.js','utf8'),dataContext);
 const html=fs.readFileSync('index.html','utf8');
-const snippet=html.match(/var PLAYERS=([\s\S]*?\n\];)\nPLAYERS\.forEach/)[1];
+const snippet=html.match(/var PLAYERS=([\s\S]*?\r?\n\];)\r?\nPLAYERS\.forEach/)[1];
 const context={};vm.createContext(context);vm.runInContext('var PLAYERS='+snippet+'; this.PLAYERS=PLAYERS;',context);
 const players=context.PLAYERS.map((p,i)=>({n:p[0],p:p[1],t:p[2],r:i+1,adp:(dataContext.PDATA[p[0]]||{}).adp ?? null}));
 const slots=core.slotsForRounds(13,['PG','SG','G','SF','PF','F','C','C','Util','Util','BN','BN','BN']);

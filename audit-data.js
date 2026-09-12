@@ -5,8 +5,8 @@ const vm=require('node:vm');
 const health=require('./data-health');
 function loadBundledData(){
   const html=fs.readFileSync(path.join(__dirname,'index.html'),'utf8');
-  const players=html.match(/var PLAYERS=([\s\S]*?\n\];)\nPLAYERS\.forEach/);
-  const tags=html.match(/var CATS=([\s\S]*?\n};)\nPLAYERS\.forEach/);
+  const players=html.match(/var PLAYERS=([\s\S]*?\r?\n\];)\r?\nPLAYERS\.forEach/);
+  const tags=html.match(/var CATS=([\s\S]*?\r?\n};)\r?\nPLAYERS\.forEach/);
   if(!players||!tags)throw new Error('Cannot locate player pool/category tags in index.html');
   const context={};vm.createContext(context);
   vm.runInContext('var PLAYERS='+players[1]+'\nvar CATS='+tags[1],context);

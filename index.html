@@ -112,6 +112,7 @@ body{background:radial-gradient(ellipse at top right,#19352f66,transparent 55%),
 #md .prank{font-variant-numeric:tabular-nums}
 #md .teamtag{display:inline-block;border-radius:4px;background:#223247;padding:1px 5px;margin-left:3px;letter-spacing:.4px}
 #md .injtag{display:inline-block;border-radius:4px;background:#5a1f1f;color:#ffb4ab;padding:1px 5px;margin-left:3px;letter-spacing:.4px;font-weight:700;cursor:help}
+#md .injtag:focus-visible{outline:2px solid #ffb4ab;outline-offset:2px}
 #md .rrow{padding:11px 12px;min-height:43px}
 #md .rpick{font-size:10px;font-weight:700;letter-spacing:.8px;width:48px}
 #md .rlist{max-height:470px;background:#0d172466}
@@ -225,7 +226,7 @@ var PLAYERS=[
 PLAYERS.forEach(function(p,i){p.r=i+1;p.n=p[0];p.p=p[1];p.t=p[2]||"\u2014";});
 PLAYERS.forEach(function(p){var d=(typeof PDATA!=="undefined"&&PDATA[p.n])||null;p.adp=d&&d.adp!=null?d.adp:null;p.last=d&&d.last!=null?d.last:null;p.lastTotal=d&&d.lastTotal!=null?d.lastTotal:null;p.inj=(typeof INJ!=="undefined"&&INJ[p.n])||null;});
 function injTitle(inj){return "INJURED — "+inj.injury+". "+inj.detail+" Expected return: "+inj.ret+". Source: "+inj.src+".";}
-function injBadge(p){return p.inj?'<span class="injtag" title="'+esc(injTitle(p.inj))+'">INJ</span>':'';}
+function injBadge(p){return p.inj?'<span class="injtag" tabindex="0" role="img" aria-label="'+esc(injTitle(p.inj))+'" title="'+esc(injTitle(p.inj))+'">INJ</span>':'';}
 var CATS={
 "Nikola Jokic":["PTS","REB","AST","STL","FG%"],
 "Victor Wembanyama":["PTS","REB","BLK","STL","3PM"],
@@ -544,9 +545,9 @@ function pickLabel(idx){var r=Math.floor(idx/TEAMS)+1;var w=idx%TEAMS+1;return "
 var HEALTH=window.DataHealth.audit(PLAYERS,typeof PDATA!=="undefined"?PDATA:{},CATS);
 function renderDataHealth(){
   var h='<details class="scarcity"><summary><b>Data health</b> &middot; '+(HEALTH.players-HEALTH.missingAdp.length)+'/'+HEALTH.players+' players with ADP &middot; bundled snapshot</summary>';
-  h+='<p class="muted">Snapshot '+esc(DATA_VERSION)+'. Yahoo ADP, NBA team, and Yahoo position eligibility refreshed from Hashtag Basketball\'s 2026-27 ADP table (Yahoo columns, updated 11 September 2026). A red INJ badge marks the 9 players currently injured (as of 12 September 2026) â hover it for the injury, context, expected return, and source. No pool players have retired. Prior-season per-game ranks via Basketball Monster / Hashtag Basketball, and prior-season totals ranks derived from Basketball-Reference 2025-26 season totals (9-cat, not a published rank), are historical and unchanged. Category values are BM-style per-game z-scores (see README). This audit checks internal consistency; NBA player-pool completeness remains unverified.</p>';
+  h+='<p class="muted">Snapshot '+esc(DATA_VERSION)+'. Yahoo ADP, NBA team, and Yahoo position eligibility were refreshed from Hashtag Basketball\'s 2026-27 ADP table (Yahoo columns, updated 11 September 2026). A red INJ badge marks the 9 players listed as injured as of 12 September 2026; hover or focus it for the injury, context, expected return, and source. Prior-season ranks and category values are historical and unchanged. Category scarcity uses BM-style per-game z-scores, not manual strength tags or a current-season projection. This audit checks internal consistency; NBA player-pool completeness remains unverified.</p>';
   h+='<p>'+HEALTH.missingAdp.length+' missing ADP (CPUs fall back to built-in rank); '+HEALTH.missingLast.length+' missing prior-season rank; '+HEALTH.untagged.length+' without category tags; '+HEALTH.placeholderTeams.length+' unknown teams.</p>';
-  h+='<p class="muted">Built-in rank is the original list order, not a fresh projection. Missing ranks stay blank. Category tags are manual strengths, not nine-category projections.</p>';
+  h+='<p class="muted">Built-in rank is the original list order, not a fresh projection. Missing ranks stay blank. The legacy category labels on player rows are informational only; scarcity calculations use the historical `cv` values.</p>';
   if(HEALTH.errors.length||HEALTH.missingData.length||HEALTH.orphanData.length)h+='<p>Data consistency issues: '+(HEALTH.errors.length+HEALTH.missingData.length+HEALTH.orphanData.length)+'. Run node audit-data.js for details.</p>';
   return h+'</details>';
 }
@@ -663,7 +664,7 @@ function renderSide(){
       for(t=0;t<TEAMS;t++){
         var idx=r*TEAMS+(r%2===0?t:TEAMS-1-t);
         var cell='&nbsp;',cls=(t===userTeam()?'you':'');
-        if(idx<state.log.length){var pl=PLAYERS[state.log[idx]];cell=esc(pl.n)+' <span class="teamtag">'+esc(pl.t)+'</span>'+vBadge(state.log[idx],idx);}
+        if(idx<state.log.length){var pl=PLAYERS[state.log[idx]];cell=esc(pl.n)+' <span class="teamtag">'+esc(pl.t)+'</span>'+injBadge(pl)+vBadge(state.log[idx],idx);}
         else if(t===userTeam()){cls+=' future-you';}
         h+='<td class="'+cls+'">'+cell+'</td>';
       }
