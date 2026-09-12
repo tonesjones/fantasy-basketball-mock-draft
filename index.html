@@ -1,4 +1,8 @@
 <style>
+/*STANDALONE-THEME-START*/
+:root{--hatch-widget-font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;--hatch-widget-text:#ececf1;--hatch-widget-muted:#9a9aad;--hatch-widget-surface:#17171d;--hatch-widget-surface-muted:#22222c;--hatch-widget-border:#2e2e3a;--hatch-widget-accent:#5b6fae;--hatch-widget-on-accent:#ffffff}
+body{background:#101014;margin:0}
+/*STANDALONE-THEME-END*/
 #md *{box-sizing:border-box}
 #md{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:var(--hatch-widget-text);max-width:100%;padding:4px}
 #md h2{font-size:18px;margin:8px 0}
@@ -377,8 +381,11 @@ function renderScarcity(){
 }
 
 var TEAMS=12;
-var state=window.hatchWidget.getState({phase:"setup",draftPos:6,rounds:13,log:[],q:"",f:"All",view:"team",sort:"rank"});
-function setState(patch){state=Object.assign({},state,patch);window.hatchWidget.setState(state);render();}
+var HW=(typeof window!=="undefined"&&window.hatchWidget)?window.hatchWidget:null;
+var DEFAULTS={phase:"setup",draftPos:6,rounds:13,log:[],q:"",f:"All",view:"team",sort:"rank"};
+var state=HW?HW.getState(DEFAULTS):Object.assign({},DEFAULTS);
+function save(){if(HW){try{HW.setState(state);}catch(e){}}}
+function setState(patch){state=Object.assign({},state,patch);save();render();}
 window.addEventListener("hatch-widget-state",function(e){state=e.detail.state;render();});
 function el(id){return document.getElementById(id);}
 function teamForPick(idx){var round=Math.floor(idx/TEAMS),w=idx%TEAMS;return round%2===0?w:TEAMS-1-w;}
@@ -442,7 +449,7 @@ function renderSetup(){
   el("mdapp").querySelectorAll(".posbtn").forEach(function(b){b.addEventListener("click",function(){setState({draftPos:parseInt(b.getAttribute("data-pos"),10)});});});
   el("mdrounds").addEventListener("change",function(e){setState({rounds:parseInt(e.target.value,10)});});
   el("mdstart").addEventListener("click",function(){
-    var s=Object.assign({},state,{phase:"draft",log:[]});state=s;window.hatchWidget.setState(s);advance();
+    var s=Object.assign({},state,{phase:"draft",log:[]});state=s;save();advance();
   });
 }
 function nextUserPickIdx(){
@@ -476,7 +483,7 @@ function renderDraft(){
   el("mdapp").querySelectorAll("[data-view]").forEach(function(b){b.addEventListener("click",function(){setState({view:b.getAttribute("data-view")});});});
   el("mdapp").querySelectorAll("[data-f]").forEach(function(b){b.addEventListener("click",function(){setState({f:b.getAttribute("data-f")});});});
   el("mdapp").querySelectorAll("[data-sort]").forEach(function(b){b.addEventListener("click",function(){setState({sort:b.getAttribute("data-sort")});});});
-  var q=el("mdq");q.addEventListener("input",function(){state.q=q.value;window.hatchWidget.setState(state);renderList();});
+  var q=el("mdq");q.addEventListener("input",function(){state.q=q.value;save();renderList();});
   q.addEventListener("keydown",function(e){e.stopPropagation();});
   var sim=el("mdsim");if(sim)sim.addEventListener("click",advance);
   el("mdnew").addEventListener("click",function(){setState({phase:"setup",log:[],q:"",f:"All",view:"team"});});
