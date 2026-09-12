@@ -20,7 +20,7 @@ if(require.main===module){
   else {
     console.log('Bundled data audit — internal consistency only; does not verify source accuracy or NBA pool completeness.');
     console.log('Players: '+report.players);
-    ['errors','missingData','orphanData','missingAdp','missingLast','missingLastTotal','missingCv','untagged','placeholderTeams'].forEach(key=>{
+    ['errors','missingData','orphanData','missingAdp','missingLast','missingLastTotal','missingCv','missingMpg','untagged','placeholderTeams'].forEach(key=>{
       console.log(key+': '+report[key].length+(report[key].length?'\n  '+report[key].join(', '):''));
     });
     console.log('Largest built-in rank / ADP gaps (40+ picks; review signals, not proven errors):');

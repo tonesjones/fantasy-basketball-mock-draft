@@ -133,6 +133,10 @@ body{background:radial-gradient(ellipse at top right,#19352f66,transparent 55%),
 @media(prefers-reduced-motion:reduce){#md button{transition:none}}
 #md .playoffbadge{font-weight:600;font-size:11px;white-space:nowrap}
 #md .playoffbadge.bad{color:#ff8a7a}#md .playoffbadge.ok{color:#ffd479}#md .playoffbadge.good{color:#85e5bc}
+#md .catmu{display:inline-block;font-size:11px;font-weight:700;margin:0 3px;white-space:nowrap}
+#md .catmu.win{color:#85e5bc}#md .catmu.even{color:#ffd479}#md .catmu.loss{color:#ff8a7a}
+#md .catdot{display:inline-block;width:10px;height:10px;border-radius:50%;margin:0 2px;vertical-align:middle}
+#md .catdot.win{background:#85e5bc}#md .catdot.even{background:#ffd479}#md .catdot.loss{background:#ff8a7a}
 #md .playoffnote a{color:#85e5bc}
 #md .playofftable{width:100%;border-collapse:collapse;font-size:12px}
 #md .playofftable th,#md .playofftable td{padding:8px;text-align:left;border-bottom:1px solid var(--hatch-widget-border)}
@@ -236,7 +240,7 @@ var PLAYERS=[
 ["Keaton Wagler",['SG'],"LAC"],["Mikel Brown Jr.",['PG'],"BKN"],["Nate Ament",['SF'],"MIL"]
 ];
 PLAYERS.forEach(function(p,i){p.r=i+1;p.n=p[0];p.p=p[1];p.t=p[2]||"\u2014";});
-PLAYERS.forEach(function(p){var d=(typeof PDATA!=="undefined"&&PDATA[p.n])||null;p.adp=d&&d.adp!=null?d.adp:null;p.last=d&&d.last!=null?d.last:null;p.lastTotal=d&&d.lastTotal!=null?d.lastTotal:null;p.inj=(typeof INJ!=="undefined"&&INJ[p.n])||null;});
+PLAYERS.forEach(function(p){var d=(typeof PDATA!=="undefined"&&PDATA[p.n])||null;p.adp=d&&d.adp!=null?d.adp:null;p.last=d&&d.last!=null?d.last:null;p.lastTotal=d&&d.lastTotal!=null?d.lastTotal:null;p.mpg=d&&d.mpg!=null?d.mpg:null;p.inj=(typeof INJ!=="undefined"&&INJ[p.n])||null;});
 function injTitle(inj){return "INJURED — "+inj.injury+". "+inj.detail+" Expected return: "+inj.ret+". Source: "+inj.src+".";}
 function injBadge(p){return p.inj?'<span class="injtag" tabindex="0" role="img" aria-label="'+esc(injTitle(p.inj))+'" title="'+esc(injTitle(p.inj))+'">INJ</span>':'';}
 var CATS={
@@ -651,7 +655,7 @@ function renderList(){
     if((srt==="adp"||srt==="cons")&&k>0){var kk=tierKey(cands[k]),pk=tierKey(cands[k-1]);if(pk<1e9&&kk-pk>=4)rows.push('<div class="tierbreak" title="Talent cliff"></div>');}
     i=cands[k];var pl2=PLAYERS[i];
     var rlabel=srt==="cons"?consRank(pl2).toFixed(1):pl2.r;
-    var sub='<span>ADP '+disp(pl2.adp)+'</span><span>Last '+disp(pl2.last)+'</span><span>Tot '+disp(pl2.lastTotal)+'</span><span>'+posBadges(pl2.p)+'</span>'+playoffBadge(pl2);
+    var sub='<span>ADP '+disp(pl2.adp)+'</span><span>Last '+disp(pl2.last)+'</span><span>Tot '+disp(pl2.lastTotal)+'</span><span>MPG '+(pl2.mpg==null?'—':pl2.mpg.toFixed(1))+'</span><span>'+posBadges(pl2.p)+'</span>'+playoffBadge(pl2);
     if(pl2.c.length)sub+='<span>'+pl2.c.slice(0,3).join(" · ")+'</span>';
     rows.push('<div class="prow"><div class="l1"><span class="prank">'+rlabel+'</span><span class="pname">'+esc(pl2.n)+' <span class="teamtag">'+esc(pl2.t)+'</span>'+injBadge(pl2)+'</span><button class="draftbtn" data-pi="'+i+'" aria-label="Draft '+esc(pl2.n)+'"'+(ut?'':' disabled')+'>Draft</button></div><div class="l2">'+sub+'</div></div>');
   }
@@ -668,7 +672,9 @@ function myRoster(){
   return CORE.assignRoster(entries,draftSlots());
 }
 function renderSide(){
-  var s=el("mdside");if(!s)return;  if(state.view==="board"){
+  var s=el("mdside");if(!s)return;
+  if(state.view==="grades"){s.innerHTML=renderGrades();return;}
+  if(state.view==="board"){
     var h='<h3>Draft board</h3><div class="boardwrap"><table class="board"><tr><th>Rd</th>';
     for(var t=0;t<TEAMS;t++)h+='<th>'+esc(teamName(t))+'</th>';
     h+='</tr>';
@@ -683,7 +689,7 @@ function renderSide(){
       }
       h+='</tr>';
     }
-    s.innerHTML=h+'</table></div>';
+    s.innerHTML=h+'</table></div><p class="muted"><span class="vdelta g">+12</span> value: picked 12 spots later than ADP &nbsp;·&nbsp; <span class="vdelta b">-8</span> reach: picked 8 spots earlier than ADP &nbsp;·&nbsp; no number: picked at ADP or no ADP data</p>';
   }else{
     var mine=[];state.log.forEach(function(pi,idx){if(teamForPick(idx)===userTeam())mine.push({pi:pi,idx:idx});});
     var ros=myRoster();
@@ -699,11 +705,70 @@ function renderSide(){
     s.innerHTML=h2+'</div>';
   }
 }
+function draftGrades(){
+  var teams=[];
+  for(var t=0;t<TEAMS;t++){
+    var entries=CORE.teamEntries(PLAYERS,state.log,t,TEAMS);
+    var score=0,count=0,cats=[0,0,0,0,0,0,0,0,0];
+    entries.forEach(function(e){
+      var d=(typeof PDATA!=="undefined"&&PDATA[e.player.n])||null;
+      if(d&&d.cv){for(var c=0;c<9;c++){score+=d.cv[c];cats[c]+=d.cv[c];}count++;}
+    });
+    teams.push({team:t,score:score,count:count,cats:cats});
+  }
+  var mean=teams.reduce(function(a,x){return a+x.score;},0)/teams.length;
+  var vari=teams.reduce(function(a,x){return a+(x.score-mean)*(x.score-mean);},0)/teams.length;
+  var std=Math.sqrt(vari)||1;
+  teams.forEach(function(x){
+    var z=(x.score-mean)/std;x.z=z;
+    x.grade=z>=1.5?'A+':z>=1.0?'A':z>=0.5?'B+':z>=0?'B':z>-0.5?'C+':z>-1?'C':z>-1.5?'D':'F';
+  });
+  teams.sort(function(a,b){return b.score-a.score;});
+  teams.forEach(function(x,i){x.rank=i+1;});
+  return teams;
+}
+function catMatchup(userCats,oppCats){
+  // Returns array of 9 'win'/'even'/'loss' vs the user's per-category totals.
+  // |diff| <= 0.5 = even; user ahead by >0.5 = win; behind by >0.5 = loss.
+  var out=[];
+  for(var c=0;c<9;c++){
+    var diff=userCats[c]-oppCats[c];
+    out.push(diff>0.5?'win':diff<-0.5?'loss':'even');
+  }
+  return out;
+}
+function renderGrades(){
+  var g=draftGrades();
+  var me=g.filter(function(x){return x.team===userTeam();})[0];
+  var muOrder=[6,7,5,0,1,2,3,4,8]; // FG% FT% 3PM Pts REB AST STL BLK TO
+  var h='<h3>Draft grades</h3><div class="muted">Score = sum of 2025-26 per-game category values (9-cat z-scores) across the roster. Higher is better.</div>';
+  h+='<div class="muted" style="margin:6px 0"><span class="catmu win">PTS</span> = you win the category <span class="catmu even">PTS</span> = even <span class="catmu loss">PTS</span> = they win it. Tally is your wins-losses vs that team.</div>';
+  h+='<div class="boardwrap"><table class="board"><thead><tr><th>#</th><th>Team</th><th>Score</th><th>Grade</th><th>vs You</th></tr></thead><tbody>';
+  g.forEach(function(x){
+    var you=x.team===userTeam();
+    h+='<tr'+(you?' class="you"':'')+'><td><b>'+x.rank+'</b></td><td>'+esc(teamName(x.team))+(you?' (you)':'')+'</td><td>'+x.score.toFixed(1)+'</td><td><b>'+x.grade+'</b></td><td>';
+    if(!you&&me){
+      var mu=catMatchup(me.cats,x.cats);
+      var w=0,l=0;
+      mu.forEach(function(m){if(m==='win')w++;else if(m==='loss')l++;});
+      h+='<b>'+w+'-'+l+'</b> ';
+      muOrder.forEach(function(c){
+        var diff=me.cats[c]-x.cats[c];
+        h+='<span class="catmu '+mu[c]+'" title="'+CATS9[c]+': you '+me.cats[c].toFixed(1)+' vs '+x.cats[c].toFixed(1)+'">'+CATS9[c]+'</span>';
+      });
+    }else if(you){
+      h+='<span class="muted">—</span>';
+    }
+    h+='</td></tr>';
+  });
+  h+='</tbody></table></div><p class="muted">Based on '+g[0].count+' drafted players per team with 2025-26 category data. Bench and starters weighted equally; playoff schedule, injuries, and projected 2026-27 role changes are not factored in.</p>';
+  return h;
+}
 function renderDone(){
   var h='<h2>Draft complete</h2><div class="muted">Final roster from pick #'+state.draftPos+' ('+state.rounds+' rounds, 12 teams)</div>';
   h+='<button class="bigbtn" id="mdnew2">Run it back</button>';
   if(state.userTurns.length)h+='<button class="ghostbtn" id="mdundo2" style="margin-left:8px">Undo my last pick</button>';
-  h+='<div class="tabs"><button class="fchip'+(state.view==='team'?' sel':'')+'" data-view="team">My team</button><button class="fchip'+(state.view==='board'?' sel':'')+'" data-view="board">Draft board</button></div><div id="mdside"></div>';
+  h+='<div class="tabs"><button class="fchip'+(state.view==='team'?' sel':'')+'" data-view="team">My team</button><button class="fchip'+(state.view==='board'?' sel':'')+'" data-view="board">Draft board</button><button class="fchip'+(state.view==='grades'?' sel':'')+'" data-view="grades">Grades</button></div><div id="mdside"></div>';
   el("mdapp").innerHTML=h;
   el("mdnew2").addEventListener("click",restartDraft);
   var undo=el("mdundo2");if(undo)undo.addEventListener("click",undoUserPick);

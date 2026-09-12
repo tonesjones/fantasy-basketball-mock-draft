@@ -4,6 +4,23 @@ The data refresh below was pushed to
 `github.com/tonesjones/fantasy-basketball-mock-draft` on 2026-09-12
 (commit `47c17da`); the sections after it are local and unpushed.
 
+## Minutes per game + draft grades (2026-09-12)
+- **New `mpg` field** — 2025-26 minutes per game for all 237 players, from
+  Basketball-Reference's 2025-26 per-game table (collected 2026-09-12).
+  224 players have values; 13 null (injured stars Haliburton/Irving/VanVleet,
+  GG Jackson, 9 incoming 2026 draft prospects). Displayed as "MPG" in every
+  available-player row. Validated by `data-health.js` (`missingMpg`).
+- **Draft grades report** — new "Grades" tab on the draft-complete screen.
+  Scores every team by summing 2025-26 per-game category values (`cv`)
+  across the roster; ranks 1–12 with letter grades (A+ to F) from the
+  score distribution. Your team is highlighted. Test: `test-draft-grades.js`.
+- **Grades: "vs You" category matchup** (added same day) — each CPU team row
+  shows your wins-losses tally against them plus per-category labels
+  (FG% FT% 3PM PTS REB AST STL BLK TO) colored green (you win), yellow
+  (even, within 0.5), red (they win); hover for exact values.
+- **Draft board legend** (added same day) — explains the green/red +/-
+  value-vs-ADP badges under the board.
+
 ## Fantasy playoff schedule (2026-09-12)
 - **New `playoff-data.js`** — Yahoo weekly schedule snapshot (2026-27):
   per-team games for Yahoo weeks 18–23 (Mar 1 – Apr 11, 2027), transcribed

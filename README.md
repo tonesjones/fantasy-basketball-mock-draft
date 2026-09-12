@@ -2,6 +2,38 @@
 
 A static, single-page mock draft trainer for Yahoo-style fantasy basketball. Open `index.html` in a browser; it has no build step, server, or external dependency.
 
+> **Nine-category leagues only.** Every rank, value, grade, and scarcity number in this app is computed from nine-category (PTS, REB, AST, STL, BLK, 3PM, FG%, FT%, TO) production. It is not a points-league tool — points leagues score on a completely different formula and would need a different dataset, so do not use these ranks or grades for one.
+
+## How to use
+
+### Setup
+
+On the setup screen, choose:
+
+- **Draft position** — your slot in the 12-team snake (1–12).
+- **Rounds** — roster size, 10–15 rounds.
+- **Playoff window** — the three Yahoo weeks your league's fantasy playoffs cover (W18–20 through W21–23; W20–22 is Yahoo's public-league default). This drives the per-player playoff schedule badges and your roster's playoff-games summary.
+
+Press **Start draft**. Your picks are marked; the 11 CPU teams draft automatically between your turns using Yahoo ADP as their market signal, with a small seeded variation so no two drafts are identical.
+
+### During the draft
+
+- **Available players** — search by name, filter by position (PG/SG/SF/PF/C or G/F/UTIL), and sort by Rank, ADP, last season, MPG, or scarcity. Pages of 50 with an honest filtered count.
+- Each row shows the player's **MPG** (2025-26 minutes per game), Yahoo ADP, built-in rank, last-season nine-cat rank, position eligibility, team, a red **INJ** badge if currently injured (hover for details), and a color-coded **playoff badge** (bad/ok/good) for games in your selected playoff window.
+- Click a player on your turn to draft them. **Undo my last pick** reverses your most recent decision.
+- The **category scarcity** panel shows, per category, what share of draftable above-replacement value is still on the board (green → red, live as picks happen). Hover a category chip for its top-3 remaining contributors.
+- **Draft board** tab — every pick, round by round. Green **+12** = value (picked 12 spots later than ADP); red **-8** = reach (picked 8 spots earlier); no number = at ADP or no ADP data.
+
+### After the draft
+
+- **My team** — your roster in Yahoo-style slots, your playoff-games summary, and a per-player playoff schedule table for your chosen window.
+- **Draft board** — the full board with the value/reach legend underneath.
+- **Grades** — all 12 teams scored by summing 2025-26 per-game category values across the roster, ranked 1–12 with letter grades (A+ to F). The **vs You** column shows your category tally against each CPU team (e.g. **7-2**) plus each category (FG% FT% 3PM PTS REB AST STL BLK TO) colored green (you win it), yellow (even), or red (they win it); hover for the exact values.
+
+### On mobile
+
+The layout collapses to a single column with compact two-line player rows; all filters, tabs, and the draft board work the same as on desktop. Draft state saves in the browser via `localStorage`, so a refresh mid-draft resumes where you left off (browser saving can vary for local `file://` URLs — serve the folder over HTTP for the most reliable saves). Use **Clear saved draft** or **Restart** to begin fresh.
+
 ## What it does
 
 - Runs a 12-team snake draft with 10–15 rounds and a selectable draft position.
@@ -16,8 +48,14 @@ A static, single-page mock draft trainer for Yahoo-style fantasy basketball. Ope
 
 - `index.html` — UI, player pool, and draft flow.
 - `draft-core.js` — dependency-free validation, roster matching, seeded random source, and CPU selection. It is also usable from Node for tests.
-- `player-data.js` — ADP and prior-season rank data merged into the player pool on load.
-- `test-draft-core.js` — focused automated checks for duplicate-pick rejection, roster reassignment, reproducible randomness, ADP-led CPU choices, and an empty player pool.
+- `player-data.js` — ADP, prior-season ranks, per-game category values (`cv`), and minutes per game (`mpg`) merged into the player pool on load.
+- `playoff-data.js` — Yahoo weekly schedule snapshot (all 30 teams × weeks 18–23, Mar 1 – Apr 11, 2027).
+- `playoff-core.js` — playoff game counts, totals, summaries, and the bad/ok/good quality rule.
+- `data-health.js` — shared browser/Node audit logic.
+- `audit-data.js` — reproducible audit of the actual bundled player, category, and ADP data.
+- `test-draft-core.js`, `test-data-health.js`, `test-playoff-core.js`, `test-draft-grades.js`, `test-draft-simulation.js` — automated checks (run with `node <file>`).
+- `scripts/` — `build-widget.py` (rebuilds the standalone in-chat widget), `build-playoff-data.py` and `import-playoff-schedule.py` (playoff schedule refresh).
+- `CHANGELOG.md` — dated change log. `OPEN-ME.txt` / `desktop-changes.patch` — desktop handoff notes.
 
 ## Run it
 
@@ -27,6 +65,9 @@ Run the logic checks with:
 
 ```bash
 node test-draft-core.js
+node test-data-health.js
+node test-playoff-core.js
+node test-draft-grades.js
 ```
 
 ## Data notes
@@ -34,6 +75,11 @@ node test-draft-core.js
 `player-data.js` contains the data provenance and generation date. The app validates saved state against that date, so an old saved draft is not silently applied to a newly refreshed player data set.
 
 The category-scarcity panel shows, for each of the nine categories, the share of draftable above-replacement per-game category value still on the board, color-coded green → red and updating live as picks happen. Each player's nine per-game category values (`cv`, stored in `player-data.js`) are BM-style z-scores across the 225 sim players who appeared in 2025-26, in CATS9 order (PTS/REB/AST/STL/BLK/3PM/FG%/FT%/TO); FG%/FT% are volume-weighted and TO is inverted so positive means fewer turnovers. Replacement level is the mean `cv` of consensus ranks 150–170. It is a depletion gauge against last season's per-game production, not a projection model or a nine-category team evaluation.
+
+## Feature notes
+
+- **Minutes per game** — every available-player row shows the player's 2025-26 MPG from Basketball-Reference's per-game table (224 of 237 players; 13 show "—": three injured stars and players who did not appear in 2025-26, e.g. incoming draft prospects).
+- **Draft grades** — the Grades tab scores every team by summing 2025-26 per-game category values (`cv`) across the roster, ranks 1–12, and assigns letter grades by standard deviation from the mean. The **vs You** column compares each CPU team to your roster category-by-category: green = you win the category, yellow = even (within 0.5), red = they win it, with a wins-losses tally. Bench and starters are weighted equally; injuries, playoff schedule, and projected 2026-27 role changes are not factored in.
 
 ## Data health audit
 

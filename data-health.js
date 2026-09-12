@@ -8,7 +8,7 @@
   function positive(value){return typeof value==='number'&&isFinite(value)&&value>0;}
   function audit(players,data,tags){
     data=data||{};tags=tags||{};
-    var out={players:players.length,errors:[],missingData:[],orphanData:[],missingAdp:[],missingLast:[],missingLastTotal:[],missingCv:[],untagged:[],placeholderTeams:[],rankDivergence:[]};
+    var out={players:players.length,errors:[],missingData:[],orphanData:[],missingAdp:[],missingLast:[],missingLastTotal:[],missingCv:[],missingMpg:[],untagged:[],placeholderTeams:[],rankDivergence:[]};
     var names=Object.create(null),normalized=Object.create(null);
     players.forEach(function(p,index){
       var name=p.n||p[0],pos=p.p||p[1],team=p.t||p[2],rank=p.r||index+1;
@@ -29,6 +29,9 @@
       var cv=d&&d.cv;
       if(cv==null)out.missingCv.push(name);
       else if(!Array.isArray(cv)||cv.length!==9||cv.some(function(x){return typeof x!=='number'||!isFinite(x);}))out.errors.push('Invalid cv (need 9 finite numbers): '+name);
+      var mpg=d&&d.mpg;
+      if(mpg==null)out.missingMpg.push(name);
+      else if(typeof mpg!=='number'||!isFinite(mpg)||mpg<0||mpg>48)out.errors.push('Invalid mpg (need 0-48): '+name);
       var cats=tags[name];
       if(!cats||!cats.length)out.untagged.push(name);
       if(cats&&(!Array.isArray(cats)||cats.some(function(c){return categories.indexOf(c)<0;})||new Set(cats).size!==cats.length))out.errors.push('Invalid or duplicate category tag: '+name);
