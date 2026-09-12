@@ -1,65 +1,55 @@
 # Fantasy Basketball Mock Draft Simulator
 
-A single-page mock draft trainer for Yahoo-style fantasy basketball leagues.
-No build step, no dependencies, no server — just open it in a browser.
+A static, single-page mock draft trainer for Yahoo-style fantasy basketball. Open `index.html` in a browser; it has no build step, server, or external dependency.
 
-2026 Season
+## What it does
 
-## Use it
+- Runs a 12-team snake draft with 10–15 rounds and a selectable draft position.
+- Uses the bundled Yahoo ADP as the CPU market signal, falling back to the app’s built-in rank when an ADP is missing. Small seeded variation keeps drafts from being identical while making a saved draft replayable.
+- Rejects duplicate or invalid draft selections in the engine.
+- Assigns each roster with position-aware matching and reassignment, so eligible players fill the most specific open slot first. Any player beyond the configured slots appears under **Overflow** rather than disappearing.
+- Shows the full available pool through 50-player pages, including an honest filtered result count.
+- Provides search, position filters, rank/ADP/last-season sorting, a live draft board, next-pick distance, and undo for the most recent user decision.
+- Saves a standalone browser session automatically using `localStorage`, including the draft setup, pick log, random state, and data version. Use **Clear saved draft** or **Restart** to begin a fresh session.
 
-**Easiest:** open `index.html` directly in any browser (double-click it).
-Everything runs locally in the page.
+## Files
 
-**Or host it free with GitHub Pages:**
+- `index.html` — UI, player pool, and draft flow.
+- `draft-core.js` — dependency-free validation, roster matching, seeded random source, and CPU selection. It is also usable from Node for tests.
+- `player-data.js` — ADP and prior-season rank data merged into the player pool on load.
+- `test-draft-core.js` — focused automated checks for duplicate-pick rejection, roster reassignment, reproducible randomness, ADP-led CPU choices, and an empty player pool.
 
-1. Push this folder to a GitHub repo (see below).
-2. On GitHub: **Settings → Pages → Deploy from a branch → main → /** (root).
-3. Your draft tool is live at `https://<your-username>.github.io/<repo-name>/`.
+## Run it
 
-## Push to GitHub
+Open `index.html` directly, or serve this folder with any static server. Draft state is stored only in the browser that created it.
+
+Run the logic checks with:
 
 ```bash
-cd mock-draft-site
-gh auth login            # one-time: links your GitHub account
-gh repo create fantasy-mock-draft --public --source=. --push
+node test-draft-core.js
 ```
 
-Or create an empty repo on github.com and run:
+## Data notes
+
+`player-data.js` contains the data provenance and generation date. The app validates saved state against that date, so an old saved draft is not silently applied to a newly refreshed player data set.
+
+The category-scarcity panel is a count of manually tagged difference-makers, not a category projection model or a nine-category team evaluation.
+
+## Data health audit
+
+The setup and draft screens include a **Data health** disclosure with coverage counts and limitations. Category counts explicitly describe the top built-in ranks being counted; they are manual strength tags and cannot measure shooting-volume impact, weaknesses, or team balance.
 
 ```bash
-git remote add origin https://github.com/<you>/<repo>.git
-git branch -M main
-git push -u origin main
+node audit-data.js
+node audit-data.js --json
+node test-data-health.js
+node test-draft-simulation.js
 ```
 
-## What's inside
+The dependency-free audit checks duplicate player names (ignoring case/outer whitespace), positions, player/data record coverage, invalid numeric values, missing ADP/prior-season ranks, missing or invalid category tags, placeholder teams, and built-in rank/ADP gaps of at least 40 picks. `--json` includes every flagged name and rank gap. Malformed values, duplicate players, and unmatched data records produce a nonzero exit code; missing values and rank disagreements remain reported limitations because they can be legitimate.
 
-- `index.html` — the whole app (draft engine, player pool, UI).
-- `player-data.js` — real-world data merged into the player pool at load:
-  `var PDATA = { "Player Name": { adp: <2026-27 ADP>, last: <2025-26 final rank> }, ... }`.
+Initial audit: **237 players; 82 missing ADP; 29 missing prior-season ranks; 30 without strength tags; 8 placeholder teams**. All bundled player names match data records. These checks establish internal consistency only: they do not prove source accuracy, current team/position eligibility, or completeness against the NBA player universe. The existing bundled values have not been refreshed or independently reverified by this change.
 
-### Data sources
-
-- **Last season's rank finish** — Basketball Monster's final 2025-26 season
-  rankings, cross-checked against Hashtag Basketball.
-- **ADP** — Yahoo 2026-27 preseason ADP when published; FantasyPros consensus
-  ADP as the fallback until then.
-
-To refresh the data, replace `player-data.js` with a new `PDATA` object in the
-same shape. Player names must match the `PLAYERS` array in `index.html`
-character-for-character (including `Jr.`, `III`, apostrophes).
-
-## Draft settings
-
-- 12 teams, snake draft, you pick your draft slot (1–12).
-- 10–15 rounds (default 13).
-- Yahoo default roster: PG, SG, G, SF, PF, F, C, C, Util, Util, BN, BN, BN.
-- CPU teams draft from the built-in rankings with randomness and positional need.
-- Sort the available list by built-in rank, ADP, or last season's finish.
-- Category-scarcity panel (PTS/REB/AST/STL/BLK/3PM/FG%/FT%/TO) counts remaining
-  difference-makers per category so you can see what's drying up.
-
-## Notes
-
-- Rankings and category tags are preseason estimates, not a projection model.
-- Rookies with no 2025-26 season show `—` for last season's finish.
+- `data-health.js` — shared browser/Node audit logic.
+- `audit-data.js` — reproducible audit of the actual bundled player, category, and ADP data.
+- `test-data-health.js` — failure-case checks and bundled record coverage gate.

@@ -1,0 +1,885 @@
+From c0317fa125ba3c06f625f50115a55f1b8fe4552f Mon Sep 17 00:00:00 2001
+From: Codex <codex@openai.com>
+Date: Sat, 12 Sep 2026 02:34:14 -0400
+Subject: [PATCH 1/4] Improve mock draft engine reliability
+
+---
+ README.md                |  71 +++++------------
+ draft-core.js            |  62 +++++++++++++++
+ index.html               | 162 ++++++++++++++++++++-------------------
+ test-draft-core.js       |  31 ++++++++
+ test-draft-simulation.js |  17 ++++
+ 5 files changed, 215 insertions(+), 128 deletions(-)
+ create mode 100644 draft-core.js
+ create mode 100644 test-draft-core.js
+ create mode 100644 test-draft-simulation.js
+
+diff --git a/README.md b/README.md
+index e0454e9..45bbe2f 100644
+--- a/README.md
++++ b/README.md
+@@ -1,65 +1,36 @@
+ # Fantasy Basketball Mock Draft Simulator
+ 
+-A single-page mock draft trainer for Yahoo-style fantasy basketball leagues.
+-No build step, no dependencies, no server — just open it in a browser.
++A static, single-page mock draft trainer for Yahoo-style fantasy basketball. Open `index.html` in a browser; it has no build step, server, or external dependency.
+ 
+-2026 Season
++## What it does
+ 
+-## Use it
++- Runs a 12-team snake draft with 10–15 rounds and a selectable draft position.
++- Uses the bundled Yahoo ADP as the CPU market signal, falling back to the app’s built-in rank when an ADP is missing. Small seeded variation keeps drafts from being identical while making a saved draft replayable.
++- Rejects duplicate or invalid draft selections in the engine.
++- Assigns each roster with position-aware matching and reassignment, so eligible players fill the most specific open slot first. Any player beyond the configured slots appears under **Overflow** rather than disappearing.
++- Shows the full available pool through 50-player pages, including an honest filtered result count.
++- Provides search, position filters, rank/ADP/last-season sorting, a live draft board, next-pick distance, and undo for the most recent user decision.
++- Saves a standalone browser session automatically using `localStorage`, including the draft setup, pick log, random state, and data version. Use **Clear saved draft** or **Restart** to begin a fresh session.
+ 
+-**Easiest:** open `index.html` directly in any browser (double-click it).
+-Everything runs locally in the page.
++## Files
+ 
+-**Or host it free with GitHub Pages:**
++- `index.html` — UI, player pool, and draft flow.
++- `draft-core.js` — dependency-free validation, roster matching, seeded random source, and CPU selection. It is also usable from Node for tests.
++- `player-data.js` — ADP and prior-season rank data merged into the player pool on load.
++- `test-draft-core.js` — focused automated checks for duplicate-pick rejection, roster reassignment, reproducible randomness, ADP-led CPU choices, and an empty player pool.
+ 
+-1. Push this folder to a GitHub repo (see below).
+-2. On GitHub: **Settings → Pages → Deploy from a branch → main → /** (root).
+-3. Your draft tool is live at `https://<your-username>.github.io/<repo-name>/`.
++## Run it
+ 
+-## Push to GitHub
++Open `index.html` directly, or serve this folder with any static server. Draft state is stored only in the browser that created it.
+ 
+-```bash
+-cd mock-draft-site
+-gh auth login            # one-time: links your GitHub account
+-gh repo create fantasy-mock-draft --public --source=. --push
+-```
+-
+-Or create an empty repo on github.com and run:
++Run the logic checks with:
+ 
+ ```bash
+-git remote add origin https://github.com/<you>/<repo>.git
+-git branch -M main
+-git push -u origin main
++node test-draft-core.js
+ ```
+ 
+-## What's inside
+-
+-- `index.html` — the whole app (draft engine, player pool, UI).
+-- `player-data.js` — real-world data merged into the player pool at load:
+-  `var PDATA = { "Player Name": { adp: <2026-27 ADP>, last: <2025-26 final rank> }, ... }`.
+-
+-### Data sources
+-
+-- **Last season's rank finish** — Basketball Monster's final 2025-26 season
+-  rankings, cross-checked against Hashtag Basketball.
+-- **ADP** — Yahoo 2026-27 preseason ADP when published; FantasyPros consensus
+-  ADP as the fallback until then.
+-
+-To refresh the data, replace `player-data.js` with a new `PDATA` object in the
+-same shape. Player names must match the `PLAYERS` array in `index.html`
+-character-for-character (including `Jr.`, `III`, apostrophes).
+-
+-## Draft settings
+-
+-- 12 teams, snake draft, you pick your draft slot (1–12).
+-- 10–15 rounds (default 13).
+-- Yahoo default roster: PG, SG, G, SF, PF, F, C, C, Util, Util, BN, BN, BN.
+-- CPU teams draft from the built-in rankings with randomness and positional need.
+-- Sort the available list by built-in rank, ADP, or last season's finish.
+-- Category-scarcity panel (PTS/REB/AST/STL/BLK/3PM/FG%/FT%/TO) counts remaining
+-  difference-makers per category so you can see what's drying up.
++## Data notes
+ 
+-## Notes
++`player-data.js` contains the data provenance and generation date. The app validates saved state against that date, so an old saved draft is not silently applied to a newly refreshed player data set.
+ 
+-- Rankings and category tags are preseason estimates, not a projection model.
+-- Rookies with no 2025-26 season show `—` for last season's finish.
++The category-scarcity panel is a count of manually tagged difference-makers, not a category projection model or a nine-category team evaluation.
+diff --git a/draft-core.js b/draft-core.js
+new file mode 100644
+index 0000000..02756fa
+--- /dev/null
++++ b/draft-core.js
+@@ -0,0 +1,62 @@
++/* Draft engine shared by the browser app and Node tests. */
++(function(root, factory){
++  var api=factory();
++  if(typeof module!=="undefined"&&module.exports)module.exports=api;
++  root.DraftCore=api;
++})(typeof globalThis!=="undefined"?globalThis:this,function(){
++  "use strict";
++  function teamForPick(index, teams){var round=Math.floor(index/teams), within=index%teams;return round%2===0?within:teams-1-within;}
++  function validPlayerIndex(players, log, index){return Number.isInteger(index)&&index>=0&&index<players.length&&log.indexOf(index)<0;}
++  function availableIndexes(players, log){var used={};log.forEach(function(i){used[i]=true;});return players.map(function(_,i){return i;}).filter(function(i){return !used[i];});}
++  function slotOK(slot, positions){
++    if(slot==="BN"||slot==="Util")return true;
++    if(slot==="G")return positions.indexOf("PG")>=0||positions.indexOf("SG")>=0;
++    if(slot==="F")return positions.indexOf("SF")>=0||positions.indexOf("PF")>=0;
++    return positions.indexOf(slot)>=0;
++  }
++  function slotWeight(slot){return slot==="BN"?4:slot==="Util"?3:slot==="G"||slot==="F"?2:1;}
++  /* Augmenting-path matching assigns every eligible player once, and reassigns
++     earlier players when a later, less-flexible player needs their slot. */
++  function assignRoster(playerEntries, slots){
++    var filled=slots.map(function(slot){return {slot:slot,player:null};});
++    var ordered=playerEntries.slice().sort(function(a,b){
++      function choices(entry){return slots.filter(function(slot){return slotOK(slot,entry.player.p);}).length;}
++      return choices(a)-choices(b);
++    });
++    function tryPlace(entry, seen){
++      var candidates=[];
++      for(var i=0;i<filled.length;i++)if(slotOK(filled[i].slot,entry.player.p))candidates.push(i);
++      candidates.sort(function(a,b){return slotWeight(filled[a].slot)-slotWeight(filled[b].slot);});
++      for(var j=0;j<candidates.length;j++){
++        var si=candidates[j];if(seen[si])continue;seen[si]=true;
++        if(!filled[si].player || tryPlace(filled[si].player,seen)){filled[si].player=entry;return true;}
++      }
++      return false;
++    }
++    var overflow=[];
++    ordered.forEach(function(entry){if(!tryPlace(entry,{}))overflow.push(entry);});
++    return {slots:filled,overflow:overflow};
++  }
++  function slotsForRounds(rounds, baseSlots){var slots=baseSlots.slice();while(slots.length<rounds)slots.push("BN");return slots;}
++  function teamEntries(players, log, team, teams){var out=[];log.forEach(function(pi,index){if(teamForPick(index,teams)===team)out.push({player:players[pi],pi:pi,index:index});});return out;}
++  function positionalNeed(entries, candidate, slots){
++    var before=assignRoster(entries,slots).slots.filter(function(x){return x.player&&x.slot!=="BN"&&x.slot!=="Util";}).length;
++    var after=assignRoster(entries.concat([{player:candidate,pi:-1,index:-1}]),slots).slots.filter(function(x){return x.player&&x.slot!=="BN"&&x.slot!=="Util";}).length;
++    return after-before;
++  }
++  function cpuPickIndex(opts){
++    var players=opts.players,log=opts.log,teams=opts.teams,team=teamForPick(log.length,teams),slots=opts.slots;
++    var entries=teamEntries(players,log,team,teams), candidates=availableIndexes(players,log),random=opts.random||Math.random;
++    var best=-1,bestScore=Infinity;
++    candidates.forEach(function(i){
++      var player=players[i];
++      var market=player.adp==null?(player.r||i+1)+45:player.adp;
++      var need=positionalNeed(entries,player,slots);
++      var score=market+(random()*10)-need*3;
++      if(score<bestScore){bestScore=score;best=i;}
++    });
++    return best;
++  }
++  function seededRandom(seed){var state=(seed>>>0)||1;return {next:function(){state^=state<<13;state^=state>>>17;state^=state<<5;return ((state>>>0)/4294967296);},getState:function(){return state>>>0;}};}
++  return {teamForPick:teamForPick,validPlayerIndex:validPlayerIndex,availableIndexes:availableIndexes,slotOK:slotOK,assignRoster:assignRoster,slotsForRounds:slotsForRounds,teamEntries:teamEntries,positionalNeed:positionalNeed,cpuPickIndex:cpuPickIndex,seededRandom:seededRandom};
++});
+diff --git a/index.html b/index.html
+index 8dd97b5..3becfb6 100644
+--- a/index.html
++++ b/index.html
+@@ -1,7 +1,7 @@
+ <style>
+ /*STANDALONE-THEME-START*/
+ :root{--hatch-widget-font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;--hatch-widget-text:#ececf1;--hatch-widget-muted:#9a9aad;--hatch-widget-surface:#17171d;--hatch-widget-surface-muted:#22222c;--hatch-widget-border:#2e2e3a;--hatch-widget-accent:#5b6fae;--hatch-widget-on-accent:#ffffff}
+-body{background:#101014;margin:0}
++html{background:#101014}body{background:#101014;margin:0;min-width:320px}
+ /*STANDALONE-THEME-END*/
+ #md *{box-sizing:border-box}
+ #md{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:var(--hatch-widget-text);max-width:100%;padding:4px}
+@@ -14,6 +14,9 @@ body{background:#101014;margin:0}
+ #md .bigbtn{background:var(--hatch-widget-accent);color:var(--hatch-widget-on-accent);border:none;border-radius:10px;padding:10px 22px;font-size:15px;font-weight:700;cursor:pointer;margin-top:10px}
+ #md .ghostbtn{background:var(--hatch-widget-surface);color:var(--hatch-widget-text);border:1px solid var(--hatch-widget-border);border-radius:10px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer}
+ #md .ghostbtn:disabled{opacity:.4;cursor:default}
++#md button:focus-visible,#md input:focus-visible,#md select:focus-visible{outline:3px solid #aebfff;outline-offset:2px}
++#md .listmeta{display:flex;justify-content:space-between;gap:8px;align-items:center;margin:5px 0}
++#md .pager{display:flex;align-items:center;gap:7px;margin:7px 0;justify-content:center}
+ #md select{background:var(--hatch-widget-surface);color:var(--hatch-widget-text);border:1px solid var(--hatch-widget-border);border-radius:8px;padding:6px 10px;font-size:14px}
+ #md .turnbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--hatch-widget-surface);border:1px solid var(--hatch-widget-border);border-radius:12px;padding:10px 12px;margin:8px 0}
+ #md .turnbar .you{font-weight:800;color:var(--hatch-widget-accent)}
+@@ -63,6 +66,7 @@ body{background:#101014;margin:0}
+ </style>
+ <div id="md"><div id="mdapp"></div></div>
+ <script src="player-data.js"></script>
++<script src="draft-core.js"></script>
+ <script>
+ (function(){
+ "use strict";
+@@ -381,58 +385,65 @@ function renderScarcity(){
+ }
+ 
+ var TEAMS=12;
++var CORE=window.DraftCore;
++var BASE_SLOTS=["PG","SG","G","SF","PF","F","C","C","Util","Util","BN","BN","BN"];
++var DATA_VERSION="2026-09-11";
++var STORAGE_KEY="fantasy-basketball-mock-draft.v2";
+ var HW=(typeof window!=="undefined"&&window.hatchWidget)?window.hatchWidget:null;
+-var DEFAULTS={phase:"setup",draftPos:6,rounds:13,log:[],q:"",f:"All",view:"team",sort:"rank"};
+-var state=HW?HW.getState(DEFAULTS):Object.assign({},DEFAULTS);
+-function save(){if(HW){try{HW.setState(state);}catch(e){}}}
+-function setState(patch){state=Object.assign({},state,patch);save();render();}
+-window.addEventListener("hatch-widget-state",function(e){state=e.detail.state;render();});
++var DEFAULTS={phase:"setup",draftPos:6,rounds:13,log:[],q:"",f:"All",view:"team",sort:"rank",page:0,seed:123456789,rngState:123456789,userTurns:[]};
++function freshState(){var seed=(Date.now()>>>0)||1;return Object.assign({},DEFAULTS,{seed:seed,rngState:seed,log:[],userTurns:[]});}
++function cleanState(raw){
++  var out=Object.assign({},DEFAULTS,raw||{}), used={};
++  out.draftPos=Math.max(1,Math.min(TEAMS,parseInt(out.draftPos,10)||DEFAULTS.draftPos));
++  out.rounds=Math.max(10,Math.min(15,parseInt(out.rounds,10)||DEFAULTS.rounds));
++  out.log=Array.isArray(out.log)?out.log.filter(function(pi){if(!CORE.validPlayerIndex(PLAYERS,[],pi)||used[pi])return false;used[pi]=true;return true;}).slice(0,TEAMS*out.rounds):[];
++  out.phase=out.log.length>=TEAMS*out.rounds?"done":(out.phase==="draft"?"draft":"setup");
++  out.f=["All","PG","SG","SF","PF","C"].indexOf(out.f)>=0?out.f:"All";
++  out.sort=["rank","adp","last"].indexOf(out.sort)>=0?out.sort:"rank";
++  out.page=Math.max(0,parseInt(out.page,10)||0);
++  out.seed=(parseInt(out.seed,10)>>>0)||1;out.rngState=(parseInt(out.rngState,10)>>>0)||out.seed;
++  out.userTurns=Array.isArray(out.userTurns)?out.userTurns.filter(function(x){return x&&Array.isArray(x.log);}).slice(-20):[];
++  return out;
++}
++function loadStandalone(){try{var saved=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");return saved&&saved.schema===2&&saved.dataVersion===DATA_VERSION?cleanState(saved.state):freshState();}catch(e){return freshState();}}
++var state=HW?cleanState(HW.getState(DEFAULTS)):loadStandalone();
++function save(){
++  if(HW){try{HW.setState(state);}catch(e){}}
++  else{try{localStorage.setItem(STORAGE_KEY,JSON.stringify({schema:2,dataVersion:DATA_VERSION,state:state}));}catch(e){}}
++}
++function clearSaved(){if(!HW){try{localStorage.removeItem(STORAGE_KEY);}catch(e){}}}
++function setState(patch){state=cleanState(Object.assign({},state,patch));save();render();}
++window.addEventListener("hatch-widget-state",function(e){state=cleanState(e.detail.state);render();});
+ function el(id){return document.getElementById(id);}
+-function teamForPick(idx){var round=Math.floor(idx/TEAMS),w=idx%TEAMS;return round%2===0?w:TEAMS-1-w;}
++function teamForPick(idx){return CORE.teamForPick(idx,TEAMS);}
+ function teamName(t){return t===state.draftPos-1?"You":"CPU "+(t+1);}
+ function totalPicks(){return TEAMS*state.rounds;}
+ function userTeam(){return state.draftPos-1;}
+ function isUserTurn(){return state.log.length<totalPicks()&&teamForPick(state.log.length)===userTeam();}
+-function rosterCounts(){
+-  var c=[];for(var t=0;t<TEAMS;t++)c.push({PG:0,SG:0,SF:0,PF:0,C:0});
+-  state.log.forEach(function(pi,idx){var team=teamForPick(idx);var pl=PLAYERS[pi];
+-    var bestPos=pl.p[0],bestN=99;pl.p.forEach(function(p){var n=c[team][p]||0;if(n<bestN){bestN=n;bestPos=p;}});
+-    c[team][bestPos]++;});
+-  return c;
+-}
+-function cpuPickIdx(){
+-  var idx=state.log.length,team=teamForPick(idx),round=Math.floor(idx/TEAMS)+1;
+-  var taken={},i;for(i=0;i<state.log.length;i++)taken[state.log[i]]=1;
+-  var counts=rosterCounts()[team];
+-  var best=-1,bestScore=1e9;
+-  for(i=0;i<PLAYERS.length;i++){
+-    if(taken[i])continue;var pl=PLAYERS[i];
+-    var score=pl.r+Math.random()*14;
+-    if(round>2){
+-      var need=0,over=0;
+-      pl.p.forEach(function(p){var n=counts[p]||0;if(n<2)need++;if(n>=3)over++;});
+-      score-=need*18;if(over===pl.p.length)score+=40;
+-    }
+-    if(score<bestScore){bestScore=score;best=i;}
++function draftSlots(){return CORE.slotsForRounds(state.rounds,BASE_SLOTS);}
++function cpuPick(log,rng){return CORE.cpuPickIndex({players:PLAYERS,log:log,teams:TEAMS,slots:draftSlots(),random:function(){return rng.next();}});}
++function simulateToUser(log,rngState){
++  var next=log.slice(),rng=CORE.seededRandom(rngState);
++  while(next.length<totalPicks()&&teamForPick(next.length)!==userTeam()){
++    var pi=cpuPick(next,rng);if(!CORE.validPlayerIndex(PLAYERS,next,pi))break;next.push(pi);
+   }
+-  return best;
++  return {log:next,rngState:rng.getState()};
+ }
+ function advance(){
+-  var log=state.log.slice();
+-  while(log.length<totalPicks()&&teamForPick(log.length)!==userTeam()){
+-    var saved=state.log;state.log=log;var p=cpuPickIdx();state.log=saved;log.push(p);
+-  }
+-  var phase=log.length>=totalPicks()?"done":"draft";
+-  setState({log:log,phase:phase});
++  var next=simulateToUser(state.log,state.rngState);
++  setState({log:next.log,rngState:next.rngState,phase:next.log.length>=totalPicks()?"done":"draft"});
+ }
+ function userDraft(pi){
+-  if(!isUserTurn())return;
+-  var log=state.log.slice();log.push(pi);
+-  var saved=state.log;state.log=log;
+-  while(log.length<totalPicks()&&teamForPick(log.length)!==userTeam()){log.push(cpuPickIdx());}
+-  state.log=saved;
+-  setState({log:log,phase:log.length>=totalPicks()?"done":"draft"});
++  if(!isUserTurn()||!CORE.validPlayerIndex(PLAYERS,state.log,pi))return;
++  var checkpoint={log:state.log.slice(),rngState:state.rngState};
++  var next=simulateToUser(state.log.concat([pi]),state.rngState);
++  setState({log:next.log,rngState:next.rngState,userTurns:state.userTurns.concat([checkpoint]).slice(-20),phase:next.log.length>=totalPicks()?"done":"draft",page:0});
+ }
++function undoUserPick(){
++  var history=state.userTurns.slice(),checkpoint=history.pop();if(!checkpoint)return;
++  setState({log:checkpoint.log,rngState:checkpoint.rngState,userTurns:history,phase:"draft",page:0});
++}
++function restartDraft(){clearSaved();state=freshState();save();render();}
+ function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+ function posBadges(p){return p.map(function(x){return x;}).join("/");}
+ function pickLabel(idx){var r=Math.floor(idx/TEAMS)+1;var w=idx%TEAMS+1;return "R"+r+" P"+w;}
+@@ -444,13 +455,14 @@ function renderSetup(){
+   for(var i=1;i<=12;i++)h+='<button class="posbtn'+(state.draftPos===i?' sel':'')+'" data-pos="'+i+'">'+i+'</button>';
+   h+='</div><h3>Rounds</h3><select id="mdrounds">';
+   [10,11,12,13,14,15].forEach(function(r){h+='<option value="'+r+'"'+(state.rounds===r?' selected':'')+'>'+r+' rounds</option>';});
+-  h+='</select><br><button class="bigbtn" id="mdstart">Start Mock Draft</button>';
++  h+='</select><br><button class="bigbtn" id="mdstart">Start Mock Draft</button><button class="ghostbtn" id="mdclear" style="margin-left:8px">Clear saved draft</button><div class="muted" style="margin-top:8px">Drafts save automatically in this browser. Data version: '+DATA_VERSION+'.</div>';
+   el("mdapp").innerHTML=h;
+   el("mdapp").querySelectorAll(".posbtn").forEach(function(b){b.addEventListener("click",function(){setState({draftPos:parseInt(b.getAttribute("data-pos"),10)});});});
+   el("mdrounds").addEventListener("change",function(e){setState({rounds:parseInt(e.target.value,10)});});
+   el("mdstart").addEventListener("click",function(){
+-    var s=Object.assign({},state,{phase:"draft",log:[]});state=s;save();advance();
++    var chosenPos=state.draftPos,chosenRounds=parseInt(el("mdrounds").value,10);state=freshState();state.draftPos=chosenPos;state.rounds=chosenRounds;state.phase="draft";save();advance();
+   });
++  el("mdclear").addEventListener("click",function(){restartDraft();});
+ }
+ function nextUserPickIdx(){
+   var tot=totalPicks();
+@@ -466,6 +478,7 @@ function renderDraft(){
+   var nxt=nextUserPickIdx();
+   if(nxt>=0&&!isUserTurn())h+='<span class="nextpick">Your next pick: <b>#'+(nxt+1)+'</b> ('+(nxt-idx)+' picks away)</span>';
+   h+='<span style="flex:1"></span>';
++  if(state.userTurns.length)h+='<button class="ghostbtn" id="mdundo">Undo my last pick</button>';
+   if(state.phase!=="done"&&!isUserTurn())h+='<button class="ghostbtn" id="mdsim">Sim to my pick</button>';
+   h+='<button class="ghostbtn" id="mdnew">Restart</button></div>';
+   h+=renderScarcity();
+@@ -481,12 +494,13 @@ function renderDraft(){
+   h+='<div class="side" id="mdside"></div></div>';
+   el("mdapp").innerHTML=h;
+   el("mdapp").querySelectorAll("[data-view]").forEach(function(b){b.addEventListener("click",function(){setState({view:b.getAttribute("data-view")});});});
+-  el("mdapp").querySelectorAll("[data-f]").forEach(function(b){b.addEventListener("click",function(){setState({f:b.getAttribute("data-f")});});});
+-  el("mdapp").querySelectorAll("[data-sort]").forEach(function(b){b.addEventListener("click",function(){setState({sort:b.getAttribute("data-sort")});});});
+-  var q=el("mdq");q.addEventListener("input",function(){state.q=q.value;save();renderList();});
++  el("mdapp").querySelectorAll("[data-f]").forEach(function(b){b.addEventListener("click",function(){setState({f:b.getAttribute("data-f"),page:0});});});
++  el("mdapp").querySelectorAll("[data-sort]").forEach(function(b){b.addEventListener("click",function(){setState({sort:b.getAttribute("data-sort"),page:0});});});
++  var q=el("mdq");q.addEventListener("input",function(){state.q=q.value;state.page=0;save();renderList();});
+   q.addEventListener("keydown",function(e){e.stopPropagation();});
+   var sim=el("mdsim");if(sim)sim.addEventListener("click",advance);
+-  el("mdnew").addEventListener("click",function(){setState({phase:"setup",log:[],q:"",f:"All",view:"team"});});
++  var undo=el("mdundo");if(undo)undo.addEventListener("click",undoUserPick);
++  el("mdnew").addEventListener("click",restartDraft);
+   renderList();renderSide();
+ }
+ function renderList(){
+@@ -503,40 +517,27 @@ function renderList(){
+   if(srt==="adp")cands.sort(function(a,b){return skey(PLAYERS[a].adp)-skey(PLAYERS[b].adp);});
+   else if(srt==="last")cands.sort(function(a,b){return skey(PLAYERS[a].last)-skey(PLAYERS[b].last);});
+   function disp(x){return x==null?'—':x;}
+-  var rows=[];
+-  for(var k=0;k<cands.length&&k<100;k++){
++  var pageSize=50,pageCount=Math.max(1,Math.ceil(cands.length/pageSize));
++  if(state.page>=pageCount)state.page=pageCount-1;
++  var from=state.page*pageSize,to=Math.min(cands.length,from+pageSize),rows=[];
++  rows.push('<div class="listmeta"><span class="muted">'+cands.length+' available · showing '+(cands.length?from+1:0)+'–'+to+'</span><span class="muted">Page '+(state.page+1)+'/'+pageCount+'</span></div>');
++  for(var k=from;k<to;k++){
+     i=cands[k];var pl2=PLAYERS[i];
+     var sub='<span>ADP '+disp(pl2.adp)+'</span><span>Last '+disp(pl2.last)+'</span><span>'+posBadges(pl2.p)+'</span>';
+     if(pl2.c.length)sub+='<span>'+pl2.c.slice(0,3).join(" · ")+'</span>';
+     rows.push('<div class="prow"><div class="l1"><span class="prank">'+pl2.r+'</span><span class="pname">'+esc(pl2.n)+' <span class="teamtag">'+esc(pl2.t)+'</span></span><button class="draftbtn" data-pi="'+i+'"'+(ut?'':' disabled')+'>Draft</button></div><div class="l2">'+sub+'</div></div>');
+   }
+-  el("mdplist").innerHTML=rows.join("")||'<div class="prow"><div class="l1"><span class="muted">No players match.</span></div></div>';
++  if(!cands.length)rows.push('<div class="prow"><div class="l1"><span class="muted">No players match.</span></div></div>');
++  el("mdplist").innerHTML=rows.join("");
++  var pager='<div class="pager"><button class="ghostbtn" id="mdprev" '+(state.page?"":"disabled")+'>Previous</button><button class="ghostbtn" id="mdnext" '+(state.page+1<pageCount?"":"disabled")+'>Next</button></div>';
++  el("mdplist").insertAdjacentHTML("afterend",pager);
+   el("mdplist").querySelectorAll(".draftbtn").forEach(function(b){b.addEventListener("click",function(){userDraft(parseInt(b.getAttribute("data-pi"),10));});});
+-}
+-var BASE_SLOTS=["PG","SG","G","SF","PF","F","C","C","Util","Util","BN","BN","BN"];
+-function slotOK(slot,pos){
+-  if(slot==="BN"||slot==="Util")return true;
+-  if(slot==="G")return pos.indexOf("PG")>=0||pos.indexOf("SG")>=0;
+-  if(slot==="F")return pos.indexOf("SF")>=0||pos.indexOf("PF")>=0;
+-  return pos.indexOf(slot)>=0;
++  el("mdprev").addEventListener("click",function(){state.page=Math.max(0,state.page-1);save();renderList();});
++  el("mdnext").addEventListener("click",function(){state.page=Math.min(pageCount-1,state.page+1);save();renderList();});
+ }
+ function myRoster(){
+-  var slots=BASE_SLOTS.slice();
+-  while(slots.length<state.rounds)slots.push("BN");
+-  var filled=slots.map(function(s){return {slot:s,pl:null};});
+-  var prio=["PG","SG","G","SF","PF","F","C","C","Util","Util","BN","BN","BN","BN","BN","BN"];
+-  state.log.forEach(function(pi,idx){
+-    if(teamForPick(idx)!==userTeam())return;
+-    var pl=PLAYERS[pi];
+-    for(var k=0;k<prio.length;k++){
+-      var done=false;
+-      for(var j=0;j<filled.length;j++){
+-        if(!filled[j].pl&&filled[j].slot===prio[k]&&slotOK(prio[k],pl.p)){filled[j].pl=pl;filled[j].pick=idx;done=true;break;}
+-      }
+-      if(done)break;
+-    }
+-  });
+-  return filled;
++  var entries=CORE.teamEntries(PLAYERS,state.log,userTeam(),TEAMS);
++  return CORE.assignRoster(entries,draftSlots());
+ }
+ function renderSide(){
+   var s=el("mdside");if(!s)return;  if(state.view==="board"){
+@@ -559,9 +560,10 @@ function renderSide(){
+     var mine=[];state.log.forEach(function(pi,idx){if(teamForPick(idx)===userTeam())mine.push({pi:pi,idx:idx});});
+     var ros=myRoster();
+     var h2='<h3>Roster</h3><div class="rlist">';
+-    ros.forEach(function(e){
+-      h2+='<div class="rrow"><span class="rpick">'+e.slot+'</span><span class="pname">'+(e.pl?esc(e.pl.n)+' <span class="teamtag">'+esc(e.pl.t)+'</span>':'<span class="muted">empty</span>')+'</span>'+(e.pl?'<span class="ppos">'+posBadges(e.pl.p)+'</span>':'')+'</div>';});
++    ros.slots.forEach(function(e){
++      h2+='<div class="rrow"><span class="rpick">'+e.slot+'</span><span class="pname">'+(e.player?esc(e.player.player.n)+' <span class="teamtag">'+esc(e.player.player.t)+'</span>':'<span class="muted">empty</span>')+'</span>'+(e.player?'<span class="ppos">'+posBadges(e.player.player.p)+'</span>':'')+'</div>';});
+     h2+='</div>';
++    if(ros.overflow.length){h2+='<h3>Overflow</h3><div class="rlist">';ros.overflow.forEach(function(e){h2+='<div class="rrow"><span class="pname">'+esc(e.player.n)+'</span></div>';});h2+='</div>';}
+     h2+='<h3>My team ('+mine.length+'/'+state.rounds+')</h3><div class="rlist">';
+     if(!mine.length)h2+='<div class="rrow"><span class="muted">No picks yet.</span></div>';
+     mine.forEach(function(m){var pl=PLAYERS[m.pi];
+@@ -572,9 +574,13 @@ function renderSide(){
+ function renderDone(){
+   var h='<h2>Draft complete</h2><div class="muted">Final roster from pick #'+state.draftPos+' ('+state.rounds+' rounds, 12 teams)</div>';
+   h+='<button class="bigbtn" id="mdnew2">Run it back</button>';
+-  el("mdapp").innerHTML=h+'<div id="mdside"></div>';
+-  el("mdnew2").addEventListener("click",function(){setState({phase:"setup",log:[],q:"",f:"All",view:"team"});});
+-  state.view="team";renderSide();
++  if(state.userTurns.length)h+='<button class="ghostbtn" id="mdundo2" style="margin-left:8px">Undo my last pick</button>';
++  h+='<div class="tabs"><button class="fchip'+(state.view==='team'?' sel':'')+'" data-view="team">My team</button><button class="fchip'+(state.view==='board'?' sel':'')+'" data-view="board">Draft board</button></div><div id="mdside"></div>';
++  el("mdapp").innerHTML=h;
++  el("mdnew2").addEventListener("click",restartDraft);
++  var undo=el("mdundo2");if(undo)undo.addEventListener("click",undoUserPick);
++  el("mdapp").querySelectorAll("[data-view]").forEach(function(b){b.addEventListener("click",function(){setState({view:b.getAttribute("data-view")});});});
++  renderSide();
+ }
+ function render(){
+   if(state.phase==="setup")renderSetup();
+diff --git a/test-draft-core.js b/test-draft-core.js
+new file mode 100644
+index 0000000..a56995f
+--- /dev/null
++++ b/test-draft-core.js
+@@ -0,0 +1,31 @@
++const assert = require('node:assert/strict');
++const core = require('./draft-core');
++const players = [
++  {n:'Center only', p:['C'], r:40, adp:40},
++  {n:'Forward', p:['PF','SF'], r:41, adp:41},
++  {n:'Guard', p:['PG','SG'], r:42, adp:42},
++  {n:'Utility', p:['PG'], r:43, adp:43}
++];
++assert.equal(core.validPlayerIndex(players, [], 2), true);
++assert.equal(core.validPlayerIndex(players, [2], 2), false, 'taken player must be rejected');
++assert.equal(core.validPlayerIndex(players, [], -1), false, 'negative indexes must be rejected');
++const roster = core.assignRoster([
++  {player:players[1], pi:1}, {player:players[2], pi:2}, {player:players[0], pi:0}
++], ['PG','SF','PF','C','Util','BN']);
++assert.equal(roster.overflow.length, 0);
++assert.equal(roster.slots.filter(s=>s.player).length, 3, 'every drafted player appears once');
++assert.equal(roster.slots.find(s=>s.slot==='C').player.player.n, 'Center only', 'reassignment preserves scarce center slot');
++const rngA=core.seededRandom(123), rngB=core.seededRandom(123);
++assert.deepEqual([rngA.next(),rngA.next(),rngA.next()],[rngB.next(),rngB.next(),rngB.next()], 'seeded RNG replays');
++const market = [
++  {n:'Rank 1', p:['PG'], r:1, adp:90},
++  {n:'ADP 5', p:['SG'], r:90, adp:5},
++  {n:'ADP 6', p:['C'], r:91, adp:6}
++];
++const pick=core.cpuPickIndex({players:market,log:[],teams:2,slots:['PG','SG','C','BN'],random:()=>0});
++assert.equal(pick,1, 'CPU should use ADP market timing over built-in rank');
++let log=[]; const rng=core.seededRandom(42);
++for(let i=0;i<4;i++){const pi=core.cpuPickIndex({players:market,log,teams:2,slots:['PG','SG','C','BN'],random:()=>rng.next()});if(pi===-1)break;assert(core.validPlayerIndex(market,log,pi));log.push(pi);}
++assert.equal(new Set(log).size, 3, 'no duplicate cpu picks when pool exhausts');
++assert.equal(core.cpuPickIndex({players:market,log,teams:2,slots:['PG'],random:()=>0}), -1, 'empty pool has no valid CPU pick');
++console.log('draft-core tests passed');
+diff --git a/test-draft-simulation.js b/test-draft-simulation.js
+new file mode 100644
+index 0000000..d430f56
+--- /dev/null
++++ b/test-draft-simulation.js
+@@ -0,0 +1,17 @@
++const assert=require('node:assert/strict');
++const fs=require('node:fs');
++const vm=require('node:vm');
++const core=require('./draft-core');
++const dataContext={};vm.createContext(dataContext);vm.runInContext(fs.readFileSync('player-data.js','utf8'),dataContext);
++const html=fs.readFileSync('index.html','utf8');
++const snippet=html.match(/var PLAYERS=([\s\S]*?\n\];)\nPLAYERS\.forEach/)[1];
++const context={};vm.createContext(context);vm.runInContext('var PLAYERS='+snippet+'; this.PLAYERS=PLAYERS;',context);
++const players=context.PLAYERS.map((p,i)=>({n:p[0],p:p[1],t:p[2],r:i+1,adp:(dataContext.PDATA[p[0]]||{}).adp ?? null}));
++const slots=core.slotsForRounds(13,['PG','SG','G','SF','PF','F','C','C','Util','Util','BN','BN','BN']);
++function run(seed){const rng=core.seededRandom(seed), log=[];while(log.length<156){const pi=core.cpuPickIndex({players,log,teams:12,slots,random:()=>rng.next()});assert(core.validPlayerIndex(players,log,pi),'CPU must only select an available player');log.push(pi);}return log;}
++const logs=[1,2,3,4,5,6,7,8,9,10].map(run);
++logs.forEach(log=>assert.equal(new Set(log).size,log.length,'full draft cannot duplicate picks'));
++const curry=players.findIndex(p=>p.n==='Stephen Curry');
++const avg=logs.reduce((sum,log)=>sum+log.indexOf(curry)+1,0)/logs.length;
++assert(avg<35,`Curry ADP behavior regressed: average CPU pick ${avg}`);
++console.log(`simulation tests passed; Stephen Curry average CPU pick ${avg.toFixed(1)} across ${logs.length} seeded drafts`);
+-- 
+2.51.1
+
+
+From 240b65e7d8420199805c909fecfb8c979a0acbee Mon Sep 17 00:00:00 2001
+From: Codex <codex@openai.com>
+Date: Sat, 12 Sep 2026 02:35:23 -0400
+Subject: [PATCH 2/4] Fix available player pagination rerender
+
+---
+ index.html | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/index.html b/index.html
+index 3becfb6..2f21897 100644
+--- a/index.html
++++ b/index.html
+@@ -490,7 +490,7 @@ function renderDraft(){
+   ["All","PG","SG","SF","PF","C"].forEach(function(f){h+='<button class="fchip'+(state.f===f?' sel':'')+'" data-f="'+f+'">'+f+'</button>';});
+   h+='</div><div class="filters"><span class="muted">Sort:</span>';
+   [["rank","Rank"],["adp","ADP"],["last","Last season"]].forEach(function(s){h+='<button class="fchip'+((state.sort||"rank")===s[0]?' sel':'')+'" data-sort="'+s[0]+'">'+s[1]+'</button>';});
+-  h+='</div><div class="plist" id="mdplist"></div></div>';
++  h+='</div><div class="plist" id="mdplist"></div><div id="mdpager"></div></div>';
+   h+='<div class="side" id="mdside"></div></div>';
+   el("mdapp").innerHTML=h;
+   el("mdapp").querySelectorAll("[data-view]").forEach(function(b){b.addEventListener("click",function(){setState({view:b.getAttribute("data-view")});});});
+@@ -530,7 +530,7 @@ function renderList(){
+   if(!cands.length)rows.push('<div class="prow"><div class="l1"><span class="muted">No players match.</span></div></div>');
+   el("mdplist").innerHTML=rows.join("");
+   var pager='<div class="pager"><button class="ghostbtn" id="mdprev" '+(state.page?"":"disabled")+'>Previous</button><button class="ghostbtn" id="mdnext" '+(state.page+1<pageCount?"":"disabled")+'>Next</button></div>';
+-  el("mdplist").insertAdjacentHTML("afterend",pager);
++  el("mdpager").innerHTML=pager;
+   el("mdplist").querySelectorAll(".draftbtn").forEach(function(b){b.addEventListener("click",function(){userDraft(parseInt(b.getAttribute("data-pi"),10));});});
+   el("mdprev").addEventListener("click",function(){state.page=Math.max(0,state.page-1);save();renderList();});
+   el("mdnext").addEventListener("click",function(){state.page=Math.min(pageCount-1,state.page+1);save();renderList();});
+-- 
+2.51.1
+
+
+From 808d7182711a36d0a3137ae8678c575fc68fcbfa Mon Sep 17 00:00:00 2001
+From: Codex <codex@openai.com>
+Date: Sat, 12 Sep 2026 02:50:50 -0400
+Subject: [PATCH 3/4] Add reproducible player data health audit and coverage
+ disclosure
+
+---
+ README.md           | 19 +++++++++++++++++++
+ audit-data.js       | 31 +++++++++++++++++++++++++++++++
+ data-health.js      | 38 ++++++++++++++++++++++++++++++++++++++
+ index.html          | 17 +++++++++++++++--
+ test-data-health.js | 26 ++++++++++++++++++++++++++
+ 5 files changed, 129 insertions(+), 2 deletions(-)
+ create mode 100644 audit-data.js
+ create mode 100644 data-health.js
+ create mode 100644 test-data-health.js
+
+diff --git a/README.md b/README.md
+index 45bbe2f..48c93ca 100644
+--- a/README.md
++++ b/README.md
+@@ -34,3 +34,22 @@ node test-draft-core.js
+ `player-data.js` contains the data provenance and generation date. The app validates saved state against that date, so an old saved draft is not silently applied to a newly refreshed player data set.
+ 
+ The category-scarcity panel is a count of manually tagged difference-makers, not a category projection model or a nine-category team evaluation.
++
++## Data health audit
++
++The setup and draft screens include a **Data health** disclosure with coverage counts and limitations. Category counts explicitly describe the top built-in ranks being counted; they are manual strength tags and cannot measure shooting-volume impact, weaknesses, or team balance.
++
++```bash
++node audit-data.js
++node audit-data.js --json
++node test-data-health.js
++node test-draft-simulation.js
++```
++
++The dependency-free audit checks duplicate player names (ignoring case/outer whitespace), positions, player/data record coverage, invalid numeric values, missing ADP/prior-season ranks, missing or invalid category tags, placeholder teams, and built-in rank/ADP gaps of at least 40 picks. `--json` includes every flagged name and rank gap. Malformed values, duplicate players, and unmatched data records produce a nonzero exit code; missing values and rank disagreements remain reported limitations because they can be legitimate.
++
++Initial audit: **237 players; 82 missing ADP; 29 missing prior-season ranks; 30 without strength tags; 8 placeholder teams**. All bundled player names match data records. These checks establish internal consistency only: they do not prove source accuracy, current team/position eligibility, or completeness against the NBA player universe. The existing bundled values have not been refreshed or independently reverified by this change.
++
++- `data-health.js` — shared browser/Node audit logic.
++- `audit-data.js` — reproducible audit of the actual bundled player, category, and ADP data.
++- `test-data-health.js` — failure-case checks and bundled record coverage gate.
+diff --git a/audit-data.js b/audit-data.js
+new file mode 100644
+index 0000000..e3a6c84
+--- /dev/null
++++ b/audit-data.js
+@@ -0,0 +1,31 @@
++'use strict';
++const fs=require('node:fs');
++const path=require('node:path');
++const vm=require('node:vm');
++const health=require('./data-health');
++function loadBundledData(){
++  const html=fs.readFileSync(path.join(__dirname,'index.html'),'utf8');
++  const players=html.match(/var PLAYERS=([\s\S]*?\n\];)\nPLAYERS\.forEach/);
++  const tags=html.match(/var CATS=([\s\S]*?\n};)\nPLAYERS\.forEach/);
++  if(!players||!tags)throw new Error('Cannot locate player pool/category tags in index.html');
++  const context={};vm.createContext(context);
++  vm.runInContext('var PLAYERS='+players[1]+'\nvar CATS='+tags[1],context);
++  vm.runInContext(fs.readFileSync(path.join(__dirname,'player-data.js'),'utf8'),context);
++  return {players:context.PLAYERS,data:context.PDATA,tags:context.CATS};
++}
++if(require.main===module){
++  const {players,data,tags}=loadBundledData();
++  const report=health.audit(players,data,tags);
++  if(process.argv.includes('--json'))console.log(JSON.stringify(report,null,2));
++  else {
++    console.log('Bundled data audit — internal consistency only; does not verify source accuracy or NBA pool completeness.');
++    console.log('Players: '+report.players);
++    ['errors','missingData','orphanData','missingAdp','missingLast','untagged','placeholderTeams'].forEach(key=>{
++      console.log(key+': '+report[key].length+(report[key].length?'\n  '+report[key].join(', '):''));
++    });
++    console.log('Largest built-in rank / ADP gaps (40+ picks; review signals, not proven errors):');
++    report.rankDivergence.slice(0,15).forEach(p=>console.log(`  ${p.name}: rank ${p.rank}, ADP ${p.adp}, gap ${p.gap}`));
++  }
++  process.exitCode=report.errors.length||report.missingData.length||report.orphanData.length?1:0;
++}
++module.exports={loadBundledData};
+diff --git a/data-health.js b/data-health.js
+new file mode 100644
+index 0000000..8768d30
+--- /dev/null
++++ b/data-health.js
+@@ -0,0 +1,38 @@
++(function(root,factory){
++  if(typeof module==='object'&&module.exports)module.exports=factory();
++  else root.DataHealth=factory();
++})(typeof globalThis!=='undefined'?globalThis:this,function(){
++  'use strict';
++  var categories=['PTS','REB','AST','STL','BLK','3PM','FG%','FT%','TO'];
++  var positions=['PG','SG','SF','PF','C'];
++  function positive(value){return typeof value==='number'&&isFinite(value)&&value>0;}
++  function audit(players,data,tags){
++    data=data||{};tags=tags||{};
++    var out={players:players.length,errors:[],missingData:[],orphanData:[],missingAdp:[],missingLast:[],untagged:[],placeholderTeams:[],rankDivergence:[]};
++    var names=Object.create(null),normalized=Object.create(null);
++    players.forEach(function(p,index){
++      var name=p.n||p[0],pos=p.p||p[1],team=p.t||p[2],rank=p.r||index+1;
++      if(typeof name!=='string'||!name.trim()){out.errors.push('Invalid player name at index '+index);return;}
++      var key=name.trim().toLowerCase();
++      if(normalized[key])out.errors.push('Duplicate player name: '+name);
++      normalized[key]=true;names[name]=true;
++      if(!Array.isArray(pos)||!pos.length||pos.some(function(x){return positions.indexOf(x)<0;}))out.errors.push('Invalid position: '+name);
++      if(!team||['—','-','FA','TBD','N/A'].indexOf(String(team).toUpperCase())>=0)out.placeholderTeams.push(name);
++      var d=Object.prototype.hasOwnProperty.call(data,name)?data[name]:null;
++      if(!d)out.missingData.push(name);
++      ['adp','last'].forEach(function(field){
++        var value=d&&d[field];
++        if(value==null)out[field==='adp'?'missingAdp':'missingLast'].push(name);
++        else if(!positive(value)||(field==='last'&&!Number.isInteger(value)))out.errors.push('Invalid '+field+': '+name);
++      });
++      var cats=tags[name];
++      if(!cats||!cats.length)out.untagged.push(name);
++      if(cats&&(!Array.isArray(cats)||cats.some(function(c){return categories.indexOf(c)<0;})||new Set(cats).size!==cats.length))out.errors.push('Invalid or duplicate category tag: '+name);
++      if(d&&positive(d.adp)&&Math.abs(rank-d.adp)>=40)out.rankDivergence.push({name:name,rank:rank,adp:d.adp,gap:Math.round((rank-d.adp)*10)/10});
++    });
++    Object.keys(data).forEach(function(name){if(!names[name])out.orphanData.push(name);});
++    out.rankDivergence.sort(function(a,b){return Math.abs(b.gap)-Math.abs(a.gap);});
++    return out;
++  }
++  return {audit:audit};
++});
+diff --git a/index.html b/index.html
+index 2f21897..b606ee3 100644
+--- a/index.html
++++ b/index.html
+@@ -67,6 +67,7 @@ html{background:#101014}body{background:#101014;margin:0;min-width:320px}
+ <div id="md"><div id="mdapp"></div></div>
+ <script src="player-data.js"></script>
+ <script src="draft-core.js"></script>
++<script src="data-health.js"></script>
+ <script>
+ (function(){
+ "use strict";
+@@ -376,12 +377,12 @@ function renderScarcity(){
+   }
+   var rem=counts(true),init=counts(false);
+   var min=1e9;CATS9.forEach(function(c){if(rem[c]<min)min=rem[c];});
+-  var h='<div class="scarcity"><h3>Category scarcity <span class="muted">draftable difference-makers left &middot; TO = low turnovers</span></h3><div class="catgrid">';
++  var h='<div class="scarcity"><h3>Category tag counts <span class="muted">remaining in top '+tot+' built-in ranks &middot; TO = low turnovers</span></h3><div class="catgrid">';
+   CATS9.forEach(function(c){
+     var pct=init[c]?Math.max(3,Math.round(rem[c]/init[c]*100)):0;
+     h+='<div class="catchip'+(rem[c]<=min+1?' hot':'')+'"><span class="catname">'+c+'</span><span class="catnum">'+rem[c]+'</span><div class="catbar"><i style="width:'+pct+'%"></i></div></div>';
+   });
+-  return h+'</div></div>';
++  return h+'</div><p class="muted">Manual strength tags only. These counts do not measure projected category value, shooting volume, weaknesses, or team balance.</p></div>';
+ }
+ 
+ var TEAMS=12;
+@@ -448,9 +449,20 @@ function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").repl
+ function posBadges(p){return p.map(function(x){return x;}).join("/");}
+ function pickLabel(idx){var r=Math.floor(idx/TEAMS)+1;var w=idx%TEAMS+1;return "R"+r+" P"+w;}
+ 
++var HEALTH=window.DataHealth.audit(PLAYERS,typeof PDATA!=="undefined"?PDATA:{},CATS);
++function renderDataHealth(){
++  var h='<details class="scarcity"><summary><b>Data health</b> &middot; '+(HEALTH.players-HEALTH.missingAdp.length)+'/'+HEALTH.players+' players with ADP &middot; bundled snapshot</summary>';
++  h+='<p class="muted">Snapshot '+esc(DATA_VERSION)+'. Bundled source notes identify Yahoo ADP via Hashtag Basketball and prior-season ranks via Basketball Monster / Hashtag Basketball. This audit checks internal consistency; source accuracy, current teams, eligibility, and NBA player-pool completeness remain unverified.</p>';
++  h+='<p>'+HEALTH.missingAdp.length+' missing ADP (CPUs fall back to built-in rank); '+HEALTH.missingLast.length+' missing prior-season rank; '+HEALTH.untagged.length+' without category tags; '+HEALTH.placeholderTeams.length+' unknown teams.</p>';
++  h+='<p class="muted">Built-in rank is the original list order, not a fresh projection. Missing ranks stay blank. Category tags are manual strengths, not nine-category projections.</p>';
++  if(HEALTH.errors.length||HEALTH.missingData.length||HEALTH.orphanData.length)h+='<p>Data consistency issues: '+(HEALTH.errors.length+HEALTH.missingData.length+HEALTH.orphanData.length)+'. Run node audit-data.js for details.</p>';
++  return h+'</details>';
++}
++
+ function renderSetup(){
+   var h='<h2>Mock Draft Setup</h2>';
+   h+='<div class="muted">12 teams, snake draft. 237-player pool from early 2026-27 preseason rankings. You draft your slot; the other 11 teams auto-pick.</div>';
++  h+=renderDataHealth();
+   h+='<h3>Your draft position</h3><div class="setup-pos">';
+   for(var i=1;i<=12;i++)h+='<button class="posbtn'+(state.draftPos===i?' sel':'')+'" data-pos="'+i+'">'+i+'</button>';
+   h+='</div><h3>Rounds</h3><select id="mdrounds">';
+@@ -481,6 +493,7 @@ function renderDraft(){
+   if(state.userTurns.length)h+='<button class="ghostbtn" id="mdundo">Undo my last pick</button>';
+   if(state.phase!=="done"&&!isUserTurn())h+='<button class="ghostbtn" id="mdsim">Sim to my pick</button>';
+   h+='<button class="ghostbtn" id="mdnew">Restart</button></div>';
++  h+=renderDataHealth();
+   h+=renderScarcity();
+   h+='<div class="tabs"><button class="fchip'+(state.view==='team'?' sel':'')+'" data-view="team">My team</button>';
+   h+='<button class="fchip'+(state.view==='board'?' sel':'')+'" data-view="board">Draft board</button></div>';
+diff --git a/test-data-health.js b/test-data-health.js
+new file mode 100644
+index 0000000..40db855
+--- /dev/null
++++ b/test-data-health.js
+@@ -0,0 +1,26 @@
++'use strict';
++const assert=require('node:assert/strict');
++const {audit}=require('./data-health');
++const {loadBundledData}=require('./audit-data');
++const player=['Example',['PG'],'BOS'];
++let report=audit([player],{Example:{adp:2,last:3}},{Example:['AST']});
++assert.equal(report.errors.length,0);
++assert.equal(report.missingAdp.length,0);
++report=audit([player,[' example ',['INVALID'],'—']],{Example:{adp:-1,last:2.5},Extra:{adp:1,last:1}},{Example:['AST','AST']});
++assert.equal(report.errors.length,5,'duplicate name, position, ADP, last rank and tags must be detected');
++assert.deepEqual(report.missingData,[' example ']);
++assert.deepEqual(report.orphanData,['Extra']);
++assert.equal(report.placeholderTeams.length,1);
++report=audit([player],{Example:{adp:null,last:null}},{});
++assert.equal(report.errors.length,0,'explicit missing values are limitations, not malformed data');
++assert.deepEqual(report.missingAdp,['Example']);
++assert.deepEqual(report.missingLast,['Example']);
++assert.deepEqual(report.untagged,['Example']);
++report=audit([player],{Example:{adp:80,last:1}},{Example:['AST']});
++assert.equal(report.rankDivergence[0].gap,-79);
++const bundle=loadBundledData();
++report=audit(bundle.players,bundle.data,bundle.tags);
++assert.deepEqual(report.errors,[]);
++assert.deepEqual(report.missingData,[]);
++assert.deepEqual(report.orphanData,[]);
++console.log(`Data health tests passed; ${report.players} bundled players have matching data records.`);
+-- 
+2.51.1
+
+
+From a569e40b4b965c50e2fdb5fcfd3fcf5bafd8ab81 Mon Sep 17 00:00:00 2001
+From: Codex <codex@openai.com>
+Date: Sat, 12 Sep 2026 02:55:00 -0400
+Subject: [PATCH 4/4] Refresh draft room styling while preserving local file
+ loading
+
+---
+ index.html | 76 +++++++++++++++++++++++++++++++++++++++++++++++++++---
+ 1 file changed, 72 insertions(+), 4 deletions(-)
+
+diff --git a/index.html b/index.html
+index b606ee3..7b9d38e 100644
+--- a/index.html
++++ b/index.html
+@@ -1,3 +1,9 @@
++<!doctype html>
++<html lang="en">
++<head>
++<meta charset="utf-8">
++<meta name="viewport" content="width=device-width, initial-scale=1">
++<title>Courtside — Mock Draft</title>
+ <style>
+ /*STANDALONE-THEME-START*/
+ :root{--hatch-widget-font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;--hatch-widget-text:#ececf1;--hatch-widget-muted:#9a9aad;--hatch-widget-surface:#17171d;--hatch-widget-surface-muted:#22222c;--hatch-widget-border:#2e2e3a;--hatch-widget-accent:#5b6fae;--hatch-widget-on-accent:#ffffff}
+@@ -63,8 +69,67 @@ html{background:#101014}body{background:#101014;margin:0;min-width:320px}
+ #md .cbadge{font-size:10px;color:var(--hatch-widget-accent);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px}
+ #md .teamtag{font-size:10px;color:var(--hatch-widget-muted)}
+ @media(max-width:640px){#md .cols{flex-direction:column}#md .avail,#md .side{width:100%}}
++
++/* Courtside: local-only visual theme */
++:root{color-scheme:dark;--hatch-widget-text:#eef3f8;--hatch-widget-muted:#a3b1c3;--hatch-widget-surface:#121d2c;--hatch-widget-surface-muted:#1a293b;--hatch-widget-border:#293a50;--hatch-widget-accent:#85e5bc;--hatch-widget-on-accent:#09271d}
++html,body{background:#0b1320}
++body{background:radial-gradient(ellipse at top right,#19352f66,transparent 55%),#0b1320;min-height:100vh}
++#md{max-width:1440px;margin:auto;padding:28px 32px 48px;line-height:1.5}
++#md .brandbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 0 24px;margin-bottom:24px;border-bottom:1px solid var(--hatch-widget-border)}
++#md .brand{display:flex;align-items:center;gap:12px;font-size:21px;font-weight:800;letter-spacing:-.6px}
++#md .brandmark{display:grid;place-items:center;width:38px;height:38px;border-radius:12px;background:var(--hatch-widget-accent);color:#09271d;font-size:25px}
++#md .season{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--hatch-widget-muted)}
++#md h2{font-size:30px;letter-spacing:-1px;margin:8px 0 10px;line-height:1.2}
++#md h3{font-size:14px;letter-spacing:.2px;margin:20px 0 10px}
++#md .muted{font-size:12px;line-height:1.7}
++#md .setup-pos{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:8px;max-width:850px;margin:14px 0 28px}
++#md .posbtn{width:100%;height:58px;border-radius:12px;font-size:18px}
++#md button{transition:background .15s,border-color .15s,box-shadow .15s}
++#md button:not(:disabled):hover{border-color:var(--hatch-widget-accent);box-shadow:0 0 0 1px #85e5bc55}
++#md .bigbtn{padding:13px 24px;border-radius:12px;margin-top:18px}
++#md .ghostbtn{min-height:40px;background:transparent}
++#md .turnbar{padding:18px 20px;margin:0 0 18px;border-left:3px solid var(--hatch-widget-accent);box-shadow:0 8px 24px #0002}
++#md .turnbar .you{font-size:12px;letter-spacing:1.2px}
++#md .cols{gap:20px}
++#md .avail,#md .side{background:var(--hatch-widget-surface);border:1px solid var(--hatch-widget-border);border-radius:16px;padding:18px}
++#md .avail{flex:1.5}#md .side{flex:1}
++#md .avail>h3,#md .side>h3:first-child{margin-top:0}
++#md .filters{gap:7px;margin:12px 0}
++#md .fchip{padding:7px 13px;border-radius:8px}
++#md .tabs{margin:18px 0 12px}
++#md input[type=text]{padding:12px 14px;border-radius:10px;background:#0d1724;font-size:14px}
++#md select{min-height:42px}
++#md .plist{max-height:560px;border:0;border-radius:0}
++#md .listmeta{position:sticky;top:0;background:var(--hatch-widget-surface);padding:8px 0;z-index:1;margin:0}
++#md .prow{padding:13px 4px;font-size:14px}
++#md .prow:hover{background:#1a293b88}
++#md .prow .l2{padding-left:38px;margin-top:5px;gap:4px 12px}
++#md .draftbtn{min-height:36px;padding:7px 14px}
++#md .prank{font-variant-numeric:tabular-nums}
++#md .teamtag{display:inline-block;border-radius:4px;background:#223247;padding:1px 5px;margin-left:3px;letter-spacing:.4px}
++#md .rrow{padding:11px 12px;min-height:43px}
++#md .rpick{font-size:10px;font-weight:700;letter-spacing:.8px;width:48px}
++#md .rlist{max-height:470px;background:#0d172466}
++#md .scarcity{padding:16px 18px;border-radius:14px;margin:14px 0}
++#md details.scarcity{background:transparent;font-size:12px}
++#md summary{cursor:pointer;color:var(--hatch-widget-muted)}
++#md summary b{color:var(--hatch-widget-text)}
++#md .catgrid{gap:8px}#md .catchip{padding:10px 6px;border:1px solid var(--hatch-widget-border);background:#0e1928}
++#md .catnum{font-size:23px;font-variant-numeric:tabular-nums;letter-spacing:-.7px}
++#md .catname{letter-spacing:.7px}#md .catbar{height:3px;margin-top:8px}
++#md table.board th,#md table.board td{padding:10px 12px}#md table.board th{z-index:1}
++#md .boardwrap{max-height:600px}
++#md .pager{justify-content:space-between;padding-top:12px}
++#md .pname{white-space:normal;overflow-wrap:anywhere}
++#md button:focus-visible,#md input:focus-visible,#md select:focus-visible,#md summary:focus-visible{outline:2px solid var(--hatch-widget-accent);outline-offset:3px}
++@media(max-width:900px){#md{padding:20px 18px 32px}#md .setup-pos{grid-template-columns:repeat(6,1fr)}#md .cols{flex-direction:column}#md .avail,#md .side{width:100%}}
++@media(max-width:480px){#md{padding:16px 12px 28px}#md h2{font-size:26px}#md .brandbar{padding-bottom:18px;margin-bottom:18px}#md .season{font-size:9px;letter-spacing:.5px}#md .avail,#md .side{padding:12px}#md .catgrid{grid-template-columns:repeat(3,1fr)}#md .turnbar{padding:14px}#md .posbtn{height:48px}#md .rrow{gap:5px}}
++@media(prefers-reduced-motion:reduce){#md button{transition:none}}
++
+ </style>
+-<div id="md"><div id="mdapp"></div></div>
++</head>
++<body>
++<main id="md"><header class="brandbar"><div class="brand"><span class="brandmark" aria-hidden="true">◉</span>Courtside</div><span class="season">2026–27 / Mock draft</span></header><div id="mdapp"></div></main>
+ <script src="player-data.js"></script>
+ <script src="draft-core.js"></script>
+ <script src="data-health.js"></script>
+@@ -460,7 +525,7 @@ function renderDataHealth(){
+ }
+ 
+ function renderSetup(){
+-  var h='<h2>Mock Draft Setup</h2>';
++  var h='<div class="season">Your draft room</div><h2>Build your next contender.</h2>';
+   h+='<div class="muted">12 teams, snake draft. 237-player pool from early 2026-27 preseason rankings. You draft your slot; the other 11 teams auto-pick.</div>';
+   h+=renderDataHealth();
+   h+='<h3>Your draft position</h3><div class="setup-pos">';
+@@ -498,7 +563,7 @@ function renderDraft(){
+   h+='<div class="tabs"><button class="fchip'+(state.view==='team'?' sel':'')+'" data-view="team">My team</button>';
+   h+='<button class="fchip'+(state.view==='board'?' sel':'')+'" data-view="board">Draft board</button></div>';
+   h+='<div class="cols"><div class="avail">';
+-  h+='<h3>Available players</h3><input type="text" id="mdq" placeholder="Search players..." value="'+esc(state.q)+'">';
++  h+='<h3>Available players</h3><input type="text" id="mdq" aria-label="Search available players" placeholder="Search players..." value="'+esc(state.q)+'">';
+   h+='<div class="filters">';
+   ["All","PG","SG","SF","PF","C"].forEach(function(f){h+='<button class="fchip'+(state.f===f?' sel':'')+'" data-f="'+f+'">'+f+'</button>';});
+   h+='</div><div class="filters"><span class="muted">Sort:</span>';
+@@ -538,7 +603,7 @@ function renderList(){
+     i=cands[k];var pl2=PLAYERS[i];
+     var sub='<span>ADP '+disp(pl2.adp)+'</span><span>Last '+disp(pl2.last)+'</span><span>'+posBadges(pl2.p)+'</span>';
+     if(pl2.c.length)sub+='<span>'+pl2.c.slice(0,3).join(" · ")+'</span>';
+-    rows.push('<div class="prow"><div class="l1"><span class="prank">'+pl2.r+'</span><span class="pname">'+esc(pl2.n)+' <span class="teamtag">'+esc(pl2.t)+'</span></span><button class="draftbtn" data-pi="'+i+'"'+(ut?'':' disabled')+'>Draft</button></div><div class="l2">'+sub+'</div></div>');
++    rows.push('<div class="prow"><div class="l1"><span class="prank">'+pl2.r+'</span><span class="pname">'+esc(pl2.n)+' <span class="teamtag">'+esc(pl2.t)+'</span></span><button class="draftbtn" data-pi="'+i+'" aria-label="Draft '+esc(pl2.n)+'"'+(ut?'':' disabled')+'>Draft</button></div><div class="l2">'+sub+'</div></div>');
+   }
+   if(!cands.length)rows.push('<div class="prow"><div class="l1"><span class="muted">No players match.</span></div></div>');
+   el("mdplist").innerHTML=rows.join("");
+@@ -603,3 +668,6 @@ function render(){
+ render();
+ })();
+ </script>
++
++</body>
++</html>
+-- 
+2.51.1
+

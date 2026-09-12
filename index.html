@@ -1,7 +1,13 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Courtside — Mock Draft</title>
 <style>
 /*STANDALONE-THEME-START*/
 :root{--hatch-widget-font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;--hatch-widget-text:#ececf1;--hatch-widget-muted:#9a9aad;--hatch-widget-surface:#17171d;--hatch-widget-surface-muted:#22222c;--hatch-widget-border:#2e2e3a;--hatch-widget-accent:#5b6fae;--hatch-widget-on-accent:#ffffff}
-body{background:#101014;margin:0}
+html{background:#101014}body{background:#101014;margin:0;min-width:320px}
 /*STANDALONE-THEME-END*/
 #md *{box-sizing:border-box}
 #md{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:var(--hatch-widget-text);max-width:100%;padding:4px}
@@ -14,6 +20,9 @@ body{background:#101014;margin:0}
 #md .bigbtn{background:var(--hatch-widget-accent);color:var(--hatch-widget-on-accent);border:none;border-radius:10px;padding:10px 22px;font-size:15px;font-weight:700;cursor:pointer;margin-top:10px}
 #md .ghostbtn{background:var(--hatch-widget-surface);color:var(--hatch-widget-text);border:1px solid var(--hatch-widget-border);border-radius:10px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer}
 #md .ghostbtn:disabled{opacity:.4;cursor:default}
+#md button:focus-visible,#md input:focus-visible,#md select:focus-visible{outline:3px solid #aebfff;outline-offset:2px}
+#md .listmeta{display:flex;justify-content:space-between;gap:8px;align-items:center;margin:5px 0}
+#md .pager{display:flex;align-items:center;gap:7px;margin:7px 0;justify-content:center}
 #md select{background:var(--hatch-widget-surface);color:var(--hatch-widget-text);border:1px solid var(--hatch-widget-border);border-radius:8px;padding:6px 10px;font-size:14px}
 #md .turnbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--hatch-widget-surface);border:1px solid var(--hatch-widget-border);border-radius:12px;padding:10px 12px;margin:8px 0}
 #md .turnbar .you{font-weight:800;color:var(--hatch-widget-accent)}
@@ -59,10 +68,75 @@ body{background:#101014;margin:0}
 #md .catbar i{display:block;height:100%;background:var(--hatch-widget-accent);border-radius:2px}
 #md .cbadge{font-size:10px;color:var(--hatch-widget-accent);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px}
 #md .teamtag{font-size:10px;color:var(--hatch-widget-muted)}
+#md .vdelta{font-size:10px;font-weight:800;padding:1px 6px;border-radius:9px;margin-left:5px;white-space:nowrap}
+#md .vdelta.g{color:#146c2e;background:#d9ecd9}
+#md .vdelta.b{color:#a1231b;background:#f6d9d4}
+#md .tierbreak{border-top:2px dashed var(--hatch-widget-accent);opacity:.45;margin:8px 4px 2px}
 @media(max-width:640px){#md .cols{flex-direction:column}#md .avail,#md .side{width:100%}}
+
+/* Courtside: local-only visual theme */
+:root{color-scheme:dark;--hatch-widget-text:#eef3f8;--hatch-widget-muted:#a3b1c3;--hatch-widget-surface:#121d2c;--hatch-widget-surface-muted:#1a293b;--hatch-widget-border:#293a50;--hatch-widget-accent:#85e5bc;--hatch-widget-on-accent:#09271d}
+html,body{background:#0b1320}
+body{background:radial-gradient(ellipse at top right,#19352f66,transparent 55%),#0b1320;min-height:100vh}
+#md{max-width:1440px;margin:auto;padding:28px 32px 48px;line-height:1.5}
+#md .brandbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 0 24px;margin-bottom:24px;border-bottom:1px solid var(--hatch-widget-border)}
+#md .brand{display:flex;align-items:center;gap:12px;font-size:21px;font-weight:800;letter-spacing:-.6px}
+#md .brandmark{display:grid;place-items:center;width:38px;height:38px;border-radius:12px;background:var(--hatch-widget-accent);color:#09271d;font-size:25px}
+#md .season{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--hatch-widget-muted)}
+#md h2{font-size:30px;letter-spacing:-1px;margin:8px 0 10px;line-height:1.2}
+#md h3{font-size:14px;letter-spacing:.2px;margin:20px 0 10px}
+#md .muted{font-size:12px;line-height:1.7}
+#md .setup-pos{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:8px;max-width:850px;margin:14px 0 28px}
+#md .posbtn{width:100%;height:58px;border-radius:12px;font-size:18px}
+#md button{transition:background .15s,border-color .15s,box-shadow .15s}
+#md button:not(:disabled):hover{border-color:var(--hatch-widget-accent);box-shadow:0 0 0 1px #85e5bc55}
+#md .bigbtn{padding:13px 24px;border-radius:12px;margin-top:18px}
+#md .ghostbtn{min-height:40px;background:transparent}
+#md .turnbar{padding:18px 20px;margin:0 0 18px;border-left:3px solid var(--hatch-widget-accent);box-shadow:0 8px 24px #0002}
+#md .turnbar .you{font-size:12px;letter-spacing:1.2px}
+#md .cols{gap:20px}
+#md .avail,#md .side{background:var(--hatch-widget-surface);border:1px solid var(--hatch-widget-border);border-radius:16px;padding:18px}
+#md .avail{flex:1.5}#md .side{flex:1}
+#md .avail>h3,#md .side>h3:first-child{margin-top:0}
+#md .filters{gap:7px;margin:12px 0}
+#md .fchip{padding:7px 13px;border-radius:8px}
+#md .tabs{margin:18px 0 12px}
+#md input[type=text]{padding:12px 14px;border-radius:10px;background:#0d1724;font-size:14px}
+#md select{min-height:42px}
+#md .plist{max-height:560px;border:0;border-radius:0}
+#md .listmeta{position:sticky;top:0;background:var(--hatch-widget-surface);padding:8px 0;z-index:1;margin:0}
+#md .prow{padding:13px 4px;font-size:14px}
+#md .prow:hover{background:#1a293b88}
+#md .prow .l2{padding-left:38px;margin-top:5px;gap:4px 12px}
+#md .draftbtn{min-height:36px;padding:7px 14px}
+#md .prank{font-variant-numeric:tabular-nums}
+#md .teamtag{display:inline-block;border-radius:4px;background:#223247;padding:1px 5px;margin-left:3px;letter-spacing:.4px}
+#md .rrow{padding:11px 12px;min-height:43px}
+#md .rpick{font-size:10px;font-weight:700;letter-spacing:.8px;width:48px}
+#md .rlist{max-height:470px;background:#0d172466}
+#md .scarcity{padding:16px 18px;border-radius:14px;margin:14px 0}
+#md details.scarcity{background:transparent;font-size:12px}
+#md summary{cursor:pointer;color:var(--hatch-widget-muted)}
+#md summary b{color:var(--hatch-widget-text)}
+#md .catgrid{gap:8px}#md .catchip{padding:10px 6px;border:1px solid var(--hatch-widget-border);background:#0e1928}
+#md .catnum{font-size:23px;font-variant-numeric:tabular-nums;letter-spacing:-.7px}
+#md .catname{letter-spacing:.7px}#md .catbar{height:3px;margin-top:8px}
+#md table.board th,#md table.board td{padding:10px 12px}#md table.board th{z-index:1}
+#md .boardwrap{max-height:600px}
+#md .pager{justify-content:space-between;padding-top:12px}
+#md .pname{white-space:normal;overflow-wrap:anywhere}
+#md button:focus-visible,#md input:focus-visible,#md select:focus-visible,#md summary:focus-visible{outline:2px solid var(--hatch-widget-accent);outline-offset:3px}
+@media(max-width:900px){#md{padding:20px 18px 32px}#md .setup-pos{grid-template-columns:repeat(6,1fr)}#md .cols{flex-direction:column}#md .avail,#md .side{width:100%}}
+@media(max-width:480px){#md{padding:16px 12px 28px}#md h2{font-size:26px}#md .brandbar{padding-bottom:18px;margin-bottom:18px}#md .season{font-size:9px;letter-spacing:.5px}#md .avail,#md .side{padding:12px}#md .catgrid{grid-template-columns:repeat(3,1fr)}#md .turnbar{padding:14px}#md .posbtn{height:48px}#md .rrow{gap:5px}}
+@media(prefers-reduced-motion:reduce){#md button{transition:none}}
+
 </style>
-<div id="md"><div id="mdapp"></div></div>
+</head>
+<body>
+<main id="md"><header class="brandbar"><div class="brand"><span class="brandmark" aria-hidden="true">◉</span>Courtside</div><span class="season">2026–27 / Mock draft</span></header><div id="mdapp"></div></main>
 <script src="player-data.js"></script>
+<script src="draft-core.js"></script>
+<script src="data-health.js"></script>
 <script>
 (function(){
 "use strict";
@@ -130,7 +204,7 @@ var PLAYERS=[
 ["Jeremiah Fears",["PG"],"NOP"],["Collin Gillespie",["PG"],"PHX"],["Jamal Shead",["PG"],"TOR"],
 ["Bub Carrington",["PG","SG"],"WSH"],["Miles McBride",["PG"],"NYK"],["Ryan Rollins",["PG"],"MIL"],
 ["Aaron Holiday",["PG"],"HOU"],["Devin Carter",["PG","SG"],"SAC"],["Keon Ellis",["SG"],"SAC"],
-["Cason Wallace",["PG","SG"],"OKC"],["Moses Moody",["SG"],"GSW"],["D'Angelo Russell",["PG","SG"],"DAL"],
+["Cason Wallace",["PG","SG","SF"],"OKC"],["Moses Moody",["SG"],"GSW"],["D'Angelo Russell",["PG","SG"],"DAL"],
 ["Jordan Clarkson",["SG"],"NYK"],["Buddy Hield",["SG"],"GSW"],["Caris LeVert",["SG","SF"],"DET"],
 ["Bogdan Bogdanovic",["SG","SF"],"LAC"],["Max Christie",["SG"],"DAL"],["Gradey Dick",["SG","SF"],"TOR"],
 ["RJ Barrett",["SG","SF"],"TOR"],["Jaden Ivey",["SG","PG"],"DET"],["Ochai Agbaji",["SF","SG"],"TOR"],
@@ -148,7 +222,7 @@ var PLAYERS=[
 ["Keaton Wagler",["SG"],"—"],["Mikel Brown Jr.",["PG","SG"],"—"],["Nate Ament",["SF"],"—"]
 ];
 PLAYERS.forEach(function(p,i){p.r=i+1;p.n=p[0];p.p=p[1];p.t=p[2]||"\u2014";});
-PLAYERS.forEach(function(p){var d=(typeof PDATA!=="undefined"&&PDATA[p.n])||null;p.adp=d&&d.adp!=null?d.adp:null;p.last=d&&d.last!=null?d.last:null;});
+PLAYERS.forEach(function(p){var d=(typeof PDATA!=="undefined"&&PDATA[p.n])||null;p.adp=d&&d.adp!=null?d.adp:null;p.last=d&&d.last!=null?d.last:null;p.lastTotal=d&&d.lastTotal!=null?d.lastTotal:null;});
 var CATS={
 "Nikola Jokic":["PTS","REB","AST","STL","FG%"],
 "Victor Wembanyama":["PTS","REB","BLK","STL","3PM"],
@@ -360,103 +434,144 @@ var CATS={
 };
 PLAYERS.forEach(function(p){p.c=CATS[p.n]||[];});
 var CATS9=["PTS","REB","AST","STL","BLK","3PM","FG%","FT%","TO"];
+/* Category scarcity, BM-style: per-game category values (z-scores) aggregated
+   across the available player pool. Replacement level per category = mean
+   value of consensus ranks 150-170 (the end-of-draft tier). Each cell shows
+   the share of draftable above-replacement value still on the board. */
+var _scarcBase=null;
+function scarcityBase(){
+  if(_scarcBase)return _scarcBase;
+  var idx=[],i;
+  for(i=0;i<PLAYERS.length;i++){var d=PDATA[PLAYERS[i].n];if(d&&d.cv)idx.push(i);}
+  var ord=idx.slice().sort(function(a,b){return consRank(PLAYERS[a])-consRank(PLAYERS[b]);});
+  var repl=[0,0,0,0,0,0,0,0,0],cnt=0;
+  for(var k=149;k<170&&k<ord.length;k++){var cv=PDATA[PLAYERS[ord[k]].n].cv;for(var c=0;c<9;c++)repl[c]+=cv[c];cnt++;}
+  for(var c2=0;c2<9;c2++)repl[c2]/=Math.max(1,cnt);
+  var start=[0,0,0,0,0,0,0,0,0];
+  idx.forEach(function(j){var v2=PDATA[PLAYERS[j].n].cv;for(var c3=0;c3<9;c3++){var vv=v2[c3]-repl[c3];if(vv>0)start[c3]+=vv;}});
+  _scarcBase={idx:idx,repl:repl,start:start};
+  return _scarcBase;
+}
 function renderScarcity(){
-  var tot=totalPicks();
-  function counts(skipTaken){
-    var taken={},i;
-    if(skipTaken)for(i=0;i<state.log.length;i++)taken[state.log[i]]=1;
-    var rem={};CATS9.forEach(function(c){rem[c]=0;});
-    for(i=0;i<PLAYERS.length;i++){var pl=PLAYERS[i];if(pl.r>tot)continue;if(taken[i])continue;
-      for(var j=0;j<pl.c.length;j++)rem[pl.c[j]]++;}
-    return rem;
-  }
-  var rem=counts(true),init=counts(false);
-  var min=1e9;CATS9.forEach(function(c){if(rem[c]<min)min=rem[c];});
-  var h='<div class="scarcity"><h3>Category scarcity <span class="muted">draftable difference-makers left &middot; TO = low turnovers</span></h3><div class="catgrid">';
-  CATS9.forEach(function(c){
-    var pct=init[c]?Math.max(3,Math.round(rem[c]/init[c]*100)):0;
-    h+='<div class="catchip'+(rem[c]<=min+1?' hot':'')+'"><span class="catname">'+c+'</span><span class="catnum">'+rem[c]+'</span><div class="catbar"><i style="width:'+pct+'%"></i></div></div>';
+  var base=scarcityBase(),taken={},i,c;
+  for(i=0;i<state.log.length;i++)taken[state.log[i]]=1;
+  var rem=[0,0,0,0,0,0,0,0,0],tops=[];
+  for(c=0;c<9;c++)tops.push([]);
+  base.idx.forEach(function(j){
+    if(taken[j])return;
+    var pl=PLAYERS[j],cv=PDATA[pl.n].cv;
+    for(c=0;c<9;c++){var v=cv[c]-base.repl[c];if(v>0){rem[c]+=v;tops[c].push({n:pl.n,v:v});}}
   });
-  return h+'</div></div>';
+  var h='<div class="scarcity"><h3>Category scarcity <span class="muted">share of draftable value still available</span></h3><div class="catgrid">';
+  CATS9.forEach(function(cat,ci){
+    var pct=base.start[ci]>0?Math.round(rem[ci]/base.start[ci]*100):0;
+    if(pct>100)pct=100;if(pct<0)pct=0;
+    var hue=Math.round(pct*1.2);
+    tops[ci].sort(function(a,b){return b.v-a.v;});
+    var tip=tops[ci].slice(0,3).map(function(t){return t.n+" +"+t.v.toFixed(1);}).join(", ")||"nothing above replacement";
+    h+='<div class="catchip" title="Most '+cat+' left: '+esc(tip)+'"><span class="catname">'+cat+'</span><span class="catnum" style="color:hsl('+hue+',62%,36%)">'+pct+'%</span><div class="catbar"><i style="width:'+pct+'%;background:hsl('+hue+',62%,45%)"></i></div></div>';
+  });
+  return h+'</div><p class="muted">BM-style 2025-26 per-game category values (z-scores; FG%/FT% volume-weighted, TO inverted). Replacement = mean of consensus ranks 150&ndash;170.</p></div>';
 }
 
 var TEAMS=12;
+var CORE=window.DraftCore;
+var BASE_SLOTS=["PG","SG","G","SF","PF","F","C","C","Util","Util","BN","BN","BN"];
+var DATA_VERSION="2026-09-12";
+var STORAGE_KEY="fantasy-basketball-mock-draft.v2";
 var HW=(typeof window!=="undefined"&&window.hatchWidget)?window.hatchWidget:null;
-var DEFAULTS={phase:"setup",draftPos:6,rounds:13,log:[],q:"",f:"All",view:"team",sort:"rank"};
-var state=HW?HW.getState(DEFAULTS):Object.assign({},DEFAULTS);
-function save(){if(HW){try{HW.setState(state);}catch(e){}}}
-function setState(patch){state=Object.assign({},state,patch);save();render();}
-window.addEventListener("hatch-widget-state",function(e){state=e.detail.state;render();});
+var DEFAULTS={phase:"setup",draftPos:6,rounds:13,log:[],q:"",f:"All",view:"team",sort:"cons",page:0,seed:123456789,rngState:123456789,userTurns:[]};
+function freshState(){var seed=(Date.now()>>>0)||1;return Object.assign({},DEFAULTS,{seed:seed,rngState:seed,log:[],userTurns:[]});}
+function cleanState(raw){
+  var out=Object.assign({},DEFAULTS,raw||{}), used={};
+  out.draftPos=Math.max(1,Math.min(TEAMS,parseInt(out.draftPos,10)||DEFAULTS.draftPos));
+  out.rounds=Math.max(10,Math.min(15,parseInt(out.rounds,10)||DEFAULTS.rounds));
+  out.log=Array.isArray(out.log)?out.log.filter(function(pi){if(!CORE.validPlayerIndex(PLAYERS,[],pi)||used[pi])return false;used[pi]=true;return true;}).slice(0,TEAMS*out.rounds):[];
+  out.phase=out.log.length>=TEAMS*out.rounds?"done":(out.phase==="draft"?"draft":"setup");
+  out.f=["All","PG","SG","SF","PF","C"].indexOf(out.f)>=0?out.f:"All";
+  out.sort=["cons","rank","adp","last","lastTotal"].indexOf(out.sort)>=0?out.sort:"cons";
+  out.page=Math.max(0,parseInt(out.page,10)||0);
+  out.seed=(parseInt(out.seed,10)>>>0)||1;out.rngState=(parseInt(out.rngState,10)>>>0)||out.seed;
+  out.userTurns=Array.isArray(out.userTurns)?out.userTurns.filter(function(x){return x&&Array.isArray(x.log);}).slice(-20):[];
+  return out;
+}
+function loadStandalone(){try{var saved=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");return saved&&saved.schema===2&&saved.dataVersion===DATA_VERSION?cleanState(saved.state):freshState();}catch(e){return freshState();}}
+var state=HW?cleanState(HW.getState(DEFAULTS)):loadStandalone();
+function save(){
+  if(HW){try{HW.setState(state);}catch(e){}}
+  else{try{localStorage.setItem(STORAGE_KEY,JSON.stringify({schema:2,dataVersion:DATA_VERSION,state:state}));}catch(e){}}
+}
+function clearSaved(){if(!HW){try{localStorage.removeItem(STORAGE_KEY);}catch(e){}}}
+function setState(patch){state=cleanState(Object.assign({},state,patch));save();render();}
+window.addEventListener("hatch-widget-state",function(e){state=cleanState(e.detail.state);render();});
 function el(id){return document.getElementById(id);}
-function teamForPick(idx){var round=Math.floor(idx/TEAMS),w=idx%TEAMS;return round%2===0?w:TEAMS-1-w;}
+function teamForPick(idx){return CORE.teamForPick(idx,TEAMS);}
 function teamName(t){return t===state.draftPos-1?"You":"CPU "+(t+1);}
 function totalPicks(){return TEAMS*state.rounds;}
 function userTeam(){return state.draftPos-1;}
 function isUserTurn(){return state.log.length<totalPicks()&&teamForPick(state.log.length)===userTeam();}
-function rosterCounts(){
-  var c=[];for(var t=0;t<TEAMS;t++)c.push({PG:0,SG:0,SF:0,PF:0,C:0});
-  state.log.forEach(function(pi,idx){var team=teamForPick(idx);var pl=PLAYERS[pi];
-    var bestPos=pl.p[0],bestN=99;pl.p.forEach(function(p){var n=c[team][p]||0;if(n<bestN){bestN=n;bestPos=p;}});
-    c[team][bestPos]++;});
-  return c;
-}
-function cpuPickIdx(){
-  var idx=state.log.length,team=teamForPick(idx),round=Math.floor(idx/TEAMS)+1;
-  var taken={},i;for(i=0;i<state.log.length;i++)taken[state.log[i]]=1;
-  var counts=rosterCounts()[team];
-  var best=-1,bestScore=1e9;
-  for(i=0;i<PLAYERS.length;i++){
-    if(taken[i])continue;var pl=PLAYERS[i];
-    var score=pl.r+Math.random()*14;
-    if(round>2){
-      var need=0,over=0;
-      pl.p.forEach(function(p){var n=counts[p]||0;if(n<2)need++;if(n>=3)over++;});
-      score-=need*18;if(over===pl.p.length)score+=40;
-    }
-    if(score<bestScore){bestScore=score;best=i;}
+function draftSlots(){return CORE.slotsForRounds(state.rounds,BASE_SLOTS);}
+function cpuPick(log,rng){return CORE.cpuPickIndex({players:PLAYERS,log:log,teams:TEAMS,slots:draftSlots(),totalPicks:totalPicks(),random:function(){return rng.next();}});}
+function simulateToUser(log,rngState){
+  var next=log.slice(),rng=CORE.seededRandom(rngState);
+  while(next.length<totalPicks()&&teamForPick(next.length)!==userTeam()){
+    var pi=cpuPick(next,rng);if(!CORE.validPlayerIndex(PLAYERS,next,pi))break;next.push(pi);
   }
-  return best;
+  return {log:next,rngState:rng.getState()};
 }
 function advance(){
-  var log=state.log.slice();
-  while(log.length<totalPicks()&&teamForPick(log.length)!==userTeam()){
-    var saved=state.log;state.log=log;var p=cpuPickIdx();state.log=saved;log.push(p);
-  }
-  var phase=log.length>=totalPicks()?"done":"draft";
-  setState({log:log,phase:phase});
+  var next=simulateToUser(state.log,state.rngState);
+  setState({log:next.log,rngState:next.rngState,phase:next.log.length>=totalPicks()?"done":"draft"});
 }
 function userDraft(pi){
-  if(!isUserTurn())return;
-  var log=state.log.slice();log.push(pi);
-  var saved=state.log;state.log=log;
-  while(log.length<totalPicks()&&teamForPick(log.length)!==userTeam()){log.push(cpuPickIdx());}
-  state.log=saved;
-  setState({log:log,phase:log.length>=totalPicks()?"done":"draft"});
+  if(!isUserTurn()||!CORE.validPlayerIndex(PLAYERS,state.log,pi))return;
+  var checkpoint={log:state.log.slice(),rngState:state.rngState};
+  var next=simulateToUser(state.log.concat([pi]),state.rngState);
+  setState({log:next.log,rngState:next.rngState,userTurns:state.userTurns.concat([checkpoint]).slice(-20),phase:next.log.length>=totalPicks()?"done":"draft",page:0});
 }
+function undoUserPick(){
+  var history=state.userTurns.slice(),checkpoint=history.pop();if(!checkpoint)return;
+  setState({log:checkpoint.log,rngState:checkpoint.rngState,userTurns:history,phase:"draft",page:0});
+}
+function restartDraft(){clearSaved();state=freshState();save();render();}
 function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
 function posBadges(p){return p.map(function(x){return x;}).join("/");}
 function pickLabel(idx){var r=Math.floor(idx/TEAMS)+1;var w=idx%TEAMS+1;return "R"+r+" P"+w;}
 
+var HEALTH=window.DataHealth.audit(PLAYERS,typeof PDATA!=="undefined"?PDATA:{},CATS);
+function renderDataHealth(){
+  var h='<details class="scarcity"><summary><b>Data health</b> &middot; '+(HEALTH.players-HEALTH.missingAdp.length)+'/'+HEALTH.players+' players with ADP &middot; bundled snapshot</summary>';
+  h+='<p class="muted">Snapshot '+esc(DATA_VERSION)+'. Bundled source notes identify Yahoo ADP via Hashtag Basketball, prior-season per-game ranks via Basketball Monster / Hashtag Basketball, and prior-season totals ranks derived from Basketball-Reference 2025-26 season totals (9-cat, not a published rank). This audit checks internal consistency; source accuracy, current teams, eligibility, and NBA player-pool completeness remain unverified.</p>';
+  h+='<p>'+HEALTH.missingAdp.length+' missing ADP (CPUs fall back to built-in rank); '+HEALTH.missingLast.length+' missing prior-season rank; '+HEALTH.untagged.length+' without category tags; '+HEALTH.placeholderTeams.length+' unknown teams.</p>';
+  h+='<p class="muted">Built-in rank is the original list order, not a fresh projection. Missing ranks stay blank. Category tags are manual strengths, not nine-category projections.</p>';
+  if(HEALTH.errors.length||HEALTH.missingData.length||HEALTH.orphanData.length)h+='<p>Data consistency issues: '+(HEALTH.errors.length+HEALTH.missingData.length+HEALTH.orphanData.length)+'. Run node audit-data.js for details.</p>';
+  return h+'</details>';
+}
+
 function renderSetup(){
-  var h='<h2>Mock Draft Setup</h2>';
+  var h='<div class="season">Your draft room</div><h2>Build your next contender.</h2>';
   h+='<div class="muted">12 teams, snake draft. 237-player pool from early 2026-27 preseason rankings. You draft your slot; the other 11 teams auto-pick.</div>';
+  h+=renderDataHealth();
   h+='<h3>Your draft position</h3><div class="setup-pos">';
   for(var i=1;i<=12;i++)h+='<button class="posbtn'+(state.draftPos===i?' sel':'')+'" data-pos="'+i+'">'+i+'</button>';
   h+='</div><h3>Rounds</h3><select id="mdrounds">';
   [10,11,12,13,14,15].forEach(function(r){h+='<option value="'+r+'"'+(state.rounds===r?' selected':'')+'>'+r+' rounds</option>';});
-  h+='</select><br><button class="bigbtn" id="mdstart">Start Mock Draft</button>';
+  h+='</select><br><button class="bigbtn" id="mdstart">Start Mock Draft</button><button class="ghostbtn" id="mdclear" style="margin-left:8px">Clear saved draft</button><div class="muted" style="margin-top:8px">Drafts save automatically in this browser. Data version: '+DATA_VERSION+'.</div>';
   el("mdapp").innerHTML=h;
   el("mdapp").querySelectorAll(".posbtn").forEach(function(b){b.addEventListener("click",function(){setState({draftPos:parseInt(b.getAttribute("data-pos"),10)});});});
   el("mdrounds").addEventListener("change",function(e){setState({rounds:parseInt(e.target.value,10)});});
   el("mdstart").addEventListener("click",function(){
-    var s=Object.assign({},state,{phase:"draft",log:[]});state=s;save();advance();
+    var chosenPos=state.draftPos,chosenRounds=parseInt(el("mdrounds").value,10);state=freshState();state.draftPos=chosenPos;state.rounds=chosenRounds;state.phase="draft";save();advance();
   });
+  el("mdclear").addEventListener("click",function(){restartDraft();});
 }
 function nextUserPickIdx(){
   var tot=totalPicks();
   for(var i=state.log.length;i<tot;i++)if(teamForPick(i)===userTeam())return i;
   return -1;
 }
+function consRank(p){return p.adp==null?p.r:(p.r+p.adp)/2;}
+function vBadge(pi,idx){var p=PLAYERS[pi];if(p.adp==null)return "";var d=Math.round(p.adp)-(idx+1);if(d===0)return "";return '<span class="vdelta '+(d>0?'g':'b')+'" title="'+(d>0?'Value':'Reach')+' vs ADP '+p.adp+'">'+(d>0?'+':'')+d+'</span>';}
 function renderDraft(){
   var idx=state.log.length,round=Math.floor(idx/TEAMS)+1,team=idx<totalPicks()?teamForPick(idx):-1;
   var h='<div class="turnbar">';
@@ -465,28 +580,33 @@ function renderDraft(){
   else{h+='<span><b>'+esc(teamName(team))+'</b> is picking...</span><span class="muted">Round '+round+', overall pick '+(idx+1)+'</span>';}
   var nxt=nextUserPickIdx();
   if(nxt>=0&&!isUserTurn())h+='<span class="nextpick">Your next pick: <b>#'+(nxt+1)+'</b> ('+(nxt-idx)+' picks away)</span>';
+  if(nxt>=0&&isUserTurn()){var nxt2=-1,tot2=totalPicks();for(var j=nxt+1;j<tot2;j++)if(teamForPick(j)===userTeam()){nxt2=j;break;}
+    if(nxt2>=0)h+='<span class="nextpick">Your next pick: <b>#'+(nxt2+1)+'</b> ('+(nxt2-nxt)+' picks away)</span>';}
   h+='<span style="flex:1"></span>';
+  if(state.userTurns.length)h+='<button class="ghostbtn" id="mdundo">Undo my last pick</button>';
   if(state.phase!=="done"&&!isUserTurn())h+='<button class="ghostbtn" id="mdsim">Sim to my pick</button>';
   h+='<button class="ghostbtn" id="mdnew">Restart</button></div>';
+  h+=renderDataHealth();
   h+=renderScarcity();
   h+='<div class="tabs"><button class="fchip'+(state.view==='team'?' sel':'')+'" data-view="team">My team</button>';
   h+='<button class="fchip'+(state.view==='board'?' sel':'')+'" data-view="board">Draft board</button></div>';
   h+='<div class="cols"><div class="avail">';
-  h+='<h3>Available players</h3><input type="text" id="mdq" placeholder="Search players..." value="'+esc(state.q)+'">';
+  h+='<h3>Available players</h3><input type="text" id="mdq" aria-label="Search available players" placeholder="Search players..." value="'+esc(state.q)+'">';
   h+='<div class="filters">';
   ["All","PG","SG","SF","PF","C"].forEach(function(f){h+='<button class="fchip'+(state.f===f?' sel':'')+'" data-f="'+f+'">'+f+'</button>';});
   h+='</div><div class="filters"><span class="muted">Sort:</span>';
-  [["rank","Rank"],["adp","ADP"],["last","Last season"]].forEach(function(s){h+='<button class="fchip'+((state.sort||"rank")===s[0]?' sel':'')+'" data-sort="'+s[0]+'">'+s[1]+'</button>';});
-  h+='</div><div class="plist" id="mdplist"></div></div>';
+  [["cons","Consensus","Average of built-in rank and Yahoo ADP"],["rank","Rank","Built-in preseason rank (sim order)"],["adp","ADP","Yahoo ADP via Hashtag Basketball (Sep 2026)"],["last","Last · PER","2025-26 nine-category per-game rank (Basketball Monster / Hashtag)"],["lastTotal","Last · TOT","2025-26 nine-category TOTALS rank — derived from Basketball-Reference season totals, not a published rank"]].forEach(function(s){h+='<button class="fchip'+((state.sort||"cons")===s[0]?' sel':'')+'" data-sort="'+s[0]+'" title="'+s[2]+'">'+s[1]+'</button>';});
+  h+='</div><div class="plist" id="mdplist"></div><div id="mdpager"></div></div>';
   h+='<div class="side" id="mdside"></div></div>';
   el("mdapp").innerHTML=h;
   el("mdapp").querySelectorAll("[data-view]").forEach(function(b){b.addEventListener("click",function(){setState({view:b.getAttribute("data-view")});});});
-  el("mdapp").querySelectorAll("[data-f]").forEach(function(b){b.addEventListener("click",function(){setState({f:b.getAttribute("data-f")});});});
-  el("mdapp").querySelectorAll("[data-sort]").forEach(function(b){b.addEventListener("click",function(){setState({sort:b.getAttribute("data-sort")});});});
-  var q=el("mdq");q.addEventListener("input",function(){state.q=q.value;save();renderList();});
+  el("mdapp").querySelectorAll("[data-f]").forEach(function(b){b.addEventListener("click",function(){setState({f:b.getAttribute("data-f"),page:0});});});
+  el("mdapp").querySelectorAll("[data-sort]").forEach(function(b){b.addEventListener("click",function(){setState({sort:b.getAttribute("data-sort"),page:0});});});
+  var q=el("mdq");q.addEventListener("input",function(){state.q=q.value;state.page=0;save();renderList();});
   q.addEventListener("keydown",function(e){e.stopPropagation();});
   var sim=el("mdsim");if(sim)sim.addEventListener("click",advance);
-  el("mdnew").addEventListener("click",function(){setState({phase:"setup",log:[],q:"",f:"All",view:"team"});});
+  var undo=el("mdundo");if(undo)undo.addEventListener("click",undoUserPick);
+  el("mdnew").addEventListener("click",restartDraft);
   renderList();renderSide();
 }
 function renderList(){
@@ -498,45 +618,37 @@ function renderList(){
     if(q&&pl.n.toLowerCase().indexOf(q)<0)continue;
     cands.push(i);
   }
-  var srt=state.sort||"rank";
+  var srt=state.sort||"cons";
   function skey(x){return x==null?1e9:x;}
   if(srt==="adp")cands.sort(function(a,b){return skey(PLAYERS[a].adp)-skey(PLAYERS[b].adp);});
   else if(srt==="last")cands.sort(function(a,b){return skey(PLAYERS[a].last)-skey(PLAYERS[b].last);});
+  else if(srt==="lastTotal")cands.sort(function(a,b){return skey(PLAYERS[a].lastTotal)-skey(PLAYERS[b].lastTotal);});
+  else if(srt==="cons")cands.sort(function(a,b){return consRank(PLAYERS[a])-consRank(PLAYERS[b]);});
+  function tierKey(i){var p=PLAYERS[i];if(srt==="adp")return p.adp==null?1e9:p.adp;return consRank(p);}
   function disp(x){return x==null?'—':x;}
-  var rows=[];
-  for(var k=0;k<cands.length&&k<100;k++){
+  var pageSize=50,pageCount=Math.max(1,Math.ceil(cands.length/pageSize));
+  if(state.page>=pageCount)state.page=pageCount-1;
+  var from=state.page*pageSize,to=Math.min(cands.length,from+pageSize),rows=[];
+  rows.push('<div class="listmeta"><span class="muted">'+cands.length+' available · showing '+(cands.length?from+1:0)+'–'+to+'</span><span class="muted">Page '+(state.page+1)+'/'+pageCount+'</span></div>');
+  for(var k=from;k<to;k++){
+    if((srt==="adp"||srt==="cons")&&k>0){var kk=tierKey(cands[k]),pk=tierKey(cands[k-1]);if(pk<1e9&&kk-pk>=4)rows.push('<div class="tierbreak" title="Talent cliff"></div>');}
     i=cands[k];var pl2=PLAYERS[i];
-    var sub='<span>ADP '+disp(pl2.adp)+'</span><span>Last '+disp(pl2.last)+'</span><span>'+posBadges(pl2.p)+'</span>';
+    var rlabel=srt==="cons"?consRank(pl2).toFixed(1):pl2.r;
+    var sub='<span>ADP '+disp(pl2.adp)+'</span><span>Last '+disp(pl2.last)+'</span><span>Tot '+disp(pl2.lastTotal)+'</span><span>'+posBadges(pl2.p)+'</span>';
     if(pl2.c.length)sub+='<span>'+pl2.c.slice(0,3).join(" · ")+'</span>';
-    rows.push('<div class="prow"><div class="l1"><span class="prank">'+pl2.r+'</span><span class="pname">'+esc(pl2.n)+' <span class="teamtag">'+esc(pl2.t)+'</span></span><button class="draftbtn" data-pi="'+i+'"'+(ut?'':' disabled')+'>Draft</button></div><div class="l2">'+sub+'</div></div>');
+    rows.push('<div class="prow"><div class="l1"><span class="prank">'+rlabel+'</span><span class="pname">'+esc(pl2.n)+' <span class="teamtag">'+esc(pl2.t)+'</span></span><button class="draftbtn" data-pi="'+i+'" aria-label="Draft '+esc(pl2.n)+'"'+(ut?'':' disabled')+'>Draft</button></div><div class="l2">'+sub+'</div></div>');
   }
-  el("mdplist").innerHTML=rows.join("")||'<div class="prow"><div class="l1"><span class="muted">No players match.</span></div></div>';
+  if(!cands.length)rows.push('<div class="prow"><div class="l1"><span class="muted">No players match.</span></div></div>');
+  el("mdplist").innerHTML=rows.join("");
+  var pager='<div class="pager"><button class="ghostbtn" id="mdprev" '+(state.page?"":"disabled")+'>Previous</button><button class="ghostbtn" id="mdnext" '+(state.page+1<pageCount?"":"disabled")+'>Next</button></div>';
+  el("mdpager").innerHTML=pager;
   el("mdplist").querySelectorAll(".draftbtn").forEach(function(b){b.addEventListener("click",function(){userDraft(parseInt(b.getAttribute("data-pi"),10));});});
-}
-var BASE_SLOTS=["PG","SG","G","SF","PF","F","C","C","Util","Util","BN","BN","BN"];
-function slotOK(slot,pos){
-  if(slot==="BN"||slot==="Util")return true;
-  if(slot==="G")return pos.indexOf("PG")>=0||pos.indexOf("SG")>=0;
-  if(slot==="F")return pos.indexOf("SF")>=0||pos.indexOf("PF")>=0;
-  return pos.indexOf(slot)>=0;
+  el("mdprev").addEventListener("click",function(){state.page=Math.max(0,state.page-1);save();renderList();});
+  el("mdnext").addEventListener("click",function(){state.page=Math.min(pageCount-1,state.page+1);save();renderList();});
 }
 function myRoster(){
-  var slots=BASE_SLOTS.slice();
-  while(slots.length<state.rounds)slots.push("BN");
-  var filled=slots.map(function(s){return {slot:s,pl:null};});
-  var prio=["PG","SG","G","SF","PF","F","C","C","Util","Util","BN","BN","BN","BN","BN","BN"];
-  state.log.forEach(function(pi,idx){
-    if(teamForPick(idx)!==userTeam())return;
-    var pl=PLAYERS[pi];
-    for(var k=0;k<prio.length;k++){
-      var done=false;
-      for(var j=0;j<filled.length;j++){
-        if(!filled[j].pl&&filled[j].slot===prio[k]&&slotOK(prio[k],pl.p)){filled[j].pl=pl;filled[j].pick=idx;done=true;break;}
-      }
-      if(done)break;
-    }
-  });
-  return filled;
+  var entries=CORE.teamEntries(PLAYERS,state.log,userTeam(),TEAMS);
+  return CORE.assignRoster(entries,draftSlots());
 }
 function renderSide(){
   var s=el("mdside");if(!s)return;  if(state.view==="board"){
@@ -548,7 +660,7 @@ function renderSide(){
       for(t=0;t<TEAMS;t++){
         var idx=r*TEAMS+(r%2===0?t:TEAMS-1-t);
         var cell='&nbsp;',cls=(t===userTeam()?'you':'');
-        if(idx<state.log.length){var pl=PLAYERS[state.log[idx]];cell=esc(pl.n)+' <span class="teamtag">'+esc(pl.t)+'</span>';}
+        if(idx<state.log.length){var pl=PLAYERS[state.log[idx]];cell=esc(pl.n)+' <span class="teamtag">'+esc(pl.t)+'</span>'+vBadge(state.log[idx],idx);}
         else if(t===userTeam()){cls+=' future-you';}
         h+='<td class="'+cls+'">'+cell+'</td>';
       }
@@ -559,22 +671,27 @@ function renderSide(){
     var mine=[];state.log.forEach(function(pi,idx){if(teamForPick(idx)===userTeam())mine.push({pi:pi,idx:idx});});
     var ros=myRoster();
     var h2='<h3>Roster</h3><div class="rlist">';
-    ros.forEach(function(e){
-      h2+='<div class="rrow"><span class="rpick">'+e.slot+'</span><span class="pname">'+(e.pl?esc(e.pl.n)+' <span class="teamtag">'+esc(e.pl.t)+'</span>':'<span class="muted">empty</span>')+'</span>'+(e.pl?'<span class="ppos">'+posBadges(e.pl.p)+'</span>':'')+'</div>';});
+    ros.slots.forEach(function(e){
+      h2+='<div class="rrow"><span class="rpick">'+e.slot+'</span><span class="pname">'+(e.player?esc(e.player.player.n)+' <span class="teamtag">'+esc(e.player.player.t)+'</span>':'<span class="muted">empty</span>')+'</span>'+(e.player?'<span class="ppos">'+posBadges(e.player.player.p)+'</span>':'')+'</div>';});
     h2+='</div>';
+    if(ros.overflow.length){h2+='<h3>Overflow</h3><div class="rlist">';ros.overflow.forEach(function(e){h2+='<div class="rrow"><span class="pname">'+esc(e.player.n)+'</span></div>';});h2+='</div>';}
     h2+='<h3>My team ('+mine.length+'/'+state.rounds+')</h3><div class="rlist">';
     if(!mine.length)h2+='<div class="rrow"><span class="muted">No picks yet.</span></div>';
     mine.forEach(function(m){var pl=PLAYERS[m.pi];
-      h2+='<div class="rrow"><span class="rpick">'+pickLabel(m.idx)+'</span><span class="pname">'+esc(pl.n)+' <span class="teamtag">'+esc(pl.t)+'</span></span><span class="ppos">'+posBadges(pl.p)+'</span></div>';});
+      h2+='<div class="rrow"><span class="rpick">'+pickLabel(m.idx)+'</span><span class="pname">'+esc(pl.n)+' <span class="teamtag">'+esc(pl.t)+'</span>'+vBadge(m.pi,m.idx)+'</span><span class="ppos">'+posBadges(pl.p)+'</span></div>';});
     s.innerHTML=h2+'</div>';
   }
 }
 function renderDone(){
   var h='<h2>Draft complete</h2><div class="muted">Final roster from pick #'+state.draftPos+' ('+state.rounds+' rounds, 12 teams)</div>';
   h+='<button class="bigbtn" id="mdnew2">Run it back</button>';
-  el("mdapp").innerHTML=h+'<div id="mdside"></div>';
-  el("mdnew2").addEventListener("click",function(){setState({phase:"setup",log:[],q:"",f:"All",view:"team"});});
-  state.view="team";renderSide();
+  if(state.userTurns.length)h+='<button class="ghostbtn" id="mdundo2" style="margin-left:8px">Undo my last pick</button>';
+  h+='<div class="tabs"><button class="fchip'+(state.view==='team'?' sel':'')+'" data-view="team">My team</button><button class="fchip'+(state.view==='board'?' sel':'')+'" data-view="board">Draft board</button></div><div id="mdside"></div>';
+  el("mdapp").innerHTML=h;
+  el("mdnew2").addEventListener("click",restartDraft);
+  var undo=el("mdundo2");if(undo)undo.addEventListener("click",undoUserPick);
+  el("mdapp").querySelectorAll("[data-view]").forEach(function(b){b.addEventListener("click",function(){setState({view:b.getAttribute("data-view")});});});
+  renderSide();
 }
 function render(){
   if(state.phase==="setup")renderSetup();
@@ -584,3 +701,6 @@ function render(){
 render();
 })();
 </script>
+
+</body>
+</html>
