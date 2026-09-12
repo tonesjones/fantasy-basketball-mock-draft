@@ -44,6 +44,22 @@
     var after=assignRoster(entries.concat([{player:candidate,pi:-1,index:-1}]),slots).slots.filter(function(x){return x.player&&x.slot!=="BN"&&x.slot!=="Util";}).length;
     return after-before;
   }
+  function marketRank(player,i){
+    /* CPU draft-market estimate. Real ADP when published; otherwise the median
+       of available 2025-26 actuals (totals rank, per-game rank) and the
+       built-in rank, so one stale or outlier signal cannot dominate. Players
+       with no 2025-26 production data at all (prospects) keep the old
+       built-in-rank +45 uncertainty penalty. */
+    if(player.adp!=null)return player.adp;
+    var vals=[];
+    if(player.lastTotal!=null&&isFinite(player.lastTotal))vals.push(player.lastTotal);
+    if(player.last!=null&&isFinite(player.last))vals.push(player.last);
+    if(vals.length===0)return (player.r||i+1)+45;
+    vals.push(player.r||i+1);
+    vals.sort(function(a,b){return a-b;});
+    var n=vals.length;
+    return n%2?vals[(n-1)/2]:(vals[n/2-1]+vals[n/2])/2;
+  }
   function cpuPickIndex(opts){
     var players=opts.players,log=opts.log,teams=opts.teams,team=teamForPick(log.length,teams),slots=opts.slots;
     var entries=teamEntries(players,log,team,teams), candidates=availableIndexes(players,log),random=opts.random||Math.random;
@@ -55,7 +71,7 @@
     var best=-1,bestScore=Infinity;
     candidates.forEach(function(i){
       var player=players[i];
-      var market=player.adp==null?(player.r||i+1)+45:player.adp;
+      var market=marketRank(player,i);
       var need=positionalNeed(entries,player,slots);
       var score=market+((random()*2-1)*spread)-need*3;
       if(score<bestScore){bestScore=score;best=i;}
@@ -63,5 +79,5 @@
     return best;
   }
   function seededRandom(seed){var state=(seed>>>0)||1;return {next:function(){state^=state<<13;state^=state>>>17;state^=state<<5;return ((state>>>0)/4294967296);},getState:function(){return state>>>0;}};}
-  return {teamForPick:teamForPick,validPlayerIndex:validPlayerIndex,availableIndexes:availableIndexes,slotOK:slotOK,assignRoster:assignRoster,slotsForRounds:slotsForRounds,teamEntries:teamEntries,positionalNeed:positionalNeed,cpuPickIndex:cpuPickIndex,seededRandom:seededRandom};
+  return {teamForPick:teamForPick,validPlayerIndex:validPlayerIndex,availableIndexes:availableIndexes,slotOK:slotOK,assignRoster:assignRoster,slotsForRounds:slotsForRounds,teamEntries:teamEntries,positionalNeed:positionalNeed,cpuPickIndex:cpuPickIndex,marketRank:marketRank,seededRandom:seededRandom};
 });

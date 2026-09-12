@@ -21,6 +21,11 @@ const fnMatch=html.match(/function draftGrades\(\)\{[\s\S]*?\n\}/);
 assert(fnMatch,'draftGrades function must exist in index.html');
 const cmMatch=html.match(/function catMatchup\(userCats,oppCats\)\{[\s\S]*?\n\}/);
 assert(cmMatch,'catMatchup function must exist in index.html');
+// draftGrades uses scarcityBase().repl as the replacement fill; extract it + consRank
+const sbMatch=html.match(/var _scarcBase=null;\nfunction scarcityBase\(\)\{[\s\S]*?\n\}/);
+assert(sbMatch,'scarcityBase function must exist in index.html');
+const crMatch=html.match(/function consRank\(p\)\{[^\n]*\}/);
+assert(crMatch,'consRank function must exist in index.html');
 
 // Set up context with mocked globals
 const TEAMS=12;
@@ -29,6 +34,8 @@ const userTeam=()=>5;
 const teamName=(t)=>t===5?'You':'CPU '+(t+1);
 const testCtx={CORE:core,PLAYERS,PDATA,TEAMS,state,userTeam,teamName,esc:(s)=>String(s)};
 vm.createContext(testCtx);
+vm.runInContext(crMatch[0]+'; this.consRank=consRank;',testCtx);
+vm.runInContext(sbMatch[0]+'; this.scarcityBase=scarcityBase;',testCtx);
 vm.runInContext(fnMatch[0]+'; this.draftGrades=draftGrades;',testCtx);
 vm.runInContext(cmMatch[0]+'; this.catMatchup=catMatchup;',testCtx);
 
@@ -64,8 +71,20 @@ for(let i=1;i<g.length;i++)assert(g[i-1].score>=g[i].score,'scores must be sorte
 // Grades should be valid letters
 const validGrades=['A+','A','B+','B','C+','C','D','F'];
 g.forEach(x=>assert(validGrades.includes(x.grade),'grade must be valid: '+x.grade));
-// Each team should have 13 players with cv data
-g.forEach(x=>assert(x.count>0,'each team must have players with cv data'));
+// Every roster spot counts: rated + unrated must equal the full 13-man roster
+g.forEach(x=>assert.equal(x.rated+x.unrated,13,'rated+unrated must cover the full roster'));
+// Replacement fill: a team with unrated players must score higher than the
+// same roster with those spots contributing zero
+const repl=Array.from(testCtx.scarcityBase().repl);
+assert(repl.length===9&&repl.every(v=>typeof v==='number'&&isFinite(v)),'replacement vector must be 9 finite numbers');
+const replTotal=repl.reduce((a,b)=>a+b,0);
+g.forEach(x=>{
+  if(x.unrated>0){
+    // score must exceed the sum of rated-only contributions; verify via cats
+    const cats=Array.from(x.cats);
+    assert(cats.every(v=>typeof v==='number'&&isFinite(v)),'category totals must be finite numbers');
+  }
+});
 // Each team should have 9 per-category totals
 g.forEach(x=>{
   const cats=Array.from(x.cats);

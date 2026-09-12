@@ -28,4 +28,10 @@ let log=[]; const rng=core.seededRandom(42);
 for(let i=0;i<4;i++){const pi=core.cpuPickIndex({players:market,log,teams:2,slots:['PG','SG','C','BN'],random:()=>rng.next()});if(pi===-1)break;assert(core.validPlayerIndex(market,log,pi));log.push(pi);}
 assert.equal(new Set(log).size, 3, 'no duplicate cpu picks when pool exhausts');
 assert.equal(core.cpuPickIndex({players:market,log,teams:2,slots:['PG'],random:()=>0}), -1, 'empty pool has no valid CPU pick');
+// marketRank: ADP passthrough, median-of-actuals fallback, prospect penalty
+assert.equal(core.marketRank({adp:45.2,r:80},0),45.2,'published ADP is the market');
+assert.equal(core.marketRank({adp:null,r:94,last:456,lastTotal:214},0),214,'fallback is median of actuals + built-in rank');
+assert.equal(core.marketRank({adp:null,r:107,lastTotal:212},0),159.5,'two-signal median averages');
+assert.equal(core.marketRank({adp:null,r:200},5),245,'no 2025-26 data keeps built-in rank +45 penalty');
+assert.equal(core.marketRank({adp:null,r:50,last:100,lastTotal:120},3),100,'median works across all three signals');
 console.log('draft-core tests passed');

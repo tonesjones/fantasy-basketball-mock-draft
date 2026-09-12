@@ -28,7 +28,7 @@ Press **Start draft**. Your picks are marked; the 11 CPU teams draft automatical
 
 - **My team** — your roster in Yahoo-style slots, your playoff-games summary, and a per-player playoff schedule table for your chosen window.
 - **Draft board** — the full board with the value/reach legend underneath.
-- **Grades** — all 12 teams scored by summing 2025-26 per-game category values across the roster, ranked 1–12 with letter grades (A+ to F). The **vs You** column shows your category tally against each CPU team (e.g. **7-2**) plus each category (FG% FT% 3PM PTS REB AST STL BLK TO) colored green (you win it), yellow (even), or red (they win it); hover for the exact values.
+- **Grades** — all 12 teams scored by summing 2025-26 per-game category values across the full roster (players without 2025-26 data count at replacement level, marked †N), ranked 1–12 with letter grades (A+ to F). The **Category matchup** column shows your historical category-value tally against each CPU team (e.g. **7-2**) plus each category (FG% FT% 3PM PTS REB AST STL BLK TO) colored green (you win it), yellow (even), or red (they win it); hover for the exact values. This is a comparison of 2025-26 z-scores, not projected category totals.
 
 ### On mobile
 
@@ -79,7 +79,7 @@ The category-scarcity panel shows, for each of the nine categories, the share of
 ## Feature notes
 
 - **Minutes per game** — every available-player row shows the player's 2025-26 MPG from Basketball-Reference's per-game table (224 of 237 players; 13 show "—": three injured stars and players who did not appear in 2025-26, e.g. incoming draft prospects).
-- **Draft grades** — the Grades tab scores every team by summing 2025-26 per-game category values (`cv`) across the roster, ranks 1–12, and assigns letter grades by standard deviation from the mean. The **vs You** column compares each CPU team to your roster category-by-category: green = you win the category, yellow = even (within 0.5), red = they win it, with a wins-losses tally. Bench and starters are weighted equally; injuries, playoff schedule, and projected 2026-27 role changes are not factored in.
+- **Draft grades** — the Grades tab scores every team by summing 2025-26 per-game category values (`cv`) across the full roster (players without 2025-26 data, e.g. injured stars and prospects, count at replacement level — the mean `cv` of consensus ranks 150–170 — and are flagged †N), ranks 1–12, and assigns letter grades by standard deviation from the mean. The **Category matchup** column compares each CPU team to your roster category-by-category on 2025-26 z-scores (not projected totals): green = you win the category, yellow = even (within 0.5), red = they win it, with a wins-losses tally. Bench and starters are weighted equally; injuries, playoff schedule, and projected 2026-27 role changes are not factored in.
 
 ## Data health audit
 

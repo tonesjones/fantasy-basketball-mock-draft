@@ -1,8 +1,30 @@
-# Changelog — changes since the GitHub push (2026-09-12)
+# Changelog
 
-The data refresh below was pushed to
-`github.com/tonesjones/fantasy-basketball-mock-draft` on 2026-09-12
-(commit `47c17da`); the sections after it are local and unpushed.
+Covers the working copy at
+`github.com/tonesjones/fantasy-basketball-mock-draft` on `main`.
+Pushes happen on demand, so the newest entries here may be ahead of the
+remote.
+
+## Accuracy fixes (2026-09-12, afternoon)
+- **Draft grades: replacement-level fill** — players without 2025-26
+  category values (injured stars, prospects) no longer vanish from the
+  score; they count at replacement level (mean `cv` of consensus ranks
+  150–170, same baseline as scarcity). Teams with filled players show a
+  †N marker with a tooltip; every roster now scores all its picks.
+- **CPU ADP fallback** — no-ADP players no longer fall back to the stale
+  built-in rank +45. The CPU market estimate is now the median of available
+  2025-26 totals rank, per-game rank, and built-in rank (the +45 uncertainty
+  penalty applies only to players with no 2025-26 data at all, i.e.
+  prospects). New `marketRank()` in `draft-core.js`, covered in
+  `test-draft-core.js`.
+- **Category tags derived from cv** — the manual `CATS` strength tags are
+  replaced by tags derived from per-game category values (top 4 categories
+  with cv > 0). 225 of 237 players tagged from data; 8 without 2025-26 data
+  keep a manual fallback (marked in the source); 4 zero-data prospects
+  remain untagged. Untagged count in the data-health audit: 30 → 4.
+- **Honest grades labeling** — the "vs You" column is now "Category
+  matchup" and is labeled a historical category-value comparison
+  (2025-26 z-scores), not projected category totals.
 
 ## Minutes per game + draft grades (2026-09-12)
 - **New `mpg` field** — 2025-26 minutes per game for all 237 players, from
