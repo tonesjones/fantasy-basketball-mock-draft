@@ -2,7 +2,32 @@
 
 The data refresh below was pushed to
 `github.com/tonesjones/fantasy-basketball-mock-draft` on 2026-09-12
-(commit `47c17da`); the injury-tag section after it is local and unpushed.
+(commit `47c17da`); the sections after it are local and unpushed.
+
+## Fantasy playoff schedule (2026-09-12)
+- **New `playoff-data.js`** — Yahoo weekly schedule snapshot (2026-27):
+  per-team games for Yahoo weeks 18–23 (Mar 1 – Apr 11, 2027), transcribed
+  from Hashtag Basketball's Yahoo grid fetched 2026-09-12; every team row
+  cross-checked against the page's own games-total column. Refresh path:
+  `scripts/import-playoff-schedule.py` (needs saved grid HTML),
+  or `scripts/build-playoff-data.py` for the transcribed build.
+- **New `playoff-core.js`** — `counts`/`total`/`summary` plus `rating`:
+  2 games in any week = bad, 3 = ok, 4–5 = good.
+- **index.html** — per-player playoff badge (color-coded bad/ok/good) on
+  every available-player row; new sorts (Playoff W1/W2/W3/total);
+  "Playoff games · your roster" summary with a per-player table;
+  setup-screen three-week window picker (weeks 18–21 starts, default 21–23,
+  the standard playoff weeks).
+- **Chat visibility fix** — the Courtside theme variables were declared on
+  `:root`, so in chat the host page's accent color leaked in and the logo /
+  "YOUR PICK" rendered nearly invisible. Variables are now scoped to `#md`,
+  which overrides host values inside the widget; standalone is unchanged.
+- Tests: `test-playoff-core.js` (data integrity + logic). All suites pass;
+  audit: 237 players, 0 errors.
+- Revision (2026-09-12, per Tony): dropped the Playoff W1/W2/W3/total sorts
+  (the badge next to each player is enough); the three-week window picker is
+  now chip buttons labeled W18–20 … W21–23 instead of a native select with
+  raw dates (also fixes the select needing a held click in chat).
 
 ## Injury tags (2026-09-12)
 - **New `INJ` data in `player-data.js`** — 9 pool players currently injured,

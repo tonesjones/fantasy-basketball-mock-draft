@@ -75,7 +75,7 @@ html{background:#101014}body{background:#101014;margin:0;min-width:320px}
 @media(max-width:640px){#md .cols{flex-direction:column}#md .avail,#md .side{width:100%}}
 
 /* Courtside: local-only visual theme */
-:root{color-scheme:dark;--hatch-widget-text:#eef3f8;--hatch-widget-muted:#a3b1c3;--hatch-widget-surface:#121d2c;--hatch-widget-surface-muted:#1a293b;--hatch-widget-border:#293a50;--hatch-widget-accent:#85e5bc;--hatch-widget-on-accent:#09271d}
+:root{color-scheme:dark}#md{--hatch-widget-text:#eef3f8;--hatch-widget-muted:#a3b1c3;--hatch-widget-surface:#121d2c;--hatch-widget-surface-muted:#1a293b;--hatch-widget-border:#293a50;--hatch-widget-accent:#85e5bc;--hatch-widget-on-accent:#09271d}
 html,body{background:#0b1320}
 body{background:radial-gradient(ellipse at top right,#19352f66,transparent 55%),#0b1320;min-height:100vh}
 #md{max-width:1440px;margin:auto;padding:28px 32px 48px;line-height:1.5}
@@ -131,6 +131,16 @@ body{background:radial-gradient(ellipse at top right,#19352f66,transparent 55%),
 @media(max-width:900px){#md{padding:20px 18px 32px}#md .setup-pos{grid-template-columns:repeat(6,1fr)}#md .cols{flex-direction:column}#md .avail,#md .side{width:100%}}
 @media(max-width:480px){#md{padding:16px 12px 28px}#md h2{font-size:26px}#md .brandbar{padding-bottom:18px;margin-bottom:18px}#md .season{font-size:9px;letter-spacing:.5px}#md .avail,#md .side{padding:12px}#md .catgrid{grid-template-columns:repeat(3,1fr)}#md .turnbar{padding:14px}#md .posbtn{height:48px}#md .rrow{gap:5px}}
 @media(prefers-reduced-motion:reduce){#md button{transition:none}}
+#md .playoffbadge{font-weight:600;font-size:11px;white-space:nowrap}
+#md .playoffbadge.bad{color:#ff8a7a}#md .playoffbadge.ok{color:#ffd479}#md .playoffbadge.good{color:#85e5bc}
+#md .playoffnote a{color:#85e5bc}
+#md .playofftable{width:100%;border-collapse:collapse;font-size:12px}
+#md .playofftable th,#md .playofftable td{padding:8px;text-align:left;border-bottom:1px solid var(--hatch-widget-border)}
+#md .playofftable th{background:#1a293b}
+#md .playofftable td:not(:first-child){font-variant-numeric:tabular-nums}
+#md .playofftable tr.bad td:last-child{color:#ff8a7a;font-weight:700}
+#md .playofftable tr.ok td:last-child{color:#ffd479;font-weight:700}
+#md .playofftable tr.good td:last-child{color:#85e5bc;font-weight:700}
 
 </style>
 </head>
@@ -139,6 +149,8 @@ body{background:radial-gradient(ellipse at top right,#19352f66,transparent 55%),
 <script src="player-data.js"></script>
 <script src="draft-core.js"></script>
 <script src="data-health.js"></script>
+<script src="playoff-data.js"></script>
+<script src="playoff-core.js"></script>
 <script>
 (function(){
 "use strict";
@@ -484,7 +496,7 @@ var BASE_SLOTS=["PG","SG","G","SF","PF","F","C","C","Util","Util","BN","BN","BN"
 var DATA_VERSION="2026-09-12";
 var STORAGE_KEY="fantasy-basketball-mock-draft.v2";
 var HW=(typeof window!=="undefined"&&window.hatchWidget)?window.hatchWidget:null;
-var DEFAULTS={phase:"setup",draftPos:6,rounds:13,log:[],q:"",f:"All",view:"team",sort:"cons",page:0,seed:123456789,rngState:123456789,userTurns:[]};
+var DEFAULTS={phase:"setup",draftPos:6,rounds:13,log:[],q:"",f:"All",view:"team",sort:"cons",playoffStart:21,page:0,seed:123456789,rngState:123456789,userTurns:[]};
 function freshState(){var seed=(Date.now()>>>0)||1;return Object.assign({},DEFAULTS,{seed:seed,rngState:seed,log:[],userTurns:[]});}
 function cleanState(raw){
   var out=Object.assign({},DEFAULTS,raw||{}), used={};
@@ -494,6 +506,7 @@ function cleanState(raw){
   out.phase=out.log.length>=TEAMS*out.rounds?"done":(out.phase==="draft"?"draft":"setup");
   out.f=["All","PG","SG","SF","PF","C"].indexOf(out.f)>=0?out.f:"All";
   out.sort=["cons","rank","adp","last","lastTotal"].indexOf(out.sort)>=0?out.sort:"cons";
+  out.playoffStart=[18,19,20,21].indexOf(out.playoffStart)>=0?out.playoffStart:21;
   out.page=Math.max(0,parseInt(out.page,10)||0);
   out.seed=(parseInt(out.seed,10)>>>0)||1;out.rngState=(parseInt(out.rngState,10)>>>0)||out.seed;
   out.userTurns=Array.isArray(out.userTurns)?out.userTurns.filter(function(x){return x&&Array.isArray(x.log);}).slice(-20):[];
@@ -565,7 +578,7 @@ function renderSetup(){
   el("mdapp").querySelectorAll(".posbtn").forEach(function(b){b.addEventListener("click",function(){setState({draftPos:parseInt(b.getAttribute("data-pos"),10)});});});
   el("mdrounds").addEventListener("change",function(e){setState({rounds:parseInt(e.target.value,10)});});
   el("mdstart").addEventListener("click",function(){
-    var chosenPos=state.draftPos,chosenRounds=parseInt(el("mdrounds").value,10);state=freshState();state.draftPos=chosenPos;state.rounds=chosenRounds;state.phase="draft";save();advance();
+    var chosenPlayoff=state.playoffStart,chosenPos=state.draftPos,chosenRounds=parseInt(el("mdrounds").value,10);state=freshState();state.draftPos=chosenPos;state.rounds=chosenRounds;state.playoffStart=chosenPlayoff;state.phase="draft";save();advance();
   });
   el("mdclear").addEventListener("click",function(){restartDraft();});
 }
@@ -638,7 +651,7 @@ function renderList(){
     if((srt==="adp"||srt==="cons")&&k>0){var kk=tierKey(cands[k]),pk=tierKey(cands[k-1]);if(pk<1e9&&kk-pk>=4)rows.push('<div class="tierbreak" title="Talent cliff"></div>');}
     i=cands[k];var pl2=PLAYERS[i];
     var rlabel=srt==="cons"?consRank(pl2).toFixed(1):pl2.r;
-    var sub='<span>ADP '+disp(pl2.adp)+'</span><span>Last '+disp(pl2.last)+'</span><span>Tot '+disp(pl2.lastTotal)+'</span><span>'+posBadges(pl2.p)+'</span>';
+    var sub='<span>ADP '+disp(pl2.adp)+'</span><span>Last '+disp(pl2.last)+'</span><span>Tot '+disp(pl2.lastTotal)+'</span><span>'+posBadges(pl2.p)+'</span>'+playoffBadge(pl2);
     if(pl2.c.length)sub+='<span>'+pl2.c.slice(0,3).join(" · ")+'</span>';
     rows.push('<div class="prow"><div class="l1"><span class="prank">'+rlabel+'</span><span class="pname">'+esc(pl2.n)+' <span class="teamtag">'+esc(pl2.t)+'</span>'+injBadge(pl2)+'</span><button class="draftbtn" data-pi="'+i+'" aria-label="Draft '+esc(pl2.n)+'"'+(ut?'':' disabled')+'>Draft</button></div><div class="l2">'+sub+'</div></div>');
   }
@@ -674,7 +687,7 @@ function renderSide(){
   }else{
     var mine=[];state.log.forEach(function(pi,idx){if(teamForPick(idx)===userTeam())mine.push({pi:pi,idx:idx});});
     var ros=myRoster();
-    var h2='<h3>Roster</h3><div class="rlist">';
+    var h2=playoffRoster(mine)+'<h3>Roster</h3><div class="rlist">';
     ros.slots.forEach(function(e){
       h2+='<div class="rrow"><span class="rpick">'+e.slot+'</span><span class="pname">'+(e.player?esc(e.player.player.n)+' <span class="teamtag">'+esc(e.player.player.t)+'</span>'+injBadge(e.player.player):'<span class="muted">empty</span>')+'</span>'+(e.player?'<span class="ppos">'+posBadges(e.player.player.p)+'</span>':'')+'</div>';});
     h2+='</div>';
@@ -697,7 +710,35 @@ function renderDone(){
   el("mdapp").querySelectorAll("[data-view]").forEach(function(b){b.addEventListener("click",function(){setState({view:b.getAttribute("data-view")});});});
   renderSide();
 }
+function playoffBadge(pl){
+ var v=window.PlayoffCore.counts(window.PlayoffData,pl.t,state.playoffStart);
+ if(!v)return '<span class="playoffbadge">Playoffs \u2014 team unknown</span>';
+ var r=window.PlayoffCore.rating(v);
+ return '<span class="playoffbadge '+r+'" title="Schedule quality: '+r+' (2 games in a week = bad, 3 = ok, 4+ = good)">Playoffs W1 '+v[0]+' \u00b7 W2 '+v[1]+' \u00b7 W3 '+v[2]+' = '+window.PlayoffCore.total(v)+'</span>';
+}
+function playoffRoster(mine){
+ var sum=window.PlayoffCore.summary(window.PlayoffData,mine.map(function(m){return PLAYERS[m.pi];}),state.playoffStart);
+ var h='<h3>Playoff games \u00b7 your roster</h3><div class="catgrid">';
+ sum.games.forEach(function(n,i){h+='<div class="catchip"><span class="catname">'+(sum.unknown?'KNOWN ':'')+'WEEK '+(i+1)+'</span><span class="catnum">'+n+'</span></div>';});
+ h+='</div><p class="muted">'+sum.players+' players, including bench. '+sum.unknown+' unknown team schedules. These are scheduled opportunities, not guaranteed starts.</p>';
+ if(mine.length){h+='<div class="boardwrap"><table class="playofftable"><thead><tr><th>Player / team</th><th>W1</th><th>W2</th><th>W3</th><th>Total</th></tr></thead><tbody>';
+ mine.forEach(function(m){var p=PLAYERS[m.pi],v=window.PlayoffCore.counts(window.PlayoffData,p.t,state.playoffStart),r=v?window.PlayoffCore.rating(v):null;
+ h+='<tr'+(r?' class="'+r+'"':'')+'><td>'+esc(p.n)+' <span class="teamtag">'+esc(p.t)+'</span></td>';
+ [0,1,2].forEach(function(i){h+='<td>'+(v?v[i]:'\u2014')+'</td>';});
+ h+='<td>'+(v?window.PlayoffCore.total(v):'\u2014')+'</td></tr>';});h+='</tbody></table></div>';}
+ return h;
+}
+function renderPlayoffSettings(){
+ var d=window.PlayoffData,h='<section class="scarcity"><h3>Fantasy playoff schedule</h3><div class="muted" style="margin-bottom:8px">Three-week window</div><div class="filters">';
+ [18,19,20,21].forEach(function(w){h+='<button class="fchip'+(state.playoffStart===w?' sel':'')+'" data-pw="'+w+'">W'+w+'\u2013'+(w+2)+(w===21?' \u00b7 standard':'')+'</button>';});
+ h+='</div><div class="catgrid" style="margin-top:12px">';
+ d.weeks.slice(state.playoffStart-18,state.playoffStart-15).forEach(function(w,i){h+='<div class="catchip"><b>W'+(i+1)+' \u00b7 Yahoo '+w.week+'</b><div class="muted">'+w.start+' \u2013 '+w.end+'</div></div>';});
+ h+='</div><p class="muted playoffnote">2 games in a week = bad \u00b7 3 = ok \u00b7 4\u20135 = good. Scheduled NBA team games, based on the displayed team. Team assignments may be outdated; injuries, rest, byes and lineup limits are not deducted. Confirm your league dates. Snapshot '+d.checked+'. <a href="'+d.source+'" target="_blank" rel="noopener">Schedule source</a> \u00b7 <a href="'+d.defaultSource+'" target="_blank" rel="noopener">Yahoo dates</a></p></section>';
+ var host=el('mdplayoffhost');if(!host){host=document.createElement('div');host.id='mdplayoffhost';el('mdapp').parentNode.insertBefore(host,el('mdapp'));}host.innerHTML=h;
+ host.querySelectorAll('[data-pw]').forEach(function(b){b.addEventListener('click',function(){setState({playoffStart:Number(b.getAttribute('data-pw')),page:0});});});
+}
 function render(){
+  renderPlayoffSettings();
   if(state.phase==="setup")renderSetup();
   else if(state.phase==="done")renderDone();
   else renderDraft();
