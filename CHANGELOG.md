@@ -5,6 +5,23 @@ Everything below was added locally *after* the version pushed to
 (that push had: standalone-safe loading, two-line mobile player rows,
 scarcity counts tied to the draftable pool).
 
+## Data refresh — Yahoo ADP / teams / eligibility (2026-09-12)
+- **Refreshed from Hashtag Basketball's 2026-27 ADP table (Yahoo columns,
+  updated 11 September 2026)** for all 237 players: 155 ADPs changed
+  (8 players gained a published ADP, none lost one; 74 remain null),
+  104 teams changed, 94 position-eligibility sets changed.
+- Team changes include the summer's blockbusters (Giannis MIL→MIA,
+  LeBron LAL→PHI, Kawhi LAC→TOR, Jaylen Brown BOS→PHI, Paul George
+  PHI→BOS, Ja Morant MEM→POR, LaMelo Ball CHA→MIN) plus abbreviation
+  normalization (SAS→SA, NYK→NY, PHX→PHO, NOP→NO, WSH→WAS, GSW→GS).
+  All eight "—" placeholder teams resolved (2026 rookies now have teams).
+- **Historical 2025-26 `last`, `lastTotal`, and `cv` fields preserved
+  untouched.** No historical results replaced with projections.
+- Player pool unchanged (237 players, same order) — `DATA_VERSION`
+  unchanged, saved drafts remain valid.
+- README and in-app Data Health text now describe the BM-style `cv`
+  scarcity model and the refreshed sources.
+
 ## Category scarcity report (2026-09-12)
 - **New per-game category values (`cv`).** Every player with 2025-26 stats
   now carries 9 BM-style per-game category values: z-scores across the 225
