@@ -1,0 +1,579 @@
+<style>
+#md *{box-sizing:border-box}
+#md{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:var(--hatch-widget-text);max-width:100%;padding:4px}
+#md h2{font-size:18px;margin:8px 0}
+#md h3{font-size:15px;margin:10px 0 6px}
+#md .muted{color:var(--hatch-widget-muted);font-size:12px}
+#md .setup-pos{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+#md .posbtn{width:44px;height:44px;border-radius:10px;border:1px solid var(--hatch-widget-border);background:var(--hatch-widget-surface);color:var(--hatch-widget-text);font-size:16px;font-weight:700;cursor:pointer}
+#md .posbtn.sel{background:var(--hatch-widget-accent);color:var(--hatch-widget-on-accent);border-color:var(--hatch-widget-accent)}
+#md .bigbtn{background:var(--hatch-widget-accent);color:var(--hatch-widget-on-accent);border:none;border-radius:10px;padding:10px 22px;font-size:15px;font-weight:700;cursor:pointer;margin-top:10px}
+#md .ghostbtn{background:var(--hatch-widget-surface);color:var(--hatch-widget-text);border:1px solid var(--hatch-widget-border);border-radius:10px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer}
+#md .ghostbtn:disabled{opacity:.4;cursor:default}
+#md select{background:var(--hatch-widget-surface);color:var(--hatch-widget-text);border:1px solid var(--hatch-widget-border);border-radius:8px;padding:6px 10px;font-size:14px}
+#md .turnbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--hatch-widget-surface);border:1px solid var(--hatch-widget-border);border-radius:12px;padding:10px 12px;margin:8px 0}
+#md .turnbar .you{font-weight:800;color:var(--hatch-widget-accent)}
+#md .cols{display:flex;gap:12px;align-items:flex-start}
+#md .avail{flex:1.4;min-width:0}
+#md .side{flex:1;min-width:0}
+#md .filters{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+#md .fchip{border:1px solid var(--hatch-widget-border);background:var(--hatch-widget-surface);color:var(--hatch-widget-text);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:600;cursor:pointer}
+#md .fchip.sel{background:var(--hatch-widget-accent);color:var(--hatch-widget-on-accent);border-color:var(--hatch-widget-accent)}
+#md input[type=text]{width:100%;background:var(--hatch-widget-surface);color:var(--hatch-widget-text);border:1px solid var(--hatch-widget-border);border-radius:8px;padding:7px 10px;font-size:13px;margin:4px 0}
+#md .plist{max-height:420px;overflow-y:auto;border:1px solid var(--hatch-widget-border);border-radius:10px}
+#md .prow{padding:7px 10px;border-bottom:1px solid var(--hatch-widget-border);font-size:13px}
+#md .prow:last-child{border-bottom:none}
+#md .prow .l1{display:flex;align-items:center;gap:8px}
+#md .prow .l2{display:flex;flex-wrap:wrap;gap:2px 10px;margin-top:3px;padding-left:38px;font-size:11px;color:var(--hatch-widget-muted)}
+#md .prank{width:30px;color:var(--hatch-widget-muted);font-size:12px;flex-shrink:0}
+#md .pname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+#md .ppos{font-size:10px;color:var(--hatch-widget-muted);flex-shrink:0}
+#md .pstat{width:40px;text-align:right;color:var(--hatch-widget-muted);font-size:11px;flex-shrink:0}
+#md .draftbtn{background:var(--hatch-widget-accent);color:var(--hatch-widget-on-accent);border:none;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0}
+#md .draftbtn:disabled{opacity:.35;cursor:default}
+#md .rlist{max-height:420px;overflow-y:auto;border:1px solid var(--hatch-widget-border);border-radius:10px}
+#md .rrow{display:flex;gap:8px;padding:6px 10px;border-bottom:1px solid var(--hatch-widget-border);font-size:13px;align-items:center}
+#md .rrow:last-child{border-bottom:none}
+#md .rpick{width:64px;color:var(--hatch-widget-muted);font-size:11px;flex-shrink:0}
+#md .tabs{display:flex;gap:6px;margin:8px 0}
+#md .boardwrap{overflow-x:auto;border:1px solid var(--hatch-widget-border);border-radius:10px;max-height:440px;overflow-y:auto}
+#md table.board{border-collapse:collapse;font-size:11px;min-width:900px}
+#md table.board th,#md table.board td{border:1px solid var(--hatch-widget-border);padding:4px 6px;text-align:left;white-space:nowrap}
+#md table.board th{background:var(--hatch-widget-surface-muted);position:sticky;top:0}
+#md table.board td.you{background:var(--hatch-widget-surface-muted);font-weight:700}
+#md table.board td.future-you{box-shadow:inset 0 0 0 2px var(--hatch-widget-accent)}
+#md .nextpick{font-size:12px;color:var(--hatch-widget-muted)}
+#md .nextpick b{color:var(--hatch-widget-accent)}
+#md .scarcity{margin:10px 0;padding:10px 12px;background:var(--hatch-widget-surface);border:1px solid var(--hatch-widget-border);border-radius:10px}
+#md .scarcity h3{margin:0 0 8px;font-size:14px}
+#md .catgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(72px,1fr));gap:6px}
+#md .catchip{background:var(--hatch-widget-surface-muted);border-radius:8px;padding:6px 4px;text-align:center}
+#md .catchip.hot{box-shadow:inset 0 0 0 2px #e0533d}
+#md .catname{display:block;font-size:10px;color:var(--hatch-widget-muted);font-weight:700}
+#md .catnum{display:block;font-size:16px;font-weight:800}
+#md .catbar{height:4px;background:var(--hatch-widget-border);border-radius:2px;margin-top:4px;overflow:hidden}
+#md .catbar i{display:block;height:100%;background:var(--hatch-widget-accent);border-radius:2px}
+#md .cbadge{font-size:10px;color:var(--hatch-widget-accent);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px}
+#md .teamtag{font-size:10px;color:var(--hatch-widget-muted)}
+@media(max-width:640px){#md .cols{flex-direction:column}#md .avail,#md .side{width:100%}}
+</style>
+<div id="md"><div id="mdapp"></div></div>
+<script src="player-data.js"></script>
+<script>
+(function(){
+"use strict";
+var PLAYERS=[
+["Nikola Jokic",["C"],"DEN"],["Victor Wembanyama",["C"],"SAS"],["Shai Gilgeous-Alexander",["PG"],"OKC"],
+["Luka Doncic",["PG"],"LAL"],["Tyrese Maxey",["PG","SG"],"PHI"],["Cade Cunningham",["PG","SG"],"DET"],
+["Giannis Antetokounmpo",["PF","C"],"MIL"],["Jalen Johnson",["PF"],"ATL"],["Donovan Mitchell",["SG","PG"],"CLE"],
+["Anthony Edwards",["SG","SF"],"MIN"],["Cooper Flagg",["SF","PG","PF"],"DAL"],["Jayson Tatum",["PF","SF"],"BOS"],
+["Amen Thompson",["SF","SG"],"HOU"],["Scottie Barnes",["SF","SG"],"TOR"],["Jamal Murray",["PG"],"DEN"],
+["Alperen Sengun",["C"],"HOU"],["Karl-Anthony Towns",["C","PF"],"NYK"],["Kevin Durant",["PF","SF"],"HOU"],
+["Mikal Bridges",["SF","SG"],"NYK"],["Tyrese Haliburton",["PG","SG"],"IND"],["James Harden",["PG","SG"],"CLE"],
+["Jaylen Brown",["SF","SG"],"BOS"],["Chet Holmgren",["C","PF"],"OKC"],["Kawhi Leonard",["SF","PF"],"LAC"],
+["Jalen Duren",["C"],"DET"],["Evan Mobley",["PF","C"],"CLE"],["Deni Avdija",["SF","SG"],"POR"],
+["Devin Booker",["PG","SG"],"PHX"],["Pascal Siakam",["PF"],"IND"],["Paolo Banchero",["PF","SF"],"ORL"],
+["Trey Murphy III",["SF","SG"],"NOP"],["Stephon Castle",["PG","SG"],"SAS"],["Kon Knueppel",["SG"],"CHA"],
+["Kyrie Irving",["PG","SG"],"DAL"],["Josh Giddey",["SG","PG","SF"],"CHI"],["VJ Edgecombe",["SG"],"PHI"],
+["Jalen Brunson",["PG"],"NYK"],["Austin Reaves",["SG","PG","SF"],"LAL"],["Jalen Williams",["PF","SF","C"],"OKC"],
+["Darius Garland",["PG"],"LAC"],["Domantas Sabonis",["C","PF"],"SAC"],["Keyonte George",["PG","SG"],"UTA"],
+["Anthony Davis",["C","PF"],"WSH"],["Lauri Markkanen",["PF","SF"],"UTA"],["LeBron James",["SF","PF"],"LAL"],
+["Paul George",["SF","PF"],"PHI"],["Dejounte Murray",["SG","PG"],"NOP"],["Michael Porter Jr.",["SF","PF"],"BKN"],
+["Matas Buzelis",["SF","PF"],"CHI"],["Ja Morant",["PG"],"MEM"],["Brandon Miller",["SF","SG"],"CHA"],
+["Trae Young",["PG"],"WSH"],["Nickeil Alexander-Walker",["SG"],"ATL"],["Alex Sarr",["C"],"WSH"],
+["Stephen Curry",["PG"],"GSW"],["Zion Williamson",["PF"],"NOP"],["Jaren Jackson Jr.",["C","PF"],"UTA"],
+["LaMelo Ball",["PG"],"CHA"],["Bam Adebayo",["C","PF"],"MIA"],["De'Aaron Fox",["PG"],"SAS"],
+["Desmond Bane",["SG"],"ORL"],["Franz Wagner",["SF","PF"],"ORL"],["Derrick White",["PG","SG"],"BOS"],
+["Joel Embiid",["C"],"PHI"],["Devin Vassell",["SG","SF"],"SAS"],["Tyler Herro",["PG","SG"],"MIA"],
+["Rudy Gobert",["C"],"MIN"],["Myles Turner",["C"],"MIL"],["Jarrett Allen",["C"],"CLE"],
+["Deandre Ayton",["C"],"LAL"],["Ivica Zubac",["C"],"LAC"],["Nic Claxton",["C"],"BKN"],
+["Walker Kessler",["C"],"LAL"],["Mark Williams",["C"],"PHX"],["Onyeka Okongwu",["C","PF"],"ATL"],
+["Naz Reid",["C","PF"],"MIN"],["Julius Randle",["PF","C"],"MIN"],["Aaron Gordon",["PF"],"DEN"],
+["Jabari Smith Jr.",["PF"],"HOU"],["Keegan Murray",["PF","SF"],"SAC"],["Tari Eason",["SF","PF"],"HOU"],
+["Luguentz Dort",["SG","SF"],"OKC"],["Alex Caruso",["PG","SG"],"OKC"],["Dyson Daniels",["SG","PG"],"ATL"],
+["Jalen Suggs",["PG","SG"],"ORL"],["Anfernee Simons",["PG","SG"],"CHI"],["Coby White",["PG","SG"],"CHI"],
+["Immanuel Quickley",["PG"],"TOR"],["Scoot Henderson",["PG"],"POR"],["Reed Sheppard",["PG","SG"],"HOU"],
+["Jared McCain",["PG","SG"],"PHI"],["Brandin Podziemski",["SG","PG"],"GSW"],["Malik Monk",["SG","PG"],"SAC"],
+["Cam Thomas",["SG"],"BKN"],["Norman Powell",["SG"],"MIA"],["OG Anunoby",["SF","PF"],"NYK"],
+["Miles Bridges",["SF","PF"],"CHA"],["Andrew Wiggins",["SF"],"MIA"],["Jimmy Butler",["SF","PF"],"GSW"],
+["Brandon Ingram",["SF"],"TOR"],["DeMar DeRozan",["SF","PF"],"SAC"],["Khris Middleton",["SF","PF"],"WSH"],
+["Tobias Harris",["PF"],"DET"],["Jerami Grant",["PF","SF"],"POR"],["Kyle Kuzma",["PF","SF"],"MIL"],
+["Keldon Johnson",["SF","PF"],"SAS"],["Jeremy Sochan",["PF"],"SAS"],["Harrison Barnes",["SF","PF"],"SAS"],
+["Cam Johnson",["SF","PF"],"DEN"],["Dillon Brooks",["SF"],"PHX"],["Aaron Wiggins",["SG","SF"],"OKC"],
+["Isaiah Joe",["SG"],"OKC"],["Jaime Jaquez Jr.",["SF"],"MIA"],["Nikola Jovic",["PF","SF"],"MIA"],
+["Kel'el Ware",["C"],"MIA"],["Kristaps Porzingis",["C","PF"],"ATL"],["Bobby Portis",["PF","C"],"MIL"],
+["Clint Capela",["C"],"HOU"],["Nikola Vucevic",["C"],"CHI"],["Jonas Valanciunas",["C"],"DEN"],
+["Jusuf Nurkic",["C"],"UTA"],["Brook Lopez",["C"],"LAC"],["Daniel Gafford",["C"],"DAL"],
+["Dereck Lively II",["C"],"DAL"],["Isaiah Stewart",["C","PF"],"DET"],["Jalen Smith",["C","PF"],"CHI"],
+["Jalen Green",["SG"],"PHX"],["Zach LaVine",["SG"],"SAC"],["Bennedict Mathurin",["SG","SF"],"IND"],
+["Shaedon Sharpe",["SG"],"POR"],["Anthony Black",["PG","SG"],"ORL"],["Payton Pritchard",["PG","SG"],"BOS"],
+["Quentin Grimes",["SG"],"PHI"],["Grayson Allen",["SG"],"PHX"],["Sam Merrill",["SG"],"CLE"],
+["Ayo Dosunmu",["SG","PG"],"CHI"],["Donte DiVincenzo",["SG","PG"],"MIN"],["Josh Hart",["SF","SG"],"NYK"],
+["De'Andre Hunter",["SF"],"CLE"],["Toumani Camara",["SF","PF"],"POR"],["Royce O'Neale",["SF","PF"],"PHX"],
+["Saddiq Bey",["SF","PF"],"NOP"],["Herbert Jones",["SF"],"NOP"],["Jaylen Wells",["SF"],"MEM"],
+["Naji Marshall",["SF"],"DAL"],["Klay Thompson",["SG","SF"],"DAL"],["P.J. Washington",["PF"],"DAL"],
+["John Collins",["PF"],"LAC"],["Santi Aldama",["PF","C"],"MEM"],["Jonathan Isaac",["PF","C"],"ORL"],
+["Wendell Carter Jr.",["C","PF"],"ORL"],["Goga Bitadze",["C"],"ORL"],["Mitchell Robinson",["C"],"NYK"],
+["Isaiah Hartenstein",["C"],"OKC"],["Yves Missi",["C"],"NOP"],["Zach Edey",["C"],"MEM"],
+["Donovan Clingan",["C"],"POR"],["Steven Adams",["C"],"HOU"],["Kevon Looney",["C"],"NOP"],
+["Jakob Poeltl",["C"],"TOR"],["AJ Dybantsa",["SF"],"WSH"],["Darryn Peterson",["SG"],"—"],
+["Cameron Boozer",["PF"],"—"],["Caleb Wilson",["PF","SF"],"—"],["Ace Bailey",["SF","SG"],"UTA"],
+["Darius Acuff Jr.",["PG"],"—"],["Kingston Flemings",["PG"],"—"],["Dylan Harper",["PG","SG"],"SAS"],
+["Rob Dillingham",["PG"],"MIN"],["Isaiah Collier",["PG"],"UTA"],["Walter Clayton Jr.",["PG","SG"],"UTA"],
+["T.J. McConnell",["PG"],"IND"],["Andrew Nembhard",["PG","SG"],"IND"],["Dennis Schroder",["PG"],"SAC"],
+["Scotty Pippen Jr.",["PG"],"MEM"],["Mike Conley",["PG"],"MIN"],["Fred VanVleet",["PG"],"HOU"],
+["Tre Jones",["PG"],"CHI"],["Davion Mitchell",["PG","SG"],"MIA"],["Jose Alvarado",["PG"],"NOP"],
+["Jeremiah Fears",["PG"],"NOP"],["Collin Gillespie",["PG"],"PHX"],["Jamal Shead",["PG"],"TOR"],
+["Bub Carrington",["PG","SG"],"WSH"],["Miles McBride",["PG"],"NYK"],["Ryan Rollins",["PG"],"MIL"],
+["Aaron Holiday",["PG"],"HOU"],["Devin Carter",["PG","SG"],"SAC"],["Keon Ellis",["SG"],"SAC"],
+["Cason Wallace",["PG","SG"],"OKC"],["Moses Moody",["SG"],"GSW"],["D'Angelo Russell",["PG","SG"],"DAL"],
+["Jordan Clarkson",["SG"],"NYK"],["Buddy Hield",["SG"],"GSW"],["Caris LeVert",["SG","SF"],"DET"],
+["Bogdan Bogdanovic",["SG","SF"],"LAC"],["Max Christie",["SG"],"DAL"],["Gradey Dick",["SG","SF"],"TOR"],
+["RJ Barrett",["SG","SF"],"TOR"],["Jaden Ivey",["SG","PG"],"DET"],["Ochai Agbaji",["SF","SG"],"TOR"],
+["Ausar Thompson",["SF","SG"],"DET"],["Ron Holland",["SF"],"DET"],["Bilal Coulibaly",["SG","SF"],"WSH"],
+["Kyshawn George",["SF"],"WSH"],["Cam Whitmore",["SF","PF"],"WSH"],["Tristan da Silva",["SF"],"ORL"],
+["Ja'Kobe Walter",["SG","SF"],"TOR"],["Pelle Larsson",["SG"],"MIA"],["Haywood Highsmith",["SF"],"MIA"],
+["Derrick Jones Jr.",["SF"],"LAC"],["Taurean Prince",["SF","PF"],"MIL"],["Aaron Nesmith",["SF"],"IND"],
+["Obi Toppin",["PF"],"IND"],["Taylor Hendricks",["PF"],"UTA"],["Kyle Filipowski",["C","PF"],"UTA"],
+["Brice Sensabaugh",["SF","SG"],"UTA"],["Jonathan Mogbo",["PF"],"TOR"],["Collin Murray-Boyles",["PF"],"TOR"],
+["GG Jackson",["PF"],"MEM"],["Leonard Miller",["PF"],"MIN"],["Dorian Finney-Smith",["PF","SF"],"HOU"],
+["Rui Hachimura",["PF","SF"],"LAL"],["Jarred Vanderbilt",["PF"],"LAL"],["Nicolas Batum",["PF"],"LAC"],
+["Kenrich Williams",["PF"],"OKC"],["Adem Bona",["C"],"PHI"],["Tristan Vukcevic",["C"],"WSH"],
+["Yang Hansen",["C"],"POR"],["Maxime Raynaud",["C"],"SAC"],["Thomas Bryant",["C"],"CLE"],
+["Luke Kornet",["C"],"BOS"],["Neemias Queta",["C"],"BOS"],["Jay Huff",["C"],"IND"],
+["Keaton Wagler",["SG"],"—"],["Mikel Brown Jr.",["PG","SG"],"—"],["Nate Ament",["SF"],"—"]
+];
+PLAYERS.forEach(function(p,i){p.r=i+1;p.n=p[0];p.p=p[1];p.t=p[2]||"\u2014";});
+PLAYERS.forEach(function(p){var d=(typeof PDATA!=="undefined"&&PDATA[p.n])||null;p.adp=d&&d.adp!=null?d.adp:null;p.last=d&&d.last!=null?d.last:null;});
+var CATS={
+"Nikola Jokic":["PTS","REB","AST","STL","FG%"],
+"Victor Wembanyama":["PTS","REB","BLK","STL","3PM"],
+"Shai Gilgeous-Alexander":["PTS","AST","STL","FG%","FT%"],
+"Luka Doncic":["PTS","REB","AST","3PM"],
+"Tyrese Maxey":["PTS","AST","STL","3PM","FT%"],
+"Cade Cunningham":["PTS","REB","AST"],
+"Giannis Antetokounmpo":["PTS","REB","AST","STL","FG%"],
+"Jalen Johnson":["PTS","REB","AST","STL"],
+"Donovan Mitchell":["PTS","AST","STL","3PM"],
+"Anthony Edwards":["PTS","STL","3PM"],
+"Cooper Flagg":["PTS","REB","STL"],
+"Jayson Tatum":["PTS","REB","AST","3PM"],
+"Amen Thompson":["REB","AST","STL","BLK","FG%"],
+"Scottie Barnes":["PTS","REB","AST","STL","BLK"],
+"Jamal Murray":["PTS","AST","3PM","FT%"],
+"Alperen Sengun":["PTS","REB","AST","FG%"],
+"Karl-Anthony Towns":["PTS","REB","3PM"],
+"Kevin Durant":["PTS","REB","3PM","FG%","FT%"],
+"Mikal Bridges":["PTS","STL","3PM","FG%"],
+"Tyrese Haliburton":["AST","STL","3PM","FT%"],
+"James Harden":["PTS","AST","3PM"],
+"Jaylen Brown":["PTS","REB","AST","STL"],
+"Chet Holmgren":["PTS","REB","BLK","3PM"],
+"Kawhi Leonard":["PTS","STL","3PM","FG%","FT%"],
+"Jalen Duren":["REB","FG%","BLK","TO"],
+"Evan Mobley":["PTS","REB","BLK","FG%"],
+"Deni Avdija":["PTS","REB","AST","STL"],
+"Devin Booker":["PTS","AST","3PM","FT%"],
+"Pascal Siakam":["PTS","REB","AST","FG%"],
+"Paolo Banchero":["PTS","REB","AST"],
+"Trey Murphy III":["PTS","STL","3PM"],
+"Stephon Castle":["PTS","AST","STL"],
+"Kon Knueppel":["PTS","3PM","FT%"],
+"Kyrie Irving":["PTS","AST","3PM","FT%"],
+"Josh Giddey":["PTS","REB","AST","STL"],
+"VJ Edgecombe":["PTS","STL"],
+"Jalen Brunson":["PTS","AST","3PM","FT%"],
+"Austin Reaves":["PTS","AST","3PM"],
+"Jalen Williams":["PTS","REB","AST"],
+"Darius Garland":["AST","STL","3PM","FT%"],
+"Domantas Sabonis":["PTS","REB","AST","FG%"],
+"Keyonte George":["PTS","AST","3PM"],
+"Anthony Davis":["PTS","REB","BLK","FG%"],
+"Lauri Markkanen":["PTS","REB","3PM","FT%"],
+"LeBron James":["PTS","REB","AST"],
+"Paul George":["PTS","REB","STL","3PM"],
+"Dejounte Murray":["PTS","AST","STL"],
+"Michael Porter Jr.":["PTS","REB","3PM"],
+"Matas Buzelis":["PTS","BLK","3PM"],
+"Ja Morant":["PTS","AST","STL"],
+"Brandon Miller":["PTS","REB","3PM"],
+"Trae Young":["PTS","AST","3PM"],
+"Nickeil Alexander-Walker":["PTS","STL","3PM"],
+"Alex Sarr":["REB","BLK"],
+"Stephen Curry":["PTS","AST","STL","3PM","FT%"],
+"Zion Williamson":["PTS","REB","STL","FG%"],
+"Jaren Jackson Jr.":["PTS","BLK","3PM"],
+"LaMelo Ball":["PTS","AST","STL","3PM"],
+"Bam Adebayo":["PTS","REB","AST","STL","BLK","FG%"],
+"De'Aaron Fox":["PTS","AST","STL"],
+"Desmond Bane":["PTS","AST","STL","3PM"],
+"Franz Wagner":["PTS","REB","AST"],
+"Derrick White":["PTS","AST","STL","BLK","3PM"],
+"Joel Embiid":["PTS","REB","BLK","FT%"],
+"Devin Vassell":["PTS","STL","3PM"],
+"Tyler Herro":["PTS","AST","3PM","FT%"],
+"Rudy Gobert":["REB","BLK","FG%","TO"],
+"Myles Turner":["REB","BLK","3PM"],
+"Jarrett Allen":["REB","FG%","BLK","TO"],
+"Deandre Ayton":["REB","FG%","TO"],
+"Ivica Zubac":["PTS","REB","FG%","BLK","TO"],
+"Nic Claxton":["REB","BLK","FG%","TO"],
+"Walker Kessler":["REB","BLK","FG%","TO"],
+"Mark Williams":["REB","BLK","FG%"],
+"Onyeka Okongwu":["REB","BLK","FG%"],
+"Naz Reid":["PTS","REB","3PM"],
+"Julius Randle":["PTS","REB","AST"],
+"Aaron Gordon":["PTS","REB","FG%"],
+"Jabari Smith Jr.":["PTS","REB","3PM","BLK"],
+"Keegan Murray":["PTS","REB","3PM"],
+"Tari Eason":["REB","STL"],
+"Luguentz Dort":["STL","3PM"],
+"Alex Caruso":["STL","AST"],
+"Dyson Daniels":["AST","STL","REB"],
+"Jalen Suggs":["PTS","AST","STL"],
+"Anfernee Simons":["PTS","3PM"],
+"Coby White":["PTS","AST","3PM"],
+"Immanuel Quickley":["PTS","AST","STL","3PM"],
+"Scoot Henderson":["PTS","AST","STL"],
+"Reed Sheppard":["PTS","AST","STL","3PM"],
+"Jared McCain":["PTS","AST","3PM"],
+"Brandin Podziemski":["PTS","REB","AST","STL"],
+"Malik Monk":["PTS","AST","3PM"],
+"Cam Thomas":["PTS","3PM","FT%"],
+"Norman Powell":["PTS","STL","3PM"],
+"OG Anunoby":["PTS","STL","3PM"],
+"Miles Bridges":["PTS","REB"],
+"Andrew Wiggins":["PTS","STL"],
+"Jimmy Butler":["PTS","AST","STL","FT%"],
+"Brandon Ingram":["PTS","AST"],
+"DeMar DeRozan":["PTS","AST","FG%","FT%"],
+"Khris Middleton":["PTS","AST","3PM"],
+"Tobias Harris":["PTS","REB"],
+"Jerami Grant":["PTS","3PM","BLK"],
+"Kyle Kuzma":["PTS","REB"],
+"Keldon Johnson":["PTS","REB"],
+"Jeremy Sochan":["REB","STL"],
+"Harrison Barnes":["PTS","REB","3PM"],
+"Cam Johnson":["PTS","3PM"],
+"Dillon Brooks":["PTS","STL","3PM"],
+"Aaron Wiggins":["PTS","3PM"],
+"Isaiah Joe":["PTS","3PM"],
+"Jaime Jaquez Jr.":["PTS","REB","AST"],
+"Nikola Jovic":["PTS","REB","3PM"],
+"Kel'el Ware":["REB","BLK"],
+"Kristaps Porzingis":["PTS","REB","BLK","3PM"],
+"Bobby Portis":["PTS","REB","3PM"],
+"Clint Capela":["REB","BLK","FG%","TO"],
+"Nikola Vucevic":["PTS","REB","3PM"],
+"Jonas Valanciunas":["REB","FG%","TO"],
+"Jusuf Nurkic":["REB","AST","BLK"],
+"Brook Lopez":["BLK","3PM","TO"],
+"Daniel Gafford":["REB","BLK","FG%","TO"],
+"Dereck Lively II":["REB","BLK","FG%","TO"],
+"Isaiah Stewart":["REB","BLK"],
+"Jalen Smith":["REB","3PM"],
+"Jalen Green":["PTS","3PM"],
+"Zach LaVine":["PTS","3PM"],
+"Bennedict Mathurin":["PTS"],
+"Shaedon Sharpe":["PTS","STL"],
+"Anthony Black":["AST","STL"],
+"Payton Pritchard":["PTS","AST","3PM"],
+"Quentin Grimes":["PTS","STL","3PM"],
+"Grayson Allen":["PTS","3PM"],
+"Sam Merrill":["3PM"],
+"Ayo Dosunmu":["PTS","AST","STL"],
+"Donte DiVincenzo":["PTS","STL","3PM"],
+"Josh Hart":["REB","AST","STL"],
+"De'Andre Hunter":["PTS","3PM"],
+"Toumani Camara":["STL","REB","3PM"],
+"Royce O'Neale":["3PM","REB"],
+"Saddiq Bey":["PTS","REB","3PM"],
+"Herbert Jones":["STL"],
+"Jaylen Wells":["PTS","3PM"],
+"Naji Marshall":["PTS","REB"],
+"Klay Thompson":["3PM","PTS"],
+"P.J. Washington":["PTS","REB","3PM","BLK"],
+"John Collins":["PTS","REB"],
+"Santi Aldama":["PTS","REB","3PM"],
+"Jonathan Isaac":["BLK","STL"],
+"Wendell Carter Jr.":["REB"],
+"Goga Bitadze":["REB","BLK"],
+"Mitchell Robinson":["REB","BLK","FG%","TO"],
+"Isaiah Hartenstein":["REB","AST","FG%"],
+"Yves Missi":["REB","BLK"],
+"Zach Edey":["REB","BLK"],
+"Donovan Clingan":["REB","BLK"],
+"Steven Adams":["REB"],
+"Kevon Looney":["REB"],
+"Jakob Poeltl":["REB","FG%","BLK","TO"],
+"AJ Dybantsa":["PTS"],
+"Darryn Peterson":["PTS"],
+"Cameron Boozer":["PTS","REB"],
+"Caleb Wilson":["PTS","REB"],
+"Ace Bailey":["PTS"],
+"Darius Acuff Jr.":["AST"],
+"Dylan Harper":["PTS","AST"],
+"Rob Dillingham":["PTS","AST"],
+"Isaiah Collier":["AST","STL"],
+"Walter Clayton Jr.":["PTS","3PM"],
+"T.J. McConnell":["AST","STL"],
+"Andrew Nembhard":["AST","STL"],
+"Dennis Schroder":["PTS","AST"],
+"Scotty Pippen Jr.":["AST","STL"],
+"Mike Conley":["AST","STL","3PM"],
+"Fred VanVleet":["AST","STL","3PM"],
+"Tre Jones":["AST"],
+"Davion Mitchell":["AST","STL"],
+"Jose Alvarado":["AST","STL"],
+"Collin Gillespie":["AST","3PM"],
+"Jamal Shead":["AST","STL"],
+"Bub Carrington":["PTS","AST"],
+"Miles McBride":["3PM"],
+"Keon Ellis":["STL","3PM"],
+"Cason Wallace":["STL"],
+"D'Angelo Russell":["PTS","AST","3PM"],
+"Jordan Clarkson":["PTS"],
+"Buddy Hield":["PTS","3PM"],
+"Caris LeVert":["PTS","AST"],
+"Bogdan Bogdanovic":["3PM"],
+"Gradey Dick":["3PM"],
+"RJ Barrett":["PTS","REB","AST"],
+"Jaden Ivey":["PTS","AST"],
+"Ausar Thompson":["STL","REB"],
+"Kyshawn George":["3PM"],
+"Cam Whitmore":["PTS"],
+"Derrick Jones Jr.":["BLK"],
+"Taurean Prince":["3PM"],
+"Aaron Nesmith":["3PM"],
+"Kyle Filipowski":["REB"],
+"Brice Sensabaugh":["PTS"],
+"Dorian Finney-Smith":["3PM","STL"],
+"Rui Hachimura":["PTS"],
+"Jarred Vanderbilt":["REB","STL"],
+"Adem Bona":["BLK"],
+"Luke Kornet":["REB","BLK","TO"],
+"Jay Huff":["BLK","3PM"]
+};
+PLAYERS.forEach(function(p){p.c=CATS[p.n]||[];});
+var CATS9=["PTS","REB","AST","STL","BLK","3PM","FG%","FT%","TO"];
+function renderScarcity(){
+  var tot=totalPicks();
+  function counts(skipTaken){
+    var taken={},i;
+    if(skipTaken)for(i=0;i<state.log.length;i++)taken[state.log[i]]=1;
+    var rem={};CATS9.forEach(function(c){rem[c]=0;});
+    for(i=0;i<PLAYERS.length;i++){var pl=PLAYERS[i];if(pl.r>tot)continue;if(taken[i])continue;
+      for(var j=0;j<pl.c.length;j++)rem[pl.c[j]]++;}
+    return rem;
+  }
+  var rem=counts(true),init=counts(false);
+  var min=1e9;CATS9.forEach(function(c){if(rem[c]<min)min=rem[c];});
+  var h='<div class="scarcity"><h3>Category scarcity <span class="muted">draftable difference-makers left &middot; TO = low turnovers</span></h3><div class="catgrid">';
+  CATS9.forEach(function(c){
+    var pct=init[c]?Math.max(3,Math.round(rem[c]/init[c]*100)):0;
+    h+='<div class="catchip'+(rem[c]<=min+1?' hot':'')+'"><span class="catname">'+c+'</span><span class="catnum">'+rem[c]+'</span><div class="catbar"><i style="width:'+pct+'%"></i></div></div>';
+  });
+  return h+'</div></div>';
+}
+
+var TEAMS=12;
+var state=window.hatchWidget.getState({phase:"setup",draftPos:6,rounds:13,log:[],q:"",f:"All",view:"team",sort:"rank"});
+function setState(patch){state=Object.assign({},state,patch);window.hatchWidget.setState(state);render();}
+window.addEventListener("hatch-widget-state",function(e){state=e.detail.state;render();});
+function el(id){return document.getElementById(id);}
+function teamForPick(idx){var round=Math.floor(idx/TEAMS),w=idx%TEAMS;return round%2===0?w:TEAMS-1-w;}
+function teamName(t){return t===state.draftPos-1?"You":"CPU "+(t+1);}
+function totalPicks(){return TEAMS*state.rounds;}
+function userTeam(){return state.draftPos-1;}
+function isUserTurn(){return state.log.length<totalPicks()&&teamForPick(state.log.length)===userTeam();}
+function rosterCounts(){
+  var c=[];for(var t=0;t<TEAMS;t++)c.push({PG:0,SG:0,SF:0,PF:0,C:0});
+  state.log.forEach(function(pi,idx){var team=teamForPick(idx);var pl=PLAYERS[pi];
+    var bestPos=pl.p[0],bestN=99;pl.p.forEach(function(p){var n=c[team][p]||0;if(n<bestN){bestN=n;bestPos=p;}});
+    c[team][bestPos]++;});
+  return c;
+}
+function cpuPickIdx(){
+  var idx=state.log.length,team=teamForPick(idx),round=Math.floor(idx/TEAMS)+1;
+  var taken={},i;for(i=0;i<state.log.length;i++)taken[state.log[i]]=1;
+  var counts=rosterCounts()[team];
+  var best=-1,bestScore=1e9;
+  for(i=0;i<PLAYERS.length;i++){
+    if(taken[i])continue;var pl=PLAYERS[i];
+    var score=pl.r+Math.random()*14;
+    if(round>2){
+      var need=0,over=0;
+      pl.p.forEach(function(p){var n=counts[p]||0;if(n<2)need++;if(n>=3)over++;});
+      score-=need*18;if(over===pl.p.length)score+=40;
+    }
+    if(score<bestScore){bestScore=score;best=i;}
+  }
+  return best;
+}
+function advance(){
+  var log=state.log.slice();
+  while(log.length<totalPicks()&&teamForPick(log.length)!==userTeam()){
+    var saved=state.log;state.log=log;var p=cpuPickIdx();state.log=saved;log.push(p);
+  }
+  var phase=log.length>=totalPicks()?"done":"draft";
+  setState({log:log,phase:phase});
+}
+function userDraft(pi){
+  if(!isUserTurn())return;
+  var log=state.log.slice();log.push(pi);
+  var saved=state.log;state.log=log;
+  while(log.length<totalPicks()&&teamForPick(log.length)!==userTeam()){log.push(cpuPickIdx());}
+  state.log=saved;
+  setState({log:log,phase:log.length>=totalPicks()?"done":"draft"});
+}
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+function posBadges(p){return p.map(function(x){return x;}).join("/");}
+function pickLabel(idx){var r=Math.floor(idx/TEAMS)+1;var w=idx%TEAMS+1;return "R"+r+" P"+w;}
+
+function renderSetup(){
+  var h='<h2>Mock Draft Setup</h2>';
+  h+='<div class="muted">12 teams, snake draft. 237-player pool from early 2026-27 preseason rankings. You draft your slot; the other 11 teams auto-pick.</div>';
+  h+='<h3>Your draft position</h3><div class="setup-pos">';
+  for(var i=1;i<=12;i++)h+='<button class="posbtn'+(state.draftPos===i?' sel':'')+'" data-pos="'+i+'">'+i+'</button>';
+  h+='</div><h3>Rounds</h3><select id="mdrounds">';
+  [10,11,12,13,14,15].forEach(function(r){h+='<option value="'+r+'"'+(state.rounds===r?' selected':'')+'>'+r+' rounds</option>';});
+  h+='</select><br><button class="bigbtn" id="mdstart">Start Mock Draft</button>';
+  el("mdapp").innerHTML=h;
+  el("mdapp").querySelectorAll(".posbtn").forEach(function(b){b.addEventListener("click",function(){setState({draftPos:parseInt(b.getAttribute("data-pos"),10)});});});
+  el("mdrounds").addEventListener("change",function(e){setState({rounds:parseInt(e.target.value,10)});});
+  el("mdstart").addEventListener("click",function(){
+    var s=Object.assign({},state,{phase:"draft",log:[]});state=s;window.hatchWidget.setState(s);advance();
+  });
+}
+function nextUserPickIdx(){
+  var tot=totalPicks();
+  for(var i=state.log.length;i<tot;i++)if(teamForPick(i)===userTeam())return i;
+  return -1;
+}
+function renderDraft(){
+  var idx=state.log.length,round=Math.floor(idx/TEAMS)+1,team=idx<totalPicks()?teamForPick(idx):-1;
+  var h='<div class="turnbar">';
+  if(state.phase==="done"){h+='<span><b>Draft complete.</b></span>';}
+  else if(isUserTurn()){h+='<span class="you">YOUR PICK</span><span class="muted">Round '+round+', overall pick '+(idx+1)+' of '+totalPicks()+'</span>';}
+  else{h+='<span><b>'+esc(teamName(team))+'</b> is picking...</span><span class="muted">Round '+round+', overall pick '+(idx+1)+'</span>';}
+  var nxt=nextUserPickIdx();
+  if(nxt>=0&&!isUserTurn())h+='<span class="nextpick">Your next pick: <b>#'+(nxt+1)+'</b> ('+(nxt-idx)+' picks away)</span>';
+  h+='<span style="flex:1"></span>';
+  if(state.phase!=="done"&&!isUserTurn())h+='<button class="ghostbtn" id="mdsim">Sim to my pick</button>';
+  h+='<button class="ghostbtn" id="mdnew">Restart</button></div>';
+  h+=renderScarcity();
+  h+='<div class="tabs"><button class="fchip'+(state.view==='team'?' sel':'')+'" data-view="team">My team</button>';
+  h+='<button class="fchip'+(state.view==='board'?' sel':'')+'" data-view="board">Draft board</button></div>';
+  h+='<div class="cols"><div class="avail">';
+  h+='<h3>Available players</h3><input type="text" id="mdq" placeholder="Search players..." value="'+esc(state.q)+'">';
+  h+='<div class="filters">';
+  ["All","PG","SG","SF","PF","C"].forEach(function(f){h+='<button class="fchip'+(state.f===f?' sel':'')+'" data-f="'+f+'">'+f+'</button>';});
+  h+='</div><div class="filters"><span class="muted">Sort:</span>';
+  [["rank","Rank"],["adp","ADP"],["last","Last season"]].forEach(function(s){h+='<button class="fchip'+((state.sort||"rank")===s[0]?' sel':'')+'" data-sort="'+s[0]+'">'+s[1]+'</button>';});
+  h+='</div><div class="plist" id="mdplist"></div></div>';
+  h+='<div class="side" id="mdside"></div></div>';
+  el("mdapp").innerHTML=h;
+  el("mdapp").querySelectorAll("[data-view]").forEach(function(b){b.addEventListener("click",function(){setState({view:b.getAttribute("data-view")});});});
+  el("mdapp").querySelectorAll("[data-f]").forEach(function(b){b.addEventListener("click",function(){setState({f:b.getAttribute("data-f")});});});
+  el("mdapp").querySelectorAll("[data-sort]").forEach(function(b){b.addEventListener("click",function(){setState({sort:b.getAttribute("data-sort")});});});
+  var q=el("mdq");q.addEventListener("input",function(){state.q=q.value;window.hatchWidget.setState(state);renderList();});
+  q.addEventListener("keydown",function(e){e.stopPropagation();});
+  var sim=el("mdsim");if(sim)sim.addEventListener("click",advance);
+  el("mdnew").addEventListener("click",function(){setState({phase:"setup",log:[],q:"",f:"All",view:"team"});});
+  renderList();renderSide();
+}
+function renderList(){
+  var taken={},i;for(i=0;i<state.log.length;i++)taken[state.log[i]]=1;
+  var q=state.q.toLowerCase(),f=state.f,ut=isUserTurn(),cands=[];
+  for(i=0;i<PLAYERS.length;i++){
+    if(taken[i])continue;var pl=PLAYERS[i];
+    if(f!=="All"&&pl.p.indexOf(f)<0)continue;
+    if(q&&pl.n.toLowerCase().indexOf(q)<0)continue;
+    cands.push(i);
+  }
+  var srt=state.sort||"rank";
+  function skey(x){return x==null?1e9:x;}
+  if(srt==="adp")cands.sort(function(a,b){return skey(PLAYERS[a].adp)-skey(PLAYERS[b].adp);});
+  else if(srt==="last")cands.sort(function(a,b){return skey(PLAYERS[a].last)-skey(PLAYERS[b].last);});
+  function disp(x){return x==null?'—':x;}
+  var rows=[];
+  for(var k=0;k<cands.length&&k<100;k++){
+    i=cands[k];var pl2=PLAYERS[i];
+    var sub='<span>ADP '+disp(pl2.adp)+'</span><span>Last '+disp(pl2.last)+'</span><span>'+posBadges(pl2.p)+'</span>';
+    if(pl2.c.length)sub+='<span>'+pl2.c.slice(0,3).join(" · ")+'</span>';
+    rows.push('<div class="prow"><div class="l1"><span class="prank">'+pl2.r+'</span><span class="pname">'+esc(pl2.n)+' <span class="teamtag">'+esc(pl2.t)+'</span></span><button class="draftbtn" data-pi="'+i+'"'+(ut?'':' disabled')+'>Draft</button></div><div class="l2">'+sub+'</div></div>');
+  }
+  el("mdplist").innerHTML=rows.join("")||'<div class="prow"><div class="l1"><span class="muted">No players match.</span></div></div>';
+  el("mdplist").querySelectorAll(".draftbtn").forEach(function(b){b.addEventListener("click",function(){userDraft(parseInt(b.getAttribute("data-pi"),10));});});
+}
+var BASE_SLOTS=["PG","SG","G","SF","PF","F","C","C","Util","Util","BN","BN","BN"];
+function slotOK(slot,pos){
+  if(slot==="BN"||slot==="Util")return true;
+  if(slot==="G")return pos.indexOf("PG")>=0||pos.indexOf("SG")>=0;
+  if(slot==="F")return pos.indexOf("SF")>=0||pos.indexOf("PF")>=0;
+  return pos.indexOf(slot)>=0;
+}
+function myRoster(){
+  var slots=BASE_SLOTS.slice();
+  while(slots.length<state.rounds)slots.push("BN");
+  var filled=slots.map(function(s){return {slot:s,pl:null};});
+  var prio=["PG","SG","G","SF","PF","F","C","C","Util","Util","BN","BN","BN","BN","BN","BN"];
+  state.log.forEach(function(pi,idx){
+    if(teamForPick(idx)!==userTeam())return;
+    var pl=PLAYERS[pi];
+    for(var k=0;k<prio.length;k++){
+      var done=false;
+      for(var j=0;j<filled.length;j++){
+        if(!filled[j].pl&&filled[j].slot===prio[k]&&slotOK(prio[k],pl.p)){filled[j].pl=pl;filled[j].pick=idx;done=true;break;}
+      }
+      if(done)break;
+    }
+  });
+  return filled;
+}
+function renderSide(){
+  var s=el("mdside");if(!s)return;  if(state.view==="board"){
+    var h='<h3>Draft board</h3><div class="boardwrap"><table class="board"><tr><th>Rd</th>';
+    for(var t=0;t<TEAMS;t++)h+='<th>'+esc(teamName(t))+'</th>';
+    h+='</tr>';
+    for(var r=0;r<state.rounds;r++){
+      h+='<tr><td><b>'+(r+1)+'</b></td>';
+      for(t=0;t<TEAMS;t++){
+        var idx=r*TEAMS+(r%2===0?t:TEAMS-1-t);
+        var cell='&nbsp;',cls=(t===userTeam()?'you':'');
+        if(idx<state.log.length){var pl=PLAYERS[state.log[idx]];cell=esc(pl.n)+' <span class="teamtag">'+esc(pl.t)+'</span>';}
+        else if(t===userTeam()){cls+=' future-you';}
+        h+='<td class="'+cls+'">'+cell+'</td>';
+      }
+      h+='</tr>';
+    }
+    s.innerHTML=h+'</table></div>';
+  }else{
+    var mine=[];state.log.forEach(function(pi,idx){if(teamForPick(idx)===userTeam())mine.push({pi:pi,idx:idx});});
+    var ros=myRoster();
+    var h2='<h3>Roster</h3><div class="rlist">';
+    ros.forEach(function(e){
+      h2+='<div class="rrow"><span class="rpick">'+e.slot+'</span><span class="pname">'+(e.pl?esc(e.pl.n)+' <span class="teamtag">'+esc(e.pl.t)+'</span>':'<span class="muted">empty</span>')+'</span>'+(e.pl?'<span class="ppos">'+posBadges(e.pl.p)+'</span>':'')+'</div>';});
+    h2+='</div>';
+    h2+='<h3>My team ('+mine.length+'/'+state.rounds+')</h3><div class="rlist">';
+    if(!mine.length)h2+='<div class="rrow"><span class="muted">No picks yet.</span></div>';
+    mine.forEach(function(m){var pl=PLAYERS[m.pi];
+      h2+='<div class="rrow"><span class="rpick">'+pickLabel(m.idx)+'</span><span class="pname">'+esc(pl.n)+' <span class="teamtag">'+esc(pl.t)+'</span></span><span class="ppos">'+posBadges(pl.p)+'</span></div>';});
+    s.innerHTML=h2+'</div>';
+  }
+}
+function renderDone(){
+  var h='<h2>Draft complete</h2><div class="muted">Final roster from pick #'+state.draftPos+' ('+state.rounds+' rounds, 12 teams)</div>';
+  h+='<button class="bigbtn" id="mdnew2">Run it back</button>';
+  el("mdapp").innerHTML=h+'<div id="mdside"></div>';
+  el("mdnew2").addEventListener("click",function(){setState({phase:"setup",log:[],q:"",f:"All",view:"team"});});
+  state.view="team";renderSide();
+}
+function render(){
+  if(state.phase==="setup")renderSetup();
+  else if(state.phase==="done")renderDone();
+  else renderDraft();
+}
+render();
+})();
+</script>
