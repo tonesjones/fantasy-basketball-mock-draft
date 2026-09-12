@@ -496,7 +496,7 @@ var BASE_SLOTS=["PG","SG","G","SF","PF","F","C","C","Util","Util","BN","BN","BN"
 var DATA_VERSION="2026-09-12";
 var STORAGE_KEY="fantasy-basketball-mock-draft.v2";
 var HW=(typeof window!=="undefined"&&window.hatchWidget)?window.hatchWidget:null;
-var DEFAULTS={phase:"setup",draftPos:6,rounds:13,log:[],q:"",f:"All",view:"team",sort:"cons",playoffStart:21,page:0,seed:123456789,rngState:123456789,userTurns:[]};
+var DEFAULTS={phase:"setup",draftPos:6,rounds:13,log:[],q:"",f:"All",view:"team",sort:"cons",playoffStart:20,page:0,seed:123456789,rngState:123456789,userTurns:[]};
 function freshState(){var seed=(Date.now()>>>0)||1;return Object.assign({},DEFAULTS,{seed:seed,rngState:seed,log:[],userTurns:[]});}
 function cleanState(raw){
   var out=Object.assign({},DEFAULTS,raw||{}), used={};
@@ -506,7 +506,7 @@ function cleanState(raw){
   out.phase=out.log.length>=TEAMS*out.rounds?"done":(out.phase==="draft"?"draft":"setup");
   out.f=["All","PG","SG","SF","PF","C"].indexOf(out.f)>=0?out.f:"All";
   out.sort=["cons","rank","adp","last","lastTotal"].indexOf(out.sort)>=0?out.sort:"cons";
-  out.playoffStart=[18,19,20,21].indexOf(out.playoffStart)>=0?out.playoffStart:21;
+  out.playoffStart=[18,19,20,21].indexOf(out.playoffStart)>=0?out.playoffStart:20;
   out.page=Math.max(0,parseInt(out.page,10)||0);
   out.seed=(parseInt(out.seed,10)>>>0)||1;out.rngState=(parseInt(out.rngState,10)>>>0)||out.seed;
   out.userTurns=Array.isArray(out.userTurns)?out.userTurns.filter(function(x){return x&&Array.isArray(x.log);}).slice(-20):[];
@@ -730,7 +730,7 @@ function playoffRoster(mine){
 }
 function renderPlayoffSettings(){
  var d=window.PlayoffData,h='<section class="scarcity"><h3>Fantasy playoff schedule</h3><div class="muted" style="margin-bottom:8px">Three-week window</div><div class="filters">';
- [18,19,20,21].forEach(function(w){h+='<button class="fchip'+(state.playoffStart===w?' sel':'')+'" data-pw="'+w+'">W'+w+'\u2013'+(w+2)+(w===21?' \u00b7 standard':'')+'</button>';});
+ [18,19,20,21].forEach(function(w){h+='<button class="fchip'+(state.playoffStart===w?' sel':'')+'" data-pw="'+w+'">W'+w+'\u2013'+(w+2)+(w===20?' \u00b7 Yahoo default':'')+'</button>';});
  h+='</div><div class="catgrid" style="margin-top:12px">';
  d.weeks.slice(state.playoffStart-18,state.playoffStart-15).forEach(function(w,i){h+='<div class="catchip"><b>W'+(i+1)+' \u00b7 Yahoo '+w.week+'</b><div class="muted">'+w.start+' \u2013 '+w.end+'</div></div>';});
  h+='</div><p class="muted playoffnote">2 games in a week = bad \u00b7 3 = ok \u00b7 4\u20135 = good. Scheduled NBA team games, based on the displayed team. Team assignments may be outdated; injuries, rest, byes and lineup limits are not deducted. Confirm your league dates. Snapshot '+d.checked+'. <a href="'+d.source+'" target="_blank" rel="noopener">Schedule source</a> \u00b7 <a href="'+d.defaultSource+'" target="_blank" rel="noopener">Yahoo dates</a></p></section>';

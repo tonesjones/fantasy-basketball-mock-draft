@@ -75,7 +75,7 @@ data = {
     'source': 'https://hashtagbasketball.com/nba-fantasy-schedule',
     'dateSource': 'https://hashtagbasketball.com/advanced-nba-schedule-grid',
     'defaultSource': 'https://basketball.fantasysports.yahoo.com/nba/gamedates',
-    'defaultStart': 21,
+    'defaultStart': 20,
     'weeks': week_meta,
     'teams': teams,
 }
@@ -86,4 +86,4 @@ out.write_text(
     '(function(r){var data=' + json.dumps(data, indent=2)
     + ';if(typeof module!=="undefined"&&module.exports)module.exports=data;else r.PlayoffData=data;})'
       "(typeof globalThis!==\"undefined\"?globalThis:this);\n")
-print('Wrote', out, '-', len(teams), 'teams, Yahoo weeks 18-23, default 21-23')
+print('Wrote', out, '-', len(teams), 'teams, Yahoo weeks 18-23, default 20-22')

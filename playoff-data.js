@@ -6,7 +6,7 @@
   "source": "https://hashtagbasketball.com/nba-fantasy-schedule",
   "dateSource": "https://hashtagbasketball.com/advanced-nba-schedule-grid",
   "defaultSource": "https://basketball.fantasysports.yahoo.com/nba/gamedates",
-  "defaultStart": 21,
+  "defaultStart": 20,
   "weeks": [
     {
       "week": 18,

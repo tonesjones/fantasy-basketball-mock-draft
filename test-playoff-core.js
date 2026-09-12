@@ -4,7 +4,7 @@ const data = require('./playoff-data.js');
 
 // --- data snapshot integrity ---
 assert.equal(data.season, '2026-27');
-assert.equal(data.defaultStart, 21, 'standard playoff window starts week 21');
+assert.equal(data.defaultStart, 20, 'Yahoo default playoff window starts week 20');
 assert.deepEqual(data.weeks.map(w => w.week), [18, 19, 20, 21, 22, 23]);
 const teams = Object.keys(data.teams);
 assert.equal(teams.length, 30, 'all 30 teams present');
@@ -41,9 +41,9 @@ assert.equal(core.rating([3, 3, 3]), 'ok');
 assert.equal(core.rating([4, 2, 5]), 'bad');
 assert.equal(core.rating([2, 2, 2]), 'bad');
 assert.equal(core.rating(null), null);
-// real snapshot spot checks: NOP has a 2-game week in the default window
-assert.equal(core.rating(core.counts(data, 'NOP', 21)), 'bad');
-assert.equal(core.rating(core.counts(data, 'GSW', 21)), 'good');
+// real snapshot spot checks in the default window
+assert.equal(core.rating(core.counts(data, 'NOP', data.defaultStart)), 'bad');
+assert.equal(core.rating(core.counts(data, 'GSW', data.defaultStart)), 'ok');
 
 // --- summary ---
 const sum = core.summary(data, [{t: 'GSW'}, {t: 'NO'}, {t: 'XXX'}], 21);
@@ -51,4 +51,4 @@ assert.equal(sum.players, 3);
 assert.equal(sum.unknown, 1);
 const gsw = core.counts(data, 'GSW', 21), nop = core.counts(data, 'NOP', 21);
 assert.deepEqual(sum.games, [gsw[0] + nop[0], gsw[1] + nop[1], gsw[2] + nop[2]]);
-console.log('playoff-core: OK -', teams.length, 'teams, default window W21-23');
+console.log('playoff-core: OK -', teams.length, 'teams, default window W20-22');

@@ -25,6 +25,6 @@ for row in rows:
  teams[alias.get(row[0],row[0])]=[int(row[header.index('W'+str(w))]) for w in range(18,24)]
 assert len(teams)==30 and all(len(v)==6 and all(0<=n<=7 for n in v) for v in teams.values())
 weeks=[{'week':w,'start':str(datetime.date(2027,3,1)+datetime.timedelta(weeks=w-18)),'end':str(datetime.date(2027,3,7)+datetime.timedelta(weeks=w-18))} for w in range(18,24)]
-data={'season':'2026-27','checked':str(datetime.date.today()),'source':'https://hashtagbasketball.com/nba-fantasy-schedule','dateSource':'https://hashtagbasketball.com/advanced-nba-schedule-grid','defaultSource':'https://basketball.fantasysports.yahoo.com/nba/gamedates','defaultStart':21,'weeks':weeks,'teams':teams}
+data={'season':'2026-27','checked':str(datetime.date.today()),'source':'https://hashtagbasketball.com/nba-fantasy-schedule','dateSource':'https://hashtagbasketball.com/advanced-nba-schedule-grid','defaultSource':'https://basketball.fantasysports.yahoo.com/nba/gamedates','defaultStart':20,'weeks':weeks,'teams':teams}
 Path('playoff-data.js').write_text('/* Yahoo weekly schedule snapshot. Refresh with scripts/import-playoff-schedule.py. */\n(function(r){var data='+json.dumps(data,indent=2)+';if(typeof module!=="undefined"&&module.exports)module.exports=data;else r.PlayoffData=data;})(typeof globalThis!=="undefined"?globalThis:this);\n')
-print('Imported 30 teams, Yahoo weeks 18-23; default 21-23')
+print('Imported 30 teams, Yahoo weeks 18-23; default 20-22')

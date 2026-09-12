@@ -16,8 +16,8 @@ The data refresh below was pushed to
 - **index.html** — per-player playoff badge (color-coded bad/ok/good) on
   every available-player row; new sorts (Playoff W1/W2/W3/total);
   "Playoff games · your roster" summary with a per-player table;
-  setup-screen three-week window picker (weeks 18–21 starts, default 21–23,
-  the standard playoff weeks).
+  setup-screen three-week window picker (weeks 18–21 starts, default 20–22,
+  matching Yahoo's public-league default playoff calendar).
 - **Chat visibility fix** — the Courtside theme variables were declared on
   `:root`, so in chat the host page's accent color leaked in and the logo /
   "YOUR PICK" rendered nearly invisible. Variables are now scoped to `#md`,
