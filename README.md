@@ -3,6 +3,8 @@
 A single-page mock draft trainer for Yahoo-style fantasy basketball leagues.
 No build step, no dependencies, no server — just open it in a browser.
 
+2026 Season
+
 ## Use it
 
 **Easiest:** open `index.html` directly in any browser (double-click it).
