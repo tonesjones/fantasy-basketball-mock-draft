@@ -1,4 +1,4 @@
-// player-data.js — real fantasy data for the mock draft simulator (237 players).
+// player-data.js — real fantasy data for the mock draft simulator (269 players).
 //
 // adp : 2026-27 Yahoo overall ADP (decimal), from Hashtag Basketball's fantasy
 //       ADP table (https://hashtagbasketball.com/fantasy-basketball-adp,
@@ -34,6 +34,19 @@
 // Generated 2026-09-11; lastTotal merged 2026-09-12. Values were read from the
 // live pages or derived as described above; do not hand-edit.
 // Names match the simulator's PLAYERS list character-for-character.
+//
+// 2026-09-13: 32 add-candidate players appended (pool 237 -> 269). Their
+// `last`, `lastTotal`, `cv`, `mpg` were derived against the FROZEN 2025-26
+// reference population from the 2026-09-12 derivation (same 225 players'
+// Basketball-Reference totals, league FG% .471 / FT% .783, same means/SDs),
+// so all 237 pre-existing players' values are byte-identical and the 32 new
+// z-scores are on the same scale. lastTotal for a new player = 1 + (number
+// of reference players with a higher total-z); ties with existing ranks are
+// possible and left as-is. `last` = Basketball Monster NBA 25-26 per-game
+// rank where available, else null. 2026 rookies / DNPs carry nulls per the
+// existing prospect convention (no cv => untagged, replacement-level fill
+// in grades). Team/pos/adp for the 32 from Hashtag's 2026-27 table (Yahoo
+// columns, updated 11 Sep 2026); teams cross-checked on 2026-09-13.
 var PDATA={
 "Nikola Jokic":{cv:[2.1,3.18,3.71,1.39,0.53,0.24,2.77,1.1,-2.52],adp:2.9,last:1,lastTotal:1,mpg:34.8},
 "Victor Wembanyama":{cv:[1.68,2.63,-0.06,0.33,5.37,0.43,1.05,0.93,-0.91],adp:1.9,last:2,lastTotal:3,mpg:29.2},
@@ -271,7 +284,39 @@ var PDATA={
 "Jay Huff":{cv:[-0.75,-0.44,-0.86,-1.12,2.78,-0.05,-0.05,0.07,0.92],adp:102.3,last:104,lastTotal:41,mpg:21.0},
 "Keaton Wagler":{adp:121.5,last:null,lastTotal:null,mpg:null},
 "Mikel Brown Jr.":{adp:122.4,last:null,lastTotal:null,mpg:null},
-"Nate Ament":{adp:115.3,last:null,lastTotal:null,mpg:null}
+"Nate Ament":{adp:115.3,last:null,lastTotal:null,mpg:null},
+"AJ Green":{cv:[-0.62,-0.93,-0.63,-1.12,-0.99,1.57,-0.75,0.07,0.88],adp:49.8,last:247,lastTotal:114,mpg:29.1},
+"Damian Lillard":{adp:71.7,last:null,lastTotal:null,mpg:null},
+"Jaden McDaniels":{cv:[0.08,-0.32,-0.25,0.55,0.93,-0.09,0.72,0.31,-0.14],adp:78.3,last:70,lastTotal:44,mpg:31.7},
+"Derik Queen":{adp:80.8,last:null,lastTotal:null,mpg:null},
+"Aday Mara":{adp:84.8,last:null,lastTotal:null,mpg:null},
+"Al Horford":{cv:[-0.95,-0.07,-0.32,-0.67,1.21,0.15,-0.67,0.0,0.92],adp:86.6,last:135,lastTotal:157,mpg:21.5},
+"Luke Kennard":{cv:[-0.94,-1.09,-0.49,-0.56,-0.99,0.0,0.47,0.27,1.12],adp:87.5,last:229,lastTotal:104,mpg:21.6},
+"Andre Drummond":{cv:[-1.25,1.39,-0.97,-0.84,0.45,-1.05,-0.11,-0.82,0.87],adp:91.7,last:227,lastTotal:146,mpg:19.5},
+"Day'Ron Sharpe":{cv:[-0.88,0.66,-0.44,0.47,-0.31,-1.44,1.15,-1.01,-0.04],adp:91.9,last:214,lastTotal:138,mpg:18.7},
+"Moussa Diabate":{cv:[-1.01,1.49,-0.64,-0.39,0.9,-1.58,1.23,-1.15,0.83],adp:93.5,last:132,lastTotal:79,mpg:26},
+"Ty Jerome":{cv:[0.84,-0.9,1.21,0.43,-0.64,1.38,-0.04,1.06,-0.15],adp:95.7,last:38,lastTotal:200,mpg:22.6},
+"Duncan Robinson":{cv:[-0.33,-0.96,-0.57,-0.93,-0.6,1.44,-0.36,-0.26,1.2],adp:96.3,last:187,lastTotal:93,mpg:27.4},
+"Allen Graves":{adp:98.4,last:null,lastTotal:null,mpg:null},
+"Cedric Coward":{cv:[-0.11,0.34,-0.23,-0.72,-0.28,0.0,-0.13,0.43,-0.02],adp:100.4,last:157,lastTotal:111,mpg:25.8},
+"Sam Hauser":{cv:[-0.8,-0.48,-0.87,-1.16,-0.58,1.11,-0.79,-0.06,1.51],adp:109.6,last:219,lastTotal:110,mpg:24.8},
+"Kelly Oubre Jr.":{cv:[-0.03,0.01,-0.8,1.23,-0.18,0.23,-0.19,-0.3,0.37],adp:110.8,last:113,lastTotal:133,mpg:31.5},
+"CJ McCollum":{cv:[0.7,-0.69,0.31,-0.18,-0.22,1.08,-0.53,-0.24,-0.12],adp:111.1,last:120,lastTotal:72,mpg:29.8},
+"Ajay Mitchell":{cv:[-0.12,-0.69,0.19,0.92,-0.53,-0.46,0.12,0.73,0.32],adp:111.7,last:106,lastTotal:105,mpg:25.8},
+"Draymond Green":{cv:[-0.93,0.2,1.14,-0.03,0.11,-0.01,-0.77,-0.46,-1.2],adp:113.4,last:218,lastTotal:125,mpg:27.5},
+"Ryan Kalkbrenner":{cv:[-1.07,0.18,-1.21,-1.22,1.92,-1.59,1.89,-0.51,0.96],adp:114.3,last:154,lastTotal:85,mpg:21.4},
+"Sandro Mamukelashvili":{cv:[-0.5,-0.04,-0.66,-0.3,-0.11,-0.07,0.58,-0.37,1.03],adp:115,last:137,lastTotal:64,mpg:21.9},
+"Peyton Watson":{cv:[0.05,-0.06,-0.58,0.05,1.21,0.0,0.24,-0.76,-0.05],adp:115.3,last:124,lastTotal:119,mpg:29.6},
+"Yaxel Lendeborg":{adp:115.8,last:null,lastTotal:null,mpg:null},
+"Kevin Porter Jr.":{cv:[0.48,0.07,2.05,3.49,-0.14,-0.31,-0.26,1.22,-1.49],adp:116.4,last:16,lastTotal:111,mpg:33.2},
+"Jrue Holiday":{cv:[0.32,-0.16,1.41,0.3,-0.97,1.15,-0.57,0.25,-1.32],adp:116.7,last:108,lastTotal:120,mpg:29.4},
+"Julian Champagnie":{cv:[-0.51,0.3,-0.83,-0.42,-0.22,0.93,-0.61,0.23,1.03],adp:118,last:121,lastTotal:54,mpg:27.6},
+"Christian Braun":{cv:[-0.37,-0.09,-0.24,-0.62,-0.63,-0.56,0.6,-0.13,0.86],adp:118.5,last:180,lastTotal:169,mpg:31.8},
+"Collin Sexton":{cv:[0.18,-1.12,0.03,0.57,-0.89,0.16,0.14,0.8,-0.48],adp:118.5,last:164,lastTotal:95,mpg:23.7},
+"Egor Demin":{cv:[-0.63,-0.75,0.05,-0.28,-0.51,0.94,-1.18,0.08,0.03],adp:121,last:233,lastTotal:169,mpg:25.2},
+"Paul Reed":{cv:[-1.03,-0.2,-0.99,-0.09,0.76,-1.38,1.17,-0.82,0.97],adp:122.3,last:200,lastTotal:118,mpg:13.9},
+"Morez Johnson Jr.":{adp:123,last:null,lastTotal:null,mpg:null},
+"Jonathan Kuminga":{cv:[-0.34,0.24,-0.45,-0.82,-0.56,-0.56,-0.25,-0.82,-0.22],adp:123.3,last:321,lastTotal:200,mpg:23.1},
 };
 // injury data current as of 2026-09-12, from current web reporting.
 // injury: brief label shown on hover; detail: evidence/context; return: expected

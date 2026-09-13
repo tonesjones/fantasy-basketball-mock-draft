@@ -5,6 +5,31 @@ Covers the working copy at
 Pushes happen on demand, so the newest entries here may be ahead of the
 remote.
 
+## Pool expansion 237 → 269 (2026-09-13)
+- **32 add-candidate players added** — every player with a Yahoo ADP in
+  Hashtag Basketball's 2026-27 table (updated 11 September 2026) that was
+  missing from the pool, from AJ Green (49.8) to Jonathan Kuminga (123.3).
+  Team and Yahoo position eligibility from the same table; 15
+  moved/returning players cross-checked against second sources.
+- **Same-scale historical stats** — for the 26 who appeared in 2025-26,
+  `cv` and `lastTotal` were derived against the frozen 2026-09-12
+  225-player reference population (same Basketball-Reference totals, same
+  league averages, same means/SDs), so all 237 pre-existing values are
+  byte-identical and the new z-scores are directly comparable. `last` is
+  Basketball Monster's NBA 25-26 per-game rank. The 6 DNP/prospects
+  (Lillard, Queen, Mara, Graves, Lendeborg, Morez Johnson Jr.) carry nulls
+  per the existing convention and stay untagged.
+- **Insertion rule** — positional merge by Yahoo ADP: built-in rank =
+  round-half-up(ADP); ties broken by lower ADP, then candidate-list order;
+  all 237 existing players keep their exact relative order. Max
+  |rank − round(ADP)| over the 32 is 4 (tie spillover in the dense
+  115–123 ADP cluster).
+- **Audit after expansion** — 269 players, 0 errors; 74 missing ADP
+  (unchanged); 35 missing per-game ranks; 18 missing totals ranks;
+  18 missing category values; 19 missing MPG; 10 untagged; 0 placeholder
+  teams. All node tests pass; widget rebuilt.
+- Not yet pushed to GitHub; awaiting approval.
+
 ## Accuracy fixes (2026-09-12, afternoon)
 - **Draft grades: replacement-level fill** — players without 2025-26
   category values (injured stars, prospects) no longer vanish from the
