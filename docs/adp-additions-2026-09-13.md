@@ -1,7 +1,7 @@
 # Audit trail: pool expansion 237 → 269 (2026-09-13)
 
 Reviewer note: this document traces every data decision behind commit
-`b968421` ("Pool expansion 237 → 269: add all 32 Yahoo-ADP candidates"),
+`e69fabf` ("Pool expansion 237 → 269: add all 32 Yahoo-ADP candidates"),
 so the full pipeline can be re-verified independently.
 
 ## 1. Source
@@ -174,7 +174,7 @@ All provenance materials are committed in-repo under
 
 **Reproducibility verified 2026-09-13:** the in-repo script was run with
 `SITE_DIR` pointed at a clean worktree of the pre-expansion parent commit
-(`1758315`); the resulting `index.html` and `player-data.js` are
+(`76911a5`, the parent of `e69fabf`); the resulting `index.html` and `player-data.js` are
 **byte-identical** to the committed post-expansion files (`diff` empty on
 both). The shipped data is exactly reproducible from Git alone.
 

@@ -42,7 +42,7 @@ CATS9 = ["PTS","REB","AST","STL","BLK","3PM","FG%","FT%","TO"]
 LG_FG, LG_FT = 0.471, 0.783
 
 def load(p):
-    with open(p) as f: return json.load(f)
+    with open(p, encoding='utf-8') as f: return json.load(f)
 
 def inp(name):
     return load(os.path.join(HERE, name))
@@ -127,7 +127,7 @@ recs.sort(key=lambda r: r['adp'])  # ascending ADP for insertion
 
 # ---- 1. PLAYERS rows in index.html ----
 html_p = os.path.join(SITE, 'index.html')
-html = open(html_p).read()
+html = open(html_p, encoding='utf-8').read()
 m = re.search(r'var PLAYERS=\[\r?\n', html)
 assert m, 'PLAYERS array not found'
 start = m.end()
@@ -196,11 +196,11 @@ html = html[:start] + new_body + html[start+m2.start():]
 html = html.replace('237-player pool from early 2026-27 preseason rankings.',
                     '269-player pool from early 2026-27 preseason rankings.')
 html = html.replace('var DATA_VERSION="2026-09-12";', 'var DATA_VERSION="2026-09-13";')
-open(html_p, 'w').write(html)
+open(html_p, 'w', encoding='utf-8').write(html)
 print('index.html: PLAYERS 237 ->', len(rows))
 
 # ---- 2. CATS tags (derived entries appended before closing };) ----
-html = open(html_p).read()
+html = open(html_p, encoding='utf-8').read()
 m = re.search(r'\n\};\n', html[html.index('var CATS='):])
 # locate the CATS literal end precisely
 cats_start = html.index('var CATS=')
@@ -211,12 +211,12 @@ for r in recs:
         new_tags.append('"%s":[%s],' % (r['name'], ','.join('"%s"' % t for t in r['tags'])))
 tag_block = '\n'.join(new_tags) + '\n'
 html = html[:cats_end] + tag_block + html[cats_end:]
-open(html_p, 'w').write(html)
+open(html_p, 'w', encoding='utf-8').write(html)
 print('index.html: CATS +', len(new_tags), 'derived entries (null-cv players left untagged)')
 
 # ---- 3. PDATA entries in player-data.js ----
 pd_p = os.path.join(SITE, 'player-data.js')
-pd = open(pd_p).read()
+pd = open(pd_p, encoding='utf-8').read()
 assert 'var PDATA={' in pd
 # PDATA literal ends right before the injury comment block
 m = re.search(r'\n\};\n// injury data current', pd)
@@ -260,7 +260,7 @@ frozen_note = (
 )
 pd = pd.replace('// Names match the simulator\'s PLAYERS list character-for-character.\n',
                 '// Names match the simulator\'s PLAYERS list character-for-character.\n' + frozen_note)
-open(pd_p, 'w').write(pd)
+open(pd_p, 'w', encoding='utf-8').write(pd)
 print('player-data.js: PDATA +32 entries')
 
 print('\nDone. New-pool summary:')

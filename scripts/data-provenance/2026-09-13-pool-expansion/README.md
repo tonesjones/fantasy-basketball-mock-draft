@@ -24,7 +24,7 @@ The script refuses to run against an already-expanded tree: it asserts exactly
 
 ```sh
 # 1. Check out the parent of the expansion commit (237-player pool)
-git worktree add /tmp/pool237 <parent-of-b968421>
+git worktree add /tmp/pool237 76911a5
 
 # 2. Run the merge against it
 SITE_DIR=/tmp/pool237 python3 scripts/data-provenance/2026-09-13-pool-expansion/merge_new32.py

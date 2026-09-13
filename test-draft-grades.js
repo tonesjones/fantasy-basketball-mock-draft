@@ -27,7 +27,7 @@ assert(fnMatch,'draftGrades function must exist in index.html');
 const cmMatch=html.match(/function catMatchup\(userCats,oppCats\)\{[\s\S]*?\n\}/);
 assert(cmMatch,'catMatchup function must exist in index.html');
 // draftGrades uses scarcityBase().repl as the replacement fill; extract it + consRank
-const sbMatch=html.match(/var _scarcBase=null;\nfunction scarcityBase\(\)\{[\s\S]*?\n\}/);
+const sbMatch=html.match(/var _scarcBase=null;\r?\n[ \t]*function scarcityBase\(\)\{[\s\S]*?\r?\n[ \t]*\}/);
 assert(sbMatch,'scarcityBase function must exist in index.html');
 const crMatch=html.match(/function consRank\(p\)\{[^\n]*\}/);
 assert(crMatch,'consRank function must exist in index.html');
