@@ -1,0 +1,352 @@
+{
+ "AJ Green": {
+  "adp": 49.8,
+  "adp_confirmed": true,
+  "notes": "Yahoo eligibility PG SG SF per table.",
+  "pos": [
+   "PG",
+   "SG",
+   "SF"
+  ],
+  "team": "MIL",
+  "team_verified": "hashtag-only"
+ },
+ "Aday Mara": {
+  "adp": 84.8,
+  "adp_confirmed": true,
+  "notes": "",
+  "pos": [
+   "C"
+  ],
+  "team": "OKC",
+  "team_verified": "hashtag-only"
+ },
+ "Al Horford": {
+  "adp": 86.6,
+  "adp_confirmed": true,
+  "notes": "Re-signed with Golden State (declined $6M player option, new 2-yr/$14M) per Reuters/ESPN, June 2026.",
+  "pos": [
+   "PF",
+   "C"
+  ],
+  "team": "GS",
+  "team_verified": "second-source:Reuters"
+ },
+ "Allen Graves": {
+  "adp": 98.4,
+  "adp_confirmed": true,
+  "notes": "",
+  "pos": [
+   "PF"
+  ],
+  "team": "TOR",
+  "team_verified": "hashtag-only"
+ },
+ "Andre Drummond": {
+  "adp": 91.7,
+  "adp_confirmed": true,
+  "notes": "'New York Knicks Sign Andre Drummond' listed in Wikipedia's List of 2026-27 NBA season transactions (NBA.com ref, July 6 2026).",
+  "pos": [
+   "C"
+  ],
+  "team": "NY",
+  "team_verified": "second-source:Wikipedia transactions list"
+ },
+ "CJ McCollum": {
+  "adp": 111.1,
+  "adp_confirmed": true,
+  "notes": "Traded Wizards->Hawks (Trae Young deal, Jan 2026), re-signed ATL 1-yr/$21M per Reuters, June 2026.",
+  "pos": [
+   "PG",
+   "SG"
+  ],
+  "team": "ATL",
+  "team_verified": "second-source:Reuters"
+ },
+ "Cedric Coward": {
+  "adp": 100.4,
+  "adp_confirmed": true,
+  "notes": "",
+  "pos": [
+   "SG",
+   "SF"
+  ],
+  "team": "MEM",
+  "team_verified": "hashtag-only"
+ },
+ "Christian Braun": {
+  "adp": 118.5,
+  "adp_confirmed": true,
+  "notes": "",
+  "pos": [
+   "SG",
+   "SF",
+   "PF"
+  ],
+  "team": "DEN",
+  "team_verified": "hashtag-only"
+ },
+ "Collin Sexton": {
+  "adp": 118.5,
+  "adp_confirmed": true,
+  "notes": "Signed with Lakers 2-yr/$19M as free agent, announced July 12 2026, per USA Today.",
+  "pos": [
+   "PG",
+   "SG"
+  ],
+  "team": "LAL",
+  "team_verified": "second-source:USA Today"
+ },
+ "Damian Lillard": {
+  "adp": 71.7,
+  "adp_confirmed": true,
+  "notes": "ClutchPoints (June 30 2026): Portland 'addition of Morant and the return of Damian Lillard' - back with Blazers for 2026-27.",
+  "pos": [
+   "PG"
+  ],
+  "team": "POR",
+  "team_verified": "second-source:ClutchPoints"
+ },
+ "Day'Ron Sharpe": {
+  "adp": 91.9,
+  "adp_confirmed": true,
+  "notes": "'Brooklyn Nets Re-Sign Day'ron Sharpe' per NBA.com ref in Wikipedia 2026-27 transactions list.",
+  "pos": [
+   "C"
+  ],
+  "team": "BKN",
+  "team_verified": "second-source:Wikipedia transactions list"
+ },
+ "Derik Queen": {
+  "adp": 80.8,
+  "adp_confirmed": true,
+  "notes": "",
+  "pos": [
+   "PF",
+   "C"
+  ],
+  "team": "NO",
+  "team_verified": "hashtag-only"
+ },
+ "Draymond Green": {
+  "adp": 113.4,
+  "adp_confirmed": true,
+  "notes": "",
+  "pos": [
+   "PF",
+   "C"
+  ],
+  "team": "GS",
+  "team_verified": "hashtag-only"
+ },
+ "Duncan Robinson": {
+  "adp": 96.3,
+  "adp_confirmed": true,
+  "notes": "Heat->Pistons sign-and-trade, 3-yr/$48M, July 2025 (partially guaranteed year 2); on Detroit's roster for 2026-27 per SI, May 2026.",
+  "pos": [
+   "SG",
+   "SF"
+  ],
+  "team": "DET",
+  "team_verified": "second-source:SI/ClutchPoints"
+ },
+ "Egor Demin": {
+  "adp": 121.0,
+  "adp_confirmed": true,
+  "notes": "",
+  "pos": [
+   "PG",
+   "SG"
+  ],
+  "team": "BKN",
+  "team_verified": "hashtag-only"
+ },
+ "Jaden McDaniels": {
+  "adp": 78.3,
+  "adp_confirmed": true,
+  "notes": "",
+  "pos": [
+   "SF"
+  ],
+  "team": "MIN",
+  "team_verified": "hashtag-only"
+ },
+ "Jonathan Kuminga": {
+  "adp": 123.3,
+  "adp_confirmed": true,
+  "notes": "Signed Timberwolves 2-yr/$12.4M (player option), Aug 26 2026, per Reuters; Hawks had declined his team option in June.",
+  "pos": [
+   "SF",
+   "PF"
+  ],
+  "team": "MIN",
+  "team_verified": "second-source:Reuters"
+ },
+ "Jrue Holiday": {
+  "adp": 116.7,
+  "adp_confirmed": true,
+  "notes": "Still a Blazer entering 2026-27: SI ('Should the Blazers Trade Jrue Holiday Before Opening Night', ~Aug 2026) and ClutchPoints (June 30 2026, Morant-trade fallout) both treat him as Portland's guard.",
+  "pos": [
+   "PG",
+   "SG"
+  ],
+  "team": "POR",
+  "team_verified": "second-source:SI/ClutchPoints"
+ },
+ "Julian Champagnie": {
+  "adp": 118.0,
+  "adp_confirmed": true,
+  "notes": "",
+  "pos": [
+   "SF",
+   "PF"
+  ],
+  "team": "SA",
+  "team_verified": "hashtag-only"
+ },
+ "Kelly Oubre Jr.": {
+  "adp": 110.8,
+  "adp_confirmed": true,
+  "notes": "Signed with Pacers 2-yr/$17M as free agent, July 1 2026, per Reuters (ESPN reporting).",
+  "pos": [
+   "SF",
+   "PF"
+  ],
+  "team": "IND",
+  "team_verified": "second-source:Reuters"
+ },
+ "Kevin Porter Jr.": {
+  "adp": 116.4,
+  "adp_confirmed": true,
+  "notes": "Exercised $5.4M Bucks player option for 2026-27, June 2026, per Bleacher Report/ClutchPoints.",
+  "pos": [
+   "PG",
+   "SG"
+  ],
+  "team": "MIL",
+  "team_verified": "second-source:Bleacher Report"
+ },
+ "Luke Kennard": {
+  "adp": 87.5,
+  "adp_confirmed": true,
+  "notes": "Wikipedia 2026-27 transactions list: Luke Kennard -> Phoenix Suns (from Los Angeles Lakers).",
+  "pos": [
+   "SG",
+   "SF"
+  ],
+  "team": "PHO",
+  "team_verified": "second-source:Wikipedia transactions list"
+ },
+ "Morez Johnson Jr.": {
+  "adp": 123.0,
+  "adp_confirmed": true,
+  "notes": "",
+  "pos": [
+   "PF"
+  ],
+  "team": "DAL",
+  "team_verified": "hashtag-only"
+ },
+ "Moussa Diabate": {
+  "adp": 93.5,
+  "adp_confirmed": true,
+  "notes": "Table shows 'Moussa Diabaté'; canonicalized without diacritics.",
+  "pos": [
+   "C"
+  ],
+  "team": "CHA",
+  "team_verified": "hashtag-only"
+ },
+ "Paul Reed": {
+  "adp": 122.3,
+  "adp_confirmed": true,
+  "notes": "'The Pistons have now reached agreements with Duncan Robinson, Caris LeVert, and Paul Reed' - ClutchPoints on Detroit's 2025-26 free agency; on Detroit's 2026-27 roster.",
+  "pos": [
+   "PF",
+   "C"
+  ],
+  "team": "DET",
+  "team_verified": "second-source:ClutchPoints"
+ },
+ "Peyton Watson": {
+  "adp": 115.3,
+  "adp_confirmed": true,
+  "notes": "Traded Nuggets->Cavaliers in multi-team sign-and-trade, 4-yr/$88M, Aug 19 2026, per Reuters/NBC Sports.",
+  "pos": [
+   "SF",
+   "PF"
+  ],
+  "team": "CLE",
+  "team_verified": "second-source:Reuters"
+ },
+ "Ryan Kalkbrenner": {
+  "adp": 114.3,
+  "adp_confirmed": true,
+  "notes": "",
+  "pos": [
+   "C"
+  ],
+  "team": "CHA",
+  "team_verified": "hashtag-only"
+ },
+ "Sam Hauser": {
+  "adp": 109.6,
+  "adp_confirmed": true,
+  "notes": "",
+  "pos": [
+   "SF",
+   "PF"
+  ],
+  "team": "BOS",
+  "team_verified": "hashtag-only"
+ },
+ "Sandro Mamukelashvili": {
+  "adp": 115.0,
+  "adp_confirmed": true,
+  "notes": "Wikipedia 2026-27 transactions list: Mamukelashvili -> Los Angeles Lakers (from Toronto Raptors); also named as a Lakers FA acquisition in USA Today (July 12 2026).",
+  "pos": [
+   "PF",
+   "C"
+  ],
+  "team": "LAL",
+  "team_verified": "second-source:Wikipedia transactions list"
+ },
+ "Ty Jerome": {
+  "adp": 95.7,
+  "adp_confirmed": true,
+  "notes": "Signed Grizzlies 3-yr/$28M in July 2025; listed on 2026-27 Grizzlies roster per Wikipedia season page.",
+  "pos": [
+   "PG",
+   "SG"
+  ],
+  "team": "MEM",
+  "team_verified": "second-source:theScore/Wikipedia"
+ },
+ "Yaxel Lendeborg": {
+  "adp": 115.8,
+  "adp_confirmed": true,
+  "notes": "",
+  "pos": [
+   "PF"
+  ],
+  "team": "GS",
+  "team_verified": "hashtag-only"
+ },
+ "_meta": {
+  "fetch_date": "2026-09-13",
+  "source": "https://hashtagbasketball.com/fantasy-basketball-adp",
+  "table_updated": "11 September 2026",
+  "team_verified_note": "'hashtag-only' = team taken from the Hashtag table with no surprising move; 'second-source:<outlet>' = team cross-checked against the named outlet; all cross-checks done 2026-09-13"
+ },
+ "Ajay Mitchell": {
+  "team": "OKC",
+  "pos": [
+   "PG",
+   "SG"
+  ],
+  "adp": 111.7,
+  "adp_confirmed": true,
+  "team_verified": "hashtag-only",
+  "notes": "Row recovered from the live 2026-27 table 2026-09-13 (child omitted it); OKC, PG SG, Yahoo ADP 111.7."
+ }
+}

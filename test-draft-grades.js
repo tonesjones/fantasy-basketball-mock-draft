@@ -1,16 +1,21 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
+const path=require('node:path');
 const vm=require('node:vm');
 const core=require('./draft-core');
+const HERE=__dirname;
+const read=(f)=>fs.readFileSync(path.join(HERE,f),'utf8');
 
 // Load PDATA
 const pdataCtx={};vm.createContext(pdataCtx);
-vm.runInContext(fs.readFileSync('player-data.js','utf8'),pdataCtx);
+vm.runInContext(read('player-data.js'),pdataCtx);
 const PDATA=pdataCtx.PDATA;
 
 // Extract PLAYERS from index.html (same pattern as test-draft-simulation.js)
-const html=fs.readFileSync('index.html','utf8');
-const snippet=html.match(/var PLAYERS=([\s\S]*?\r?\n\];)\r?\nPLAYERS\.forEach/)[1];
+const html=read('index.html');
+const playersMatch=html.match(/var PLAYERS=([\s\S]*?\r?\n\];)\r?\nPLAYERS\.forEach/);
+assert(playersMatch,'PLAYERS array extraction failed: expected "var PLAYERS=[...];" followed by "PLAYERS.forEach" in index.html');
+const snippet=playersMatch[1];
 const ctx={};vm.createContext(ctx);
 vm.runInContext('var PLAYERS='+snippet+'; this.PLAYERS=PLAYERS;',ctx);
 const PLAYERS=ctx.PLAYERS.map((p,i)=>({n:p[0],p:p[1],t:p[2],r:i+1,

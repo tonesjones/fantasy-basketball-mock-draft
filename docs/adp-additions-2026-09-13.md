@@ -161,12 +161,34 @@ additions were written.
 
 ## 10. Working files & reproducibility
 
-- Merge script and raw pulls: `~/workspace/fantasy/merge_new32.py`,
-  `hashtag_new32.json`, `bref_new32.json`, `bm_new32.json`
-  (kept alongside the other pipeline working files, not committed).
-- Reference files for the frozen-population derivation (`cv_ref.json`,
-  `lasttotal_ref.json`, `totalz_225.json`) live in `/tmp` — **ephemeral**;
-  a re-run after reboot must regenerate them. The derivation itself is a
-  few lines and the method is recorded in the `player-data.js` header.
-- Commits: `b968421` (data) + this document; pushed to
-  `github.com/tonesjones/fantasy-basketball-mock-draft` on `main`.
+All provenance materials are committed in-repo under
+`scripts/data-provenance/2026-09-13-pool-expansion/`:
+
+- `merge_new32.py` — the merge script (inputs resolve relative to the script;
+  `SITE_DIR` env var overrides the target checkout for verification runs)
+- `hashtag_new32.json`, `bref_new32.json`, `bm_new32.json` — raw pulls
+- `cv_ref.json`, `totalz_225.json`, `lasttotal_ref.json` — frozen 2026-09-12
+  reference data (previously `/tmp`-only; now versioned)
+- `lastTotal-2025-26.json` — raw working file from the 2026-09-12 derivation
+- `README.md` — re-run instructions
+
+**Reproducibility verified 2026-09-13:** the in-repo script was run with
+`SITE_DIR` pointed at a clean worktree of the pre-expansion parent commit
+(`1758315`); the resulting `index.html` and `player-data.js` are
+**byte-identical** to the committed post-expansion files (`diff` empty on
+both). The shipped data is exactly reproducible from Git alone.
+
+## 11. Review follow-ups (2026-09-13)
+
+- *Reproducibility gap (fixed):* raw pulls, merge script, and frozen
+  reference data previously lived outside the repo / in `/tmp`. All are now
+  committed under `scripts/data-provenance/2026-09-13-pool-expansion/` and
+  the byte-identical re-derivation above closes the loop.
+- *test-draft-grades.js failure (not reproduced):* the reported failure of
+  the HTML-extraction regex could not be reproduced — the test passes on this
+  commit, on its parent, and on clean `git show` extractions of both, run
+  from the repo dir and from a foreign cwd. The test was hardened anyway:
+  data files now resolve via `__dirname` (cwd-independent) and the PLAYERS
+  extraction asserts with a diagnostic message instead of throwing a bare
+  TypeError on no-match. If the failure reappears in the reviewer's
+  environment, the exact command and Node version would help pin it down.
