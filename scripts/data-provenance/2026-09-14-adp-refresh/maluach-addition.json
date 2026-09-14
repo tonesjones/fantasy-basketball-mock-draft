@@ -1,0 +1,42 @@
+{
+ "name": "Khaman Maluach",
+ "team": "PHO",
+ "pos": [
+  "C"
+ ],
+ "adp": 120.8,
+ "source": "ESPN 2025-26 totals; BM NBA 25-26 per-game rank 457 (basketballmonster.com/PlayerInfo.aspx?i=7169)",
+ "totals": {
+  "G": 46,
+  "PTS": 139,
+  "TRB": 133,
+  "AST": 6,
+  "STL": 5,
+  "BLK": 33,
+  "3P": 5,
+  "FG": 56,
+  "FGA": 105,
+  "FT": 22,
+  "FTA": 31,
+  "TOV": 25
+ },
+ "cv": [
+  -1.78,
+  -0.87,
+  -1.53,
+  -2.19,
+  0.32,
+  -1.48,
+  0.12,
+  -0.29,
+  1.39
+ ],
+ "lastTotal": 209,
+ "last": 457,
+ "mpg": 8.9,
+ "tags": [
+  "TO",
+  "BLK",
+  "FG%"
+ ]
+}

@@ -1,0 +1,38 @@
+{
+ "name": "Derik Queen",
+ "source": "ESPN 2025-26 totals cross-checked vs StatMuse/BM (2026-09-14)",
+ "totals": {
+  "G": 81,
+  "PTS": 948,
+  "TRB": 572,
+  "AST": 298,
+  "STL": 84,
+  "BLK": 74,
+  "3P": 23,
+  "FG": 354,
+  "FGA": 748,
+  "FT": 217,
+  "FTA": 273,
+  "TOV": 190
+ },
+ "cv": [
+  -0.41,
+  0.83,
+  0.23,
+  0.35,
+  0.74,
+  -1.29,
+  -0.08,
+  0.02,
+  -0.82
+ ],
+ "lastTotal": 64,
+ "last": 144,
+ "mpg": 25.0,
+ "tags": [
+  "REB",
+  "BLK",
+  "STL",
+  "AST"
+ ]
+}

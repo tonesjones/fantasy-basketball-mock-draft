@@ -1,0 +1,415 @@
+name,team,pos,adp
+Nikola Jokic,DEN,C,2.8
+Victor Wembanyama,SA,C,1.8
+Shai Gilgeous-Alexander,OKC,PG,6.2
+Luka Doncic,LAL,PG SG,4.8
+Cade Cunningham,DET,PG SG,8.6
+Giannis Antetokounmpo,MIA,PF C,12.4
+Anthony Edwards,MIN,PG SG,15.2
+Jayson Tatum,BOS,SF PF,12.5
+Tyrese Maxey,PHI,PG,11.2
+Cooper Flagg,DAL,SG SF PF,11.0
+Karl-Anthony Towns,NY,PF C,15.2
+Donovan Mitchell,CLE,PG SG,19.8
+Scottie Barnes,TOR,SF PF C,14.1
+Kevin Durant,HOU,SG SF PF,15.5
+Jalen Johnson,ATL,SF PF,16.5
+Stephen Curry,GS,PG,23.7
+Anthony Davis,WAS,PF C,24.9
+Amen Thompson,HOU,PG SG,29.2
+Trae Young,WAS,PG,26.6
+Alperen Sengün,HOU,PF C,18.4
+Jamal Murray,DEN,PG,18.6
+Jalen Brunson,NY,PG,22.9
+LaMelo Ball,MIN,PG,22.6
+Devin Booker,PHO,PG SG,31.5
+James Harden,CLE,PG SG,38.4
+Josh Giddey,CHI,PG SG,29.9
+Chet Holmgren,OKC,PF C,21.1
+Domantas Sabonis,SAC,PF C,35.3
+Jaylen Brown,PHI,SG SF PF,32.0
+Evan Mobley,CLE,PF C,32.3
+Bam Adebayo,MIA,PF C,33.9
+Austin Reaves,LAL,PG SG SF,22.4
+Kawhi Leonard,TOR,SG SF PF,20.0
+LeBron James,PHI,SF PF,40.8
+Jalen Williams,OKC,SF PF,44.8
+Tyrese Haliburton,IND,PG SG,22.4
+Paolo Banchero,ORL,PF,37.5
+Pascal Siakam,IND,PF C,47.6
+Derrick White,BOS,PG SG,45.0
+Deni Avdija,POR,SG SF PF,35.3
+Trey Murphy III,NO,SG SF,35.9
+Jalen Duren,DET,C,31.4
+Walker Kessler,LAL,C,29.6
+Desmond Bane,ORL,SG SF,54.8
+Joel Embiid,PHI,C,47.9
+Franz Wagner,ORL,SF PF,53.9
+Lauri Markkanen,UTA,SF PF,43.8
+Jaren Jackson Jr.,UTA,PF C,54.5
+Ivica Zubac,IND,C,68.3
+Kon Knueppel,CHA,SG SF,37.1
+Dyson Daniels,ATL,SG SF,62.8
+OG Anunoby,NY,SF PF,61.4
+Stephon Castle,SA,PG SG,56.2
+Zion Williamson,NO,PF C,70.0
+De'Aaron Fox,SA,PG,82.1
+Michael Porter Jr.,BKN,SF PF,67.9
+Onyeka Okongwu,ATL,C,56.9
+Kyrie Irving,DAL,PG,48.8
+Donovan Clingan,POR,C,40.7
+Brandon Miller,CHA,SF PF,49.7
+Darius Garland,LAC,PG,58.4
+Tyler Herro,MIL,PG SG,61.8
+Julius Randle,BKN,PF,64.1
+Mikal Bridges,NY,SF PF,76.0
+Ja Morant,POR,PG,91.3
+Alexandre Sarr,WAS,C,60.9
+Keyonte George,UTA,PG SG,52.4
+Nickeil Alexander-Walker,ATL,PG SG,59.4
+Jarrett Allen,CLE,C,77.9
+Coby White,CHA,PG SG,87.1
+Rudy Gobert,MIN,C,76.0
+Damian Lillard,POR,PG,71.9
+Naz Reid,CHA,PF C,64.9
+Brandon Ingram,LAC,SG SF PF,75.1
+Matas Buzelis,CHI,SF PF,59.0
+Cameron Boozer,MEM,PF,62.5
+Josh Hart,NY,SG SF,96.8
+Dejounte Murray,NO,PG,66.6
+Jaden McDaniels,MIN,SF,78.2
+Paul George,BOS,SF PF,79.9
+Myles Turner,MIL,C,95.5
+Payton Pritchard,BOS,PG,76.8
+Kel'el Ware,MIL,C,75.3
+VJ Edgecombe,PHI,PG SG,67.0
+Zach Edey,MEM,C,70.0
+Ryan Rollins,MIL,PG SG,74.4
+Dylan Harper,SA,PG SG,79.1
+Miles Bridges,PHO,PF,98.4
+Ausar Thompson,DET,SG SF PF,90.8
+AJ Dybantsa,WAS,SF,75.9
+Norman Powell,CHI,SG SF,93.8
+Jalen Green,PHO,SG SF,109.3
+Immanuel Quickley,TOR,PG SG,98.8
+Caleb Wilson,CHI,PF,80.4
+Derik Queen,NO,PF C,80.7
+DeMar DeRozan,DEN,SF PF,116.6
+Andrew Wiggins,MIA,SG SF PF,110.0
+Nicolas Claxton,CHI,C,95.2
+Kristaps Porzingis,GS,C,105.9
+Ty Jerome,MEM,PG SG,95.9
+Jabari Smith Jr.,HOU,PF C,98.2
+Isaiah Hartenstein,OKC,C,102.5
+Kevin Porter Jr.,MIL,PG SG,116.6
+Zach LaVine,SAC,PG SG SF,120.0
+CJ McCollum,ATL,PG SG,111.1
+Jalen Suggs,ORL,PG SG,108.2
+Mark Williams,PHO,C,102.9
+Day'Ron Sharpe,BKN,C,91.9
+Darryn Peterson,UTA,SG,93.0
+Reed Sheppard,HOU,PG SG,115.6
+RJ Barrett,TOR,SG SF PF,111.1
+Luke Kennard,PHO,SG SF,87.5
+Jakob Poeltl,TOR,C,121.8
+John Collins,DET,PF C,118.6
+Neemias Queta,BOS,C,104.9
+Ayo Dosunmu,MIN,PG SG,106.4
+Cedric Coward,MEM,SG SF,100.5
+Keegan Murray,SAC,SF PF,121.7
+Nikola Vucevic,ORL,C,111.9
+Toumani Camara,POR,SF PF,119.4
+Ajay Mitchell,OKC,PG SG,109.7
+Andrew Nembhard,IND,PG SG,121.2
+Cason Wallace,OKC,PG SG SF,114.1
+Fred VanVleet,HOU,PG,120.6
+Collin Murray-Boyles,TOR,PF C,120.8
+Jaime Jaquez Jr.,MIL,SG SF PF,105.1
+Peyton Watson,CLE,SF PF,115.7
+Brandin Podziemski,GS,PG SG,114.1
+Kyshawn George,WAS,SG SF PF,111.7
+Jusuf Nurkic,UTA,C,118.0
+Darius Acuff Jr.,SAC,PG,110.5
+Nate Ament,MIL,SF,115.3
+Egor Demin,BKN,PG SG,121.1
+Ace Bailey,UTA,SF PF,116.8
+Sandro Mamukelashvili,LAL,PF C,115.1
+Aaron Gordon,DEN,PF C,112.1
+Anthony Black,ORL,PG SG SF,119.2
+Jeremiah Fears,NO,PG SG,117.1
+Maxime Raynaud,SAC,C,120.8
+P.J. Washington,DAL,PF C,119.3
+Saddiq Bey,NO,SF PF,122.9
+Davion Mitchell,MIA,PG,115.4
+Devin Vassell,SA,SG SF,117.2
+Moussa Diabaté,CHA,C,98.7
+Christian Braun,DEN,SG SF PF,118.5
+Collin Gillespie,PHO,PG SG,125.2
+Draymond Green,GS,PF C,112.7
+Jimmy Butler III,GS,SF PF,120.5
+Tari Eason,HOU,SG SF PF,
+Paul Reed,DET,PF C,122.8
+Shaedon Sharpe,POR,PG SG,114.2
+Carter Bryant,SA,SF PF,
+Cam Whitmore,CLE,SF PF,
+Gradey Dick,LAC,SG SF,
+Cameron Johnson,DEN,SF PF,107.9
+Jordan Clarkson,NY,SG SF,
+Labaron Philon Jr.,PHI,PG,
+Meleek Thomas,CLE,SG,
+Rob Dillingham,CHI,PG SG,
+Jordan Walsh,BOS,SF PF,
+Mike Conley,BOS,PG,
+Buddy Hield,ATL,SG SF,
+Yang Hansen,POR,C,
+Landry Shamet,NY,SG SF,
+Isaiah Evans,MIN,SG,
+Koa Peat,PHO,PF,
+Alex Karaban,SAC,SF,
+Karim Lopez,MEM,SF,
+Trevon Brazile,DEN,PF,
+Jayden Quaintance,SA,PF,
+Caleb Love,PHI,PG SG,
+Ryan Nembhard,ATL,PG,
+Chris Cenac Jr.,BOS,PF,
+Kenrich Williams,OKC,PF C,
+Tarris Reed Jr.,SA,C,
+Thomas Bryant,CLE,C,
+Dean Wade,PHI,SF PF,
+Goga Bitadze,ORL,C,
+Jaxson Hayes,UTA,C,
+Kevin Huerter,DET,SG SF,
+Gary Trent Jr.,MIL,SG SF,
+Kevon Looney,LAL,PF C,
+Trey Lyles,MIN,PF,
+Johnny Furphy,IND,SG SF,
+Tyler Kolek,NY,PG SG,
+Ron Harper Jr.,BOS,SF,
+Simone Fontecchio,MIA,SF PF,
+Hugo González,BOS,SG SF,
+Jeremy Sochan,POR,PF C,
+Tyus Jones,DEN,PG,
+Cody Williams,MIN,SG SF,
+Clint Capela,HOU,C,
+Justin Edwards,PHI,SF PF,
+Adou Thiero,LAL,SF PF,
+Sidy Cissoko,POR,SF PF,
+Josh Green,UTA,SG SF,
+Bones Hyland,MIN,PG SG,
+Dalton Knecht,LAL,SG SF,
+Baba Miller,LAC,PF,
+Ryan Conwell,MIA,SG,
+Emanuel Sharp,SAC,SG,
+John Konchar,MIN,SG SF,
+Zuby Ejiofor,ATL,PF,
+Bennett Stirtz,OKC,PG,
+Chaz Lanier,DET,SG,
+Sion James,CHA,SG SF,
+Alijah Martin,TOR,PG SG,
+Micah Peavy,NO,SF PF,
+Javon Small,MEM,PG SG,
+Kobe Sanders,LAC,SG SF,
+Mohamed Diawara,NY,PF,
+Jamal Cain,ORL,SG SF,
+Jamaree Bouyea,PHO,PG,
+Dominick Barlow,PHI,PF C,
+Bryce McGowens,NO,SG SF,
+Caleb Houstan,NO,SF,
+Jabari Walker,PHI,PF,
+Jaden Hardy,LAL,PG SG SF,
+Tidjane Salaün,CHA,PF C,
+DaRon Holmes II,DEN,PF C,
+Devin Carter,ATL,PG SG,
+Jaylen Clark,MIN,SG SF,
+Trayce Jackson-Davis,TOR,C,
+Andre Jackson Jr.,TOR,SG SF,
+Luka Garza,BOS,C,
+Charles Bassey,GS,C,
+Jericho Sims,MIL,PF C,
+Micah Potter,POR,PF C,
+Josh Minott,BKN,SF PF,
+Ziaire Williams,LAL,SG SF,
+Tre Mann,WAS,PG SG,
+Ben Sheppard,IND,SG SF,
+Zeke Nnaji,DEN,PF C,
+Jae'Sean Tate,HOU,SG SF PF,
+Vít Krejcí,POR,SG SF,
+Nikola Topic,OKC,PG,
+Mouhamed Gueye,ATL,PF C,
+Tristan Vukcevic,WAS,C,
+Rayan Rupert,PHI,SG SF,
+Jase Richardson,ORL,PG SG,
+Ariel Hukporti,PHI,C,
+Cam Christie,LAC,SG SF,
+KJ Simpson,DEN,PG SG,
+Noah Penda,ORL,SF PF,
+Tyrese Proctor,CLE,PG SG,
+Moussa Cisse,DAL,C,
+Myron Gardner,MIA,SG SF,
+Rasheer Fleming,PHO,PF C,
+DeAndre Jordan,NO,C,
+Ben Saraf,BKN,SG,
+Ryan Dunn,PHO,SF PF,
+Pacôme Dadiet,NY,SG SF,
+Kyle Anderson,TOR,SF PF,
+Jordan McLaughlin,SA,PG SG,
+Svi Mykhailiuk,UTA,SG SF,
+Bogdan Bogdanovic,HOU,PG SG SF,
+Dorian Finney-Smith,CHA,SF PF,
+Caris LeVert,MIL,SG SF,
+Terance Mann,BKN,SG SF,
+Josh Okogie,UTA,SG SF,
+Joshua Jefferson,BKN,PF,
+Larry Nance Jr.,IND,PF C,
+Jarred Vanderbilt,LAL,PF C,
+Jevon Carter,ORL,PG SG,
+Grant Williams,CHA,PF C,
+Drake Powell,BKN,PG SG,
+Noa Essengue,CHI,PF,
+Karlo Matkovic,NO,PF C,
+Daeqwon Plowden,SAC,SG SF,
+Pat Spencer,PHO,PG SG,
+Oscar Tshiebwe,HOU,PF C,
+Branden Carlson,POR,C,
+Jamison Battle,TOR,SF PF,
+Spencer Jones,DEN,SF PF,
+Javonte Green,DET,SG SF,
+Nae'Qwan Tomlin,CLE,SF PF,
+Bruce Thornton,HOU,PG,
+Christian Anderson,CHA,PG,
+Tobias Harris,SA,PF,122.7
+Jrue Holiday,POR,PG SG,115.6
+Quentin Grimes,LAL,SG SF,121.6
+Bennedict Mathurin,NO,SG SF,121.5
+Wendell Carter Jr.,ORL,C,110.3
+Aaron Nesmith,IND,SG SF,75.3
+Yaxel Lendeborg,GS,PF,116.0
+Brook Lopez,LAC,C,72.9
+Dillon Brooks,PHO,SF PF,115.5
+Mitchell Robinson,BOS,C,109.9
+Tre Jones,CHI,PG SG,
+Mikel Brown Jr.,BKN,PG,122.4
+Grayson Allen,CHA,SG SF,
+Khaman Maluach,PHO,C,120.8
+AJ Green,MIL,PG SG SF,73.3
+T.J. McConnell,IND,PG,93.5
+Deandre Ayton,WAS,C,118.3
+Daniel Gafford,DAL,C,98.3
+Aaron Wiggins,ATL,SG SF,83.5
+Kyle Filipowski,UTA,PF C,120.1
+Anfernee Simons,PHI,PG SG,116.8
+Adem Bona,PHI,C,85.4
+Bobby Portis,MIA,PF C,117.1
+Pelle Larsson,MIA,SG SF,
+Jay Huff,IND,C,102.3
+Al Horford,GS,PF C,86.6
+Luke Kornet,SA,C,87.5
+Isaiah Stewart,MEM,PF C,112.3
+Aday Mara,OKC,C,88.7
+De'Andre Hunter,SAC,SF PF,91.0
+Alex Caruso,OKC,SG SF,92.9
+Morez Johnson Jr.,DAL,PF,123.0
+Andre Drummond,NY,C,91.7
+Julian Champagnie,SA,SF PF,114.0
+Duncan Robinson,DET,SG SF,96.3
+Collin Sexton,LAL,PG SG,116.0
+GG Jackson II,MEM,SF PF C,96.0
+Allen Graves,TOR,PF,98.4
+Jared McCain,OKC,PG SG,106.6
+Kelly Oubre Jr.,IND,SF PF,110.6
+Klay Thompson,MIA,SG SF,109.7
+Jonathan Kuminga,MIN,SF PF,117.1
+Rui Hachimura,LAC,SF PF,106.2
+Keaton Wagler,LAC,SG,121.1
+Ryan Kalkbrenner,CHA,C,114.3
+Joan Beringer,MIN,PF C,
+Sam Hauser,BOS,SF PF,109.6
+Kyle Kuzma,MIL,SF PF,120.0
+Isaiah Collier,UTA,PG SG,120.0
+Jordan Poole,NO,PG SG,
+Gui Santos,GS,SF PF,
+Scotty Pippen Jr.,MEM,PG,
+Bilal Coulibaly,WAS,SG SF,
+Herbert Jones,NO,SG SF,
+Jerami Grant,MEM,SF PF,
+Dereck Lively II,DAL,C,
+Nique Clifford,SAC,SG SF,
+Malik Monk,SAC,PG SG,
+Santi Aldama,DAL,PF,
+De'Anthony Melton,GS,PG SG,
+Scoot Henderson,POR,PG,
+Jaylon Tyson,CLE,SG SF PF,
+Brayden Burries,MIL,SG,
+Yves Missi,NO,C,
+Naji Marshall,DAL,SG SF PF,
+Hannes Steinbach,CHA,PF,
+Noah Clowney,BKN,PF C,
+Robert Williams III,POR,C,
+Max Christie,DAL,SG SF,
+Zaccharie Risacher,DAL,SF PF,
+Isaiah Joe,DET,SG SF,
+Keldon Johnson,SA,SF PF,
+Kingston Flemings,ATL,PG,
+Tre Johnson,WAS,PG SG SF,
+Sam Merrill,CLE,SG SF,
+Tim Hardaway Jr.,MIA,SG SF,
+Brice Sensabaugh,UTA,SG SF PF,
+Bronny James Jr.,LAL,PG SG,
+Bradley Beal,LAC,SG SF,
+Terrence Shannon Jr.,MIN,SG SF,
+Bub Carrington,WAS,PG SG,
+Taylor Hendricks,MEM,PF C,
+Daniss Jenkins,DET,PG SG,
+Dennis Schröder,CHA,PG SG,
+Oso Ighodaro,PHO,C,
+Walter Clayton Jr.,MEM,PG SG,
+Obi Toppin,IND,SF PF,
+Cameron Carr,LAL,SG,
+Dylan Cardwell,SAC,PF C,
+Gary Payton II,GS,SG SF,
+Miles McBride,NY,PG SG,
+Marcus Smart,HOU,PG SG,
+Ousmane Dieng,MIL,SF PF,
+Yanic Konan Niederhauser,LAC,C,
+Will Riley,WAS,SF PF,
+Luguentz Dort,ATL,SG SF,
+Nikola Jovic,MIA,PF C,
+Jaylin Williams,OKC,PF C,
+Jalen Smith,CHI,PF C,
+Dru Smith,MIA,PG SG,
+Zach Collins,CHI,C,
+Sergio de Larrea,DAL,PG,
+Craig Porter Jr.,CLE,PG SG,
+Harrison Barnes,SA,PF,
+Jock Landale,ATL,C,
+Dailyn Swain,CHI,SF,
+Jose Alvarado,NY,PG,
+Kentavious Caldwell-Pope,PHI,SG SF,
+Isaiah Jackson,LAC,C,
+Marvin Bagley III,DEN,PF C,
+Steven Adams,HOU,C,
+Quinten Post,MEM,C,
+Khris Middleton,WAS,SF PF,
+Moritz Wagner,BKN,C,
+Isaac Okoro,CHI,SG SF,
+Matisse Thybulle,LAL,SG SF,
+Olivier-Maxence Prosper,MEM,SF PF C,
+Jordan Goodwin,PHO,PG SG,
+Cam Spencer,MEM,PG SG,
+Keon Ellis,BKN,SG SF,
+Ron Holland II,DET,SF PF,
+Precious Achiuwa,SAC,PF C,
+Max Strus,LAC,SF PF,
+Ja'Kobe Walter,TOR,PG SG,
+Jake LaRavia,LAL,SF PF,
+Kris Dunn,LAC,PG SG,
+Danny Wolf,BKN,PF C,
+Jarace Walker,IND,SF PF,
+Royce O'Neale,CHA,SF PF,
+Jaylen Wells,MEM,SG SF,
+Leonard Miller,CHI,SF PF,
+Derrick Jones Jr.,LAC,SF PF,
+Justin Champagnie,WAS,SF PF,
+Tristan da Silva,ORL,SF PF,
+Baylor Scheierman,BOS,SG SF,
+Jamal Shead,TOR,PG,

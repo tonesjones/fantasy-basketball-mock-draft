@@ -45,12 +45,16 @@
     return after-before;
   }
   function marketRank(player,i){
-    /* CPU draft-market estimate. Real ADP when published; otherwise the median
-       of available 2025-26 actuals (totals rank, per-game rank) and the
-       built-in rank, so one stale or outlier signal cannot dominate. Players
-       with no 2025-26 production data at all (prospects) keep the old
-       built-in-rank +45 uncertainty penalty. */
-    if(player.adp!=null)return player.adp;
+    /* CPU draft-market estimate: blend of published Yahoo and Fantrax ADP;
+       when only one platform published, that one is the market; otherwise
+       the median of available 2025-26 actuals (totals rank, per-game rank)
+       and the built-in rank, so one stale or outlier signal cannot dominate.
+       Players with no 2025-26 production data at all (prospects) keep the
+       old built-in-rank +45 uncertainty penalty. */
+    var a=player.adp,f=player.adpF;
+    if(a!=null&&f!=null)return (a+f)/2;
+    if(a!=null)return a;
+    if(f!=null)return f;
     var vals=[];
     if(player.lastTotal!=null&&isFinite(player.lastTotal))vals.push(player.lastTotal);
     if(player.last!=null&&isFinite(player.last))vals.push(player.last);
