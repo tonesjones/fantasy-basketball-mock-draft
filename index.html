@@ -568,7 +568,7 @@ function renderScarcity(){
 var TEAMS=12;
 var CORE=window.DraftCore;
 var BASE_SLOTS=["PG","SG","G","SF","PF","F","C","C","Util","Util","BN","BN","BN"];
-var DATA_VERSION="2026-09-14b";
+var DATA_VERSION="2026-09-18";
 var STORAGE_KEY="fantasy-basketball-mock-draft.v2";
 var HW=(typeof window!=="undefined"&&window.hatchWidget)?window.hatchWidget:null;
 var DEFAULTS={phase:"setup",draftPos:6,rounds:13,log:[],q:"",f:"All",view:"team",sort:"cons",playoffStart:20,page:0,seed:123456789,rngState:123456789,userTurns:[]};
@@ -633,7 +633,7 @@ function pickLabel(idx){var r=Math.floor(idx/TEAMS)+1;var w=idx%TEAMS+1;return "
 var HEALTH=window.DataHealth.audit(PLAYERS,typeof PDATA!=="undefined"?PDATA:{},CATS);
 function renderDataHealth(){
   var h='<details class="scarcity"><summary><b>Data health</b> &middot; '+(HEALTH.players-HEALTH.missingAdp.length)+'/'+HEALTH.players+' players with ADP &middot; bundled snapshot</summary>';
-  h+='<p class="muted">Snapshot '+esc(DATA_VERSION)+'. Yahoo and Fantrax ADP, NBA team, and Yahoo position eligibility were refreshed from Hashtag Basketball\'s 2026-27 ADP table (Yahoo and Fantrax columns, updated 14 September 2026). A red INJ badge marks the 10 players listed as injured as of 14 September 2026; hover or focus it for the injury, context, expected return, and source. Prior-season ranks and category values are historical and unchanged. Category scarcity and the per-row strength tags both derive from BM-style per-game z-scores, not a current-season projection. This audit checks internal consistency; NBA player-pool completeness remains unverified.</p>';
+  h+='<p class="muted">Snapshot '+esc(DATA_VERSION)+'. Yahoo and Fantrax ADP, NBA team, and Yahoo position eligibility were refreshed from Hashtag Basketball\'s 2026-27 ADP table (Yahoo and Fantrax columns, updated 17 September 2026). A red INJ badge marks the 10 players listed as injured as of 14 September 2026; hover or focus it for the injury, context, expected return, and source. Prior-season ranks and category values are historical and unchanged. Category scarcity and the per-row strength tags both derive from BM-style per-game z-scores, not a current-season projection. This audit checks internal consistency; NBA player-pool completeness remains unverified.</p>';
   h+='<p>'+HEALTH.missingAdp.length+' missing Yahoo ADP (CPUs use Fantrax ADP when Yahoo is missing, else median of 2025-26 totals rank, per-game rank, and built-in rank); '+HEALTH.missingLast.length+' missing prior-season rank; '+HEALTH.untagged.length+' without category tags; '+HEALTH.placeholderTeams.length+' unknown teams.</p>';
   h+='<p class="muted">Built-in rank is the original list order, not a fresh projection. Missing ranks stay blank. The legacy category labels on player rows are informational only; scarcity calculations use the historical `cv` values.</p>';
   if(HEALTH.errors.length||HEALTH.missingData.length||HEALTH.orphanData.length)h+='<p>Data consistency issues: '+(HEALTH.errors.length+HEALTH.missingData.length+HEALTH.orphanData.length)+'. Run node audit-data.js for details.</p>';
