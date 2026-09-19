@@ -8,7 +8,7 @@
   function positive(value){return typeof value==='number'&&isFinite(value)&&value>0;}
   function audit(players,data,tags){
     data=data||{};tags=tags||{};
-    var out={players:players.length,errors:[],missingData:[],orphanData:[],missingAdp:[],missingLast:[],missingLastTotal:[],missingCv:[],missingMpg:[],untagged:[],placeholderTeams:[],rankDivergence:[]};
+    var out={players:players.length,errors:[],missingData:[],orphanData:[],missingAdp:[],missingAdpF:[],missingLast:[],missingLastTotal:[],missingCv:[],missingMpg:[],untagged:[],placeholderTeams:[],rankDivergence:[]};
     var names=Object.create(null),normalized=Object.create(null);
     players.forEach(function(p,index){
       var name=p.n||p[0],pos=p.p||p[1],team=p.t||p[2],rank=p.r||index+1;
@@ -20,11 +20,11 @@
       if(!team||['—','-','FA','TBD','N/A'].indexOf(String(team).toUpperCase())>=0)out.placeholderTeams.push(name);
       var d=Object.prototype.hasOwnProperty.call(data,name)?data[name]:null;
       if(!d)out.missingData.push(name);
-      var missingKey={adp:'missingAdp',last:'missingLast',lastTotal:'missingLastTotal'};
-      ['adp','last','lastTotal'].forEach(function(field){
+      var missingKey={adp:'missingAdp',adpF:'missingAdpF',last:'missingLast',lastTotal:'missingLastTotal'};
+      ['adp','adpF','last','lastTotal'].forEach(function(field){
         var value=d&&d[field];
         if(value==null)out[missingKey[field]].push(name);
-        else if(!positive(value)||(field!=='adp'&&!Number.isInteger(value)))out.errors.push('Invalid '+field+': '+name);
+        else if(!positive(value)||(field!=='adp'&&field!=='adpF'&&!Number.isInteger(value)))out.errors.push('Invalid '+field+': '+name);
       });
       var cv=d&&d.cv;
       if(cv==null)out.missingCv.push(name);

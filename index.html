@@ -253,7 +253,7 @@ var PLAYERS=[
 
 ];
 PLAYERS.forEach(function(p,i){p.r=i+1;p.n=p[0];p.p=p[1];p.t=p[2]||"\u2014";});
-PLAYERS.forEach(function(p){var d=(typeof PDATA!=="undefined"&&PDATA[p.n])||null;p.adp=d&&d.adp!=null?d.adp:null;p.last=d&&d.last!=null?d.last:null;p.lastTotal=d&&d.lastTotal!=null?d.lastTotal:null;p.mpg=d&&d.mpg!=null?d.mpg:null;p.inj=(typeof INJ!=="undefined"&&INJ[p.n])||null;});
+PLAYERS.forEach(function(p){var d=(typeof PDATA!=="undefined"&&PDATA[p.n])||null;p.adp=d&&d.adp!=null?d.adp:null;p.adpF=d&&d.adpF!=null?d.adpF:null;p.last=d&&d.last!=null?d.last:null;p.lastTotal=d&&d.lastTotal!=null?d.lastTotal:null;p.mpg=d&&d.mpg!=null?d.mpg:null;p.inj=(typeof INJ!=="undefined"&&INJ[p.n])||null;});
 function injTitle(inj){return "INJURED — "+inj.injury+". "+inj.detail+" Expected return: "+inj.ret+". Source: "+inj.src+".";}
 function injBadge(p){return p.inj?'<span class="injtag" tabindex="0" role="img" aria-label="'+esc(injTitle(p.inj))+'" title="'+esc(injTitle(p.inj))+'">INJ</span>':'';}
 /* Category strength tags: derived from 2025-26 per-game category values (cv).
