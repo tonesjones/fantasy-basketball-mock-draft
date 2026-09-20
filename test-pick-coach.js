@@ -1,16 +1,33 @@
-/* Smoke: PickCoach stub biases UNCERTAIN; rare large ADP value can SUGGEST. */
+/* PickCoach tests: stub bias, 0.7 gate, http TypeError → uncertain (not stub),
+ * soft-error shape, fingerprint cache, sourceLabel, softAdpClause fixtures. */
 var assert = require("assert");
 var path = require("path");
 var fs = require("fs");
 var vm = require("vm");
-var code = fs.readFileSync(path.join(__dirname, "pick-coach.js"), "utf8");
-var sandbox = { setTimeout: setTimeout, clearTimeout: clearTimeout, console: console };
-sandbox.globalThis = sandbox;
-sandbox.window = sandbox;
-vm.runInNewContext(code, sandbox);
-var PC = sandbox.PickCoach;
+
+function loadPickCoach(extra) {
+  var code = fs.readFileSync(path.join(__dirname, "pick-coach.js"), "utf8");
+  var sandbox = {
+    setTimeout: setTimeout,
+    clearTimeout: clearTimeout,
+    console: console,
+    AbortController: AbortController,
+  };
+  if (extra) {
+    Object.keys(extra).forEach(function (k) {
+      sandbox[k] = extra[k];
+    });
+  }
+  sandbox.globalThis = sandbox;
+  sandbox.window = sandbox;
+  vm.runInNewContext(code, sandbox);
+  return sandbox.PickCoach;
+}
+
+var PC = loadPickCoach();
 assert.ok(PC, "PickCoach exported");
 
+// --- Stub heuristics ---
 var mid = PC.pickCoachEvaluate({ player: "X", pickNumber: 50, adp: 48, rank: 50 });
 assert.strictEqual(mid.verdict, "uncertain", "near-ADP should be uncertain");
 assert.ok(mid.scoreConfidence < 0.7);
@@ -25,8 +42,181 @@ var reach = PC.pickCoachEvaluate({ player: "Z", pickNumber: 20, adp: 55, rank: 5
 assert.strictEqual(reach.choice, "reach");
 assert.strictEqual(reach.verdict, "uncertain", "reach without huge gap stays uncertain");
 
-PC.evaluate({ player: "A", pickNumber: 10, adp: 10 }).then(function (r) {
-  assert.ok(r.verdict === "suggest" || r.verdict === "uncertain");
-  assert.ok(!r.stale);
-  console.log("test-pick-coach: ok");
+// --- Gate: normalizeApiResult demotes suggest when conf < 0.7 ---
+var demoted = PC.normalizeApiResult({
+  score: 3,
+  scoreConfidence: 0.9,
+  choice: "take",
+  choiceConfidence: 0.4,
+  verdict: "suggest",
+  model: "jev-1.13.0",
+  why: "x",
 });
+assert.strictEqual(demoted.verdict, "uncertain", "gate demotes when choice conf low");
+
+var kept = PC.normalizeApiResult({
+  score: 3,
+  scoreConfidence: 0.8,
+  choice: "wait",
+  choiceConfidence: 0.75,
+  verdict: "suggest",
+  model: "jev-1.13.0",
+});
+assert.strictEqual(kept.verdict, "suggest");
+
+var soft = PC.uncertainResult("TYPESAFE_API_KEY not configured", "jev-1.13.0");
+assert.strictEqual(soft.verdict, "uncertain");
+assert.ok(soft.error && /TYPESAFE_API_KEY/.test(soft.error));
+assert.strictEqual(PC.sourceLabel(soft), "Unavailable");
+assert.strictEqual(PC.sourceLabel(value), "Stub · offline");
+assert.strictEqual(PC.sourceLabel(kept), "Jev");
+
+// --- Fingerprint ---
+assert.strictEqual(
+  PC.fingerprint({ player: "A", pickNumber: 10, logLen: 9 }),
+  "A|10|9"
+);
+assert.strictEqual(
+  PC.fingerprint({ player: "A", pickNumber: 10 }),
+  "A|10|9",
+  "logLen defaults from pickNumber-1"
+);
+
+// --- softAdpClause fixtures (mirrored from index.html display layer) ---
+function softAdpClause(choice, pickNumber, adp) {
+  if (adp == null || !isFinite(Number(adp))) return "";
+  var delta = pickNumber - Number(adp);
+  if (choice === "take") {
+    if (delta >= 3) return "value vs ADP";
+    if (delta <= -3) return "near ADP";
+    return "near ADP";
+  }
+  if (choice === "reach") return "early vs ADP";
+  if (choice === "wait") return "can wait vs ADP";
+  if (Math.abs(delta) <= 2) return "near ADP";
+  if (delta > 2) return "value vs ADP";
+  return "early vs ADP";
+}
+assert.strictEqual(softAdpClause("take", 30, 20), "value vs ADP");
+assert.strictEqual(softAdpClause("wait", 25, 22), "can wait vs ADP");
+assert.strictEqual(softAdpClause("reach", 15, 40), "early vs ADP");
+
+// --- Async: http(s) TypeError → uncertain, NOT stub ---
+function withFakeLocation(protocol, host, run) {
+  return new Promise(function (resolve, reject) {
+    var fetchCalls = 0;
+    var PC2 = loadPickCoach({
+      location: { protocol: protocol, hostname: host || "localhost" },
+      fetch: function () {
+        fetchCalls++;
+        return Promise.reject(new TypeError("Failed to fetch"));
+      },
+    });
+    PC2.clearCache();
+    PC2.evaluate({ player: "Net", pickNumber: 12, adp: 10, logLen: 11 }).then(function (r) {
+      try {
+        run(r, fetchCalls, PC2);
+        resolve();
+      } catch (e) {
+        reject(e);
+      }
+    }, reject);
+  });
+}
+
+var chain = Promise.resolve();
+
+chain = chain.then(function () {
+  return withFakeLocation("https:", "tony-draft-lab-preview.pages.dev", function (r, n) {
+    assert.ok(n >= 1, "fetch attempted on https");
+    assert.strictEqual(r.verdict, "uncertain");
+    assert.ok(r.error, "https TypeError must set error");
+    assert.notStrictEqual(r.model, "stub", "https must NOT fall back to stub");
+    assert.strictEqual(PC.sourceLabel(r), "Unavailable");
+  });
+});
+
+chain = chain.then(function () {
+  return withFakeLocation("file:", "", function (r, n) {
+    assert.strictEqual(n, 0, "file:// skips fetch");
+    assert.strictEqual(r.model, "stub");
+    assert.strictEqual(r.fallback, "file");
+    assert.ok(!r.error);
+  });
+});
+
+// Cache hit on second evaluate (mock fetch returns suggest once)
+chain = chain.then(function () {
+  var calls = 0;
+  var PC3 = loadPickCoach({
+    location: { protocol: "https:", hostname: "tony-draft-lab-preview.pages.dev" },
+    fetch: function () {
+      calls++;
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        text: function () {
+          return Promise.resolve(
+            JSON.stringify({
+              score: 3,
+              scoreConfidence: 0.85,
+              choice: "take",
+              choiceConfidence: 0.82,
+              verdict: "suggest",
+              model: "jev-1.13.0",
+              why: "ok",
+              scoreLabel: "Good",
+            })
+          );
+        },
+      });
+    },
+  });
+  PC3.clearCache();
+  var state = { player: "CacheMe", pickNumber: 5, logLen: 4, adp: 8 };
+  return PC3.evaluate(state).then(function (r1) {
+    assert.strictEqual(r1.verdict, "suggest");
+    assert.strictEqual(calls, 1);
+    return PC3.evaluate(state).then(function (r2) {
+      assert.strictEqual(r2.verdict, "suggest");
+      assert.ok(r2.cached, "second call should be cached");
+      assert.strictEqual(calls, 1, "cache skips second fetch");
+    });
+  });
+});
+
+// Cancel aborts pending evaluate
+chain = chain.then(function () {
+  var PC4 = loadPickCoach({
+    location: { protocol: "https:", hostname: "example.com" },
+    fetch: function (_url, opts) {
+      return new Promise(function (resolve, reject) {
+        if (opts && opts.signal) {
+          opts.signal.addEventListener("abort", function () {
+            var e = new Error("aborted");
+            e.name = "AbortError";
+            reject(e);
+          });
+        }
+      });
+    },
+  });
+  var p = PC4.evaluate({ player: "Abort", pickNumber: 1, logLen: 0 });
+  // Cancel after debounce so in-flight abort path is exercised; also covers
+  // pre-debounce cancel resolving stale (see cancel()).
+  setTimeout(function () {
+    PC4.cancel();
+  }, 250);
+  return p.then(function (r) {
+    assert.ok(r.stale || r.verdict === "uncertain");
+  });
+});
+
+chain
+  .then(function () {
+    console.log("test-pick-coach: ok");
+  })
+  .catch(function (err) {
+    console.error("test-pick-coach FAILED", err);
+    process.exit(1);
+  });

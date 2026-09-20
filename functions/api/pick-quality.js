@@ -1,16 +1,20 @@
 /**
  * Cloudflare Pages Function: POST /api/pick-quality
  *
- * Calls TypeSafe System One (jev-latest) with Score + Choice questions
+ * Calls TypeSafe System One (pinned jev-1.13.0) with Score + Choice questions
  * matching scripts/pick_quality_jev.py (spike / PR #3) semantics.
  *
  * Fail-soft: missing key / timeout / API error → HTTP 200 with
  * verdict "uncertain" + error string (never break the draft).
  * Never logs TYPESAFE_API_KEY.
+ *
+ * Secret (Pages project): TYPESAFE_API_KEY
+ *   npx wrangler pages secret put TYPESAFE_API_KEY --project-name tony-draft-lab-preview
  */
 
 const CONF_GATE = 0.7;
-const MODEL = "jev-latest";
+/** Pin versioned id (aliases like jev-latest may move). */
+const MODEL = "jev-1.13.0";
 const TYPESAFE_URL = "https://api.typesafe.ai/v1/systemone";
 const FETCH_TIMEOUT_MS = 25000;
 
@@ -30,23 +34,55 @@ const CHOICE_CRITERIA = {
   reach: "Picking now would be an early reach relative to ADP and available alternatives",
 };
 
-function corsHeaders() {
+/** Allowed browser origins for preview + local wrangler (not *). */
+const ALLOWED_ORIGINS = [
+  "https://tony-draft-lab-preview.pages.dev",
+  "https://tony-draft-lab.pages.dev",
+  "http://localhost:8788",
+  "http://127.0.0.1:8788",
+  "http://localhost:8799",
+  "http://127.0.0.1:8799",
+];
+
+function isAllowedOrigin(origin) {
+  if (!origin) return false;
+  if (ALLOWED_ORIGINS.indexOf(origin) >= 0) return true;
+  // Preview deploy aliases: https://<hash>.tony-draft-lab-preview.pages.dev
+  try {
+    var u = new URL(origin);
+    if (u.protocol !== "https:" && u.protocol !== "http:") return false;
+    var host = u.hostname;
+    if (host === "tony-draft-lab-preview.pages.dev") return true;
+    if (host === "tony-draft-lab.pages.dev") return true;
+    if (/\.tony-draft-lab-preview\.pages\.dev$/i.test(host)) return true;
+    if (/\.tony-draft-lab\.pages\.dev$/i.test(host)) return true;
+    if (host === "localhost" || host === "127.0.0.1") return true;
+    return false;
+  } catch (e) {
+    return false;
+  }
+}
+
+function corsHeaders(request) {
+  var origin = (request && request.headers && request.headers.get("Origin")) || "";
+  var allow = isAllowedOrigin(origin) ? origin : ALLOWED_ORIGINS[0];
   return {
-    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Origin": allow,
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
+    "Vary": "Origin",
     "Content-Type": "application/json; charset=utf-8",
   };
 }
 
-function jsonResponse(body, status) {
+function jsonResponse(body, status, request) {
   return new Response(JSON.stringify(body), {
     status: status == null ? 200 : status,
-    headers: corsHeaders(),
+    headers: corsHeaders(request),
   });
 }
 
-function uncertain(error, extra) {
+function uncertain(error, request, extra) {
   var out = {
     score: null,
     scoreConfidence: 0,
@@ -62,7 +98,7 @@ function uncertain(error, extra) {
       if (Object.prototype.hasOwnProperty.call(extra, k)) out[k] = extra[k];
     }
   }
-  return jsonResponse(out, 200);
+  return jsonResponse(out, 200, request);
 }
 
 function scoreLabel(score) {
@@ -88,6 +124,27 @@ function normalizeRosterNeeds(rosterNeeds, drafted) {
   };
 }
 
+function normalizeBoardList(list, kind) {
+  if (!Array.isArray(list)) return [];
+  return list.slice(0, 8).map(function (item) {
+    if (!item || typeof item !== "object") return null;
+    if (kind === "recent") {
+      return {
+        name: item.name || item.player || "",
+        pick: item.pick != null ? Number(item.pick) : null,
+      };
+    }
+    return {
+      name: item.name || item.player || "",
+      adp: item.adp != null && item.adp !== "" ? Number(item.adp) : null,
+      positions: Array.isArray(item.positions) ? item.positions : [],
+      rank: item.rank != null && item.rank !== "" ? Number(item.rank) : null,
+    };
+  }).filter(function (x) {
+    return x && x.name;
+  });
+}
+
 function buildState(body) {
   var pickNumber = Number(body.pickNumber) || 1;
   var teams = 12;
@@ -95,6 +152,28 @@ function buildState(body) {
     body.picksUntilNext != null && body.picksUntilNext !== ""
       ? Number(body.picksUntilNext)
       : null;
+  var rn = normalizeRosterNeeds(body.rosterNeeds, body.drafted);
+  var scarcity =
+    body.scarcityRem || body.scarcity_rem || body.boardContext && body.boardContext.scarcity_rem || null;
+  var board = {
+    notable_available: normalizeBoardList(
+      body.notableAvailable ||
+        body.notable_available ||
+        (body.boardContext && body.boardContext.notable_available) ||
+        [],
+      "notable"
+    ),
+    recently_taken: normalizeBoardList(
+      body.recentlyTaken ||
+        body.recently_taken ||
+        (body.boardContext && body.boardContext.recently_taken) ||
+        [],
+      "recent"
+    ),
+  };
+  if (scarcity && typeof scarcity === "object") {
+    board.scarcity_rem_pct = scarcity;
+  }
   return {
     league: {
       format: "9-category H2H (PTS REB AST STL BLK 3PM FG% FT% TO)",
@@ -114,11 +193,8 @@ function buildState(body) {
       built_in_rank: body.rank != null && body.rank !== "" ? Number(body.rank) : null,
       yahoo_adp: body.adp != null && body.adp !== "" ? Number(body.adp) : null,
     },
-    roster_needs: normalizeRosterNeeds(body.rosterNeeds, body.drafted),
-    board_context: {
-      notable_available: [],
-      recently_taken: [],
-    },
+    roster_needs: rn,
+    board_context: board,
   };
 }
 
@@ -164,27 +240,27 @@ export async function onRequest(context) {
   var env = context.env || {};
 
   if (request.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders() });
+    return new Response(null, { status: 204, headers: corsHeaders(request) });
   }
 
   if (request.method !== "POST") {
-    return jsonResponse({ error: "POST only", verdict: "uncertain" }, 405);
+    return jsonResponse({ error: "POST only", verdict: "uncertain" }, 405, request);
   }
 
   var apiKey = env.TYPESAFE_API_KEY;
   if (!apiKey) {
-    return uncertain("TYPESAFE_API_KEY not configured");
+    return uncertain("TYPESAFE_API_KEY not configured", request);
   }
 
   var body;
   try {
     body = await request.json();
   } catch (e) {
-    return uncertain("Invalid JSON body");
+    return uncertain("Invalid JSON body", request);
   }
 
   if (!body || typeof body !== "object" || !body.player) {
-    return uncertain("Missing player in request body");
+    return uncertain("Missing player in request body", request);
   }
 
   var state = buildState(body);
@@ -217,7 +293,7 @@ export async function onRequest(context) {
       err && err.name === "AbortError"
         ? "TypeSafe request timed out"
         : "TypeSafe request failed: " + (err && err.message ? err.message : "network error");
-    return uncertain(msg);
+    return uncertain(msg, request);
   }
   clearTimeout(timer);
 
@@ -231,7 +307,8 @@ export async function onRequest(context) {
     // Do not echo secrets; truncate body for diagnostics only.
     var snippet = (errText || "").slice(0, 200).replace(/\s+/g, " ");
     return uncertain(
-      "TypeSafe HTTP " + upstream.status + (snippet ? ": " + snippet : "")
+      "TypeSafe HTTP " + upstream.status + (snippet ? ": " + snippet : ""),
+      request
     );
   }
 
@@ -239,14 +316,14 @@ export async function onRequest(context) {
   try {
     data = await upstream.json();
   } catch (e) {
-    return uncertain("TypeSafe returned non-JSON");
+    return uncertain("TypeSafe returned non-JSON", request);
   }
 
   var answers = (data && data.answers) || {};
   var scoreAns = answers.score;
   var choiceAns = answers.choice;
   if (!scoreAns || !choiceAns) {
-    return uncertain("TypeSafe response missing score/choice answers");
+    return uncertain("TypeSafe response missing score/choice answers", request);
   }
 
   var score = Number(scoreAns.score);
@@ -255,12 +332,12 @@ export async function onRequest(context) {
   var choiceConf = Number(choiceAns.confidence);
 
   if (!isFinite(score) || !isFinite(scoreConf) || !isFinite(choiceConf) || !choice) {
-    return uncertain("TypeSafe answers incomplete");
+    return uncertain("TypeSafe answers incomplete", request);
   }
 
   var allowed = { take: 1, wait: 1, reach: 1 };
   if (!allowed[choice]) {
-    return uncertain("Unexpected choice: " + String(choice));
+    return uncertain("Unexpected choice: " + String(choice), request);
   }
 
   var verdict =
@@ -278,5 +355,5 @@ export async function onRequest(context) {
     verdict: verdict,
     model: modelUsed,
     scoreLabel: label,
-  });
+  }, 200, request);
 }

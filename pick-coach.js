@@ -2,8 +2,8 @@
  *
  * Prefers POST /api/pick-quality (Cloudflare Pages Function → TypeSafe/Jev).
  * Fail-soft: API soft-errors return uncertain + error (no silent stub).
- * Offline / file:// / network TypeError → stub labeled model:"stub" so
- * index.html still works without wrangler.
+ * Offline file:// (or no fetch) → stub labeled model:"stub".
+ * On http(s) hosts, network TypeError → uncertain + quiet error (NOT stub).
  */
 (function (root) {
   "use strict";
@@ -11,11 +11,15 @@
   var SCORE_WORDS = ["Poor", "Below avg", "Average", "Good", "Excellent"];
   var CONF_GATE = 0.7;
   var DEBOUNCE_MS = 200;
+  var CACHE_TTL_MS = 45000;
   var API_PATH = "/api/pick-quality";
+  var PINNED_MODEL = "jev-1.13.0";
 
   var _timer = null;
   var _seq = 0;
   var _abort = null;
+  var _cache = Object.create(null);
+  var _pendingResolve = null;
 
   function scoreWord(score) {
     var i = Math.max(0, Math.min(4, Math.round(Number(score) || 0)));
@@ -28,6 +32,47 @@
     } catch (e) {
       return false;
     }
+  }
+
+  function isHttpHost() {
+    try {
+      if (typeof location === "undefined") return false;
+      return location.protocol === "http:" || location.protocol === "https:";
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /** Fingerprint: player + pick# + logLen (board identity for cache). */
+  function fingerprint(state) {
+    var s = state || {};
+    var player = String(s.player || "");
+    var pick = Number(s.pickNumber) || 0;
+    var logLen =
+      s.logLen != null && s.logLen !== ""
+        ? Number(s.logLen)
+        : Math.max(0, pick - 1);
+    return player + "|" + pick + "|" + logLen;
+  }
+
+  function cacheGet(key) {
+    var hit = _cache[key];
+    if (!hit) return null;
+    if (Date.now() - hit.t > CACHE_TTL_MS) {
+      delete _cache[key];
+      return null;
+    }
+    return hit.v;
+  }
+
+  function cacheSet(key, value) {
+    if (!value || value.stale || value.error) return;
+    // Cache successful suggest/uncertain-without-error only.
+    _cache[key] = { t: Date.now(), v: value };
+  }
+
+  function clearCache() {
+    _cache = Object.create(null);
   }
 
   /**
@@ -128,6 +173,7 @@
       verdict = "uncertain";
     }
     var score = data.score != null ? Number(data.score) : null;
+    var model = data.model || PINNED_MODEL;
     return {
       score: score,
       scoreConfidence: isFinite(scoreConf) ? scoreConf : 0,
@@ -135,11 +181,27 @@
       choiceConfidence: isFinite(choiceConf) ? choiceConf : 0,
       verdict: verdict,
       why: data.why || "",
-      model: data.model || "jev-latest",
+      model: model,
       scoreLabel: data.scoreLabel || (score != null ? scoreWord(score) : undefined),
       error: data.error || undefined,
       stale: false,
     };
+  }
+
+  /** Short UI label: "Jev" / "Stub · offline" / "Unavailable". */
+  function sourceLabel(res) {
+    if (!res) return "";
+    if (res.error) return "Unavailable";
+    var m = String(res.model || "");
+    if (m === "stub" || res.fallback === "file" || res.fallback === "no-fetch") {
+      return "Stub · offline";
+    }
+    if (/^jev/i.test(m) || m === "pick-quality") {
+      // Prefer friendly "Jev"; keep version in title tooltip via model field.
+      return "Jev";
+    }
+    if (m) return m;
+    return "";
   }
 
   function fetchPickQuality(state, signal) {
@@ -177,6 +239,8 @@
       return Promise.resolve({ stale: true, verdict: "uncertain" });
     }
 
+    var fp = fingerprint(state);
+
     if (isFileProtocol()) {
       try {
         var stubFile = pickCoachEvaluate(state || {});
@@ -195,6 +259,17 @@
       return Promise.resolve(stubNoFetch);
     }
 
+    var cached = cacheGet(fp);
+    if (cached) {
+      var copy = {};
+      for (var k in cached) {
+        if (Object.prototype.hasOwnProperty.call(cached, k)) copy[k] = cached[k];
+      }
+      copy.stale = false;
+      copy.cached = true;
+      return Promise.resolve(copy);
+    }
+
     if (_abort) {
       try {
         _abort.abort();
@@ -210,6 +285,9 @@
         if (mySeq !== _seq) {
           return { stale: true, verdict: "uncertain" };
         }
+        if (result && !result.stale && !result.error) {
+          cacheSet(fp, result);
+        }
         return result;
       })
       .catch(function (err) {
@@ -219,8 +297,18 @@
         if (err && err.name === "AbortError") {
           return { stale: true, verdict: "uncertain" };
         }
-        // Network / missing function (browser "Failed to fetch", Node relative URL).
-        if (err && (err.name === "TypeError" || /Failed to fetch|Invalid URL|NetworkError/i.test(String(err.message || err)))) {
+        var isNet =
+          err &&
+          (err.name === "TypeError" ||
+            /Failed to fetch|Invalid URL|NetworkError/i.test(
+              String(err.message || err)
+            ));
+        // On http(s) hosts: never paint stub as if live — uncertain + quiet error.
+        if (isNet && isHttpHost()) {
+          return uncertainResult("Coach unreachable", "pick-quality");
+        }
+        // Non-browser / relative-URL Node smoke: allow stub only off http(s).
+        if (isNet && !isHttpHost()) {
           try {
             var stubNet = pickCoachEvaluate(state || {});
             stubNet.stale = false;
@@ -244,6 +332,12 @@
   function evaluate(state) {
     var mySeq = ++_seq;
     return new Promise(function (resolve) {
+      if (_pendingResolve) {
+        try {
+          _pendingResolve({ stale: true, verdict: "uncertain" });
+        } catch (e) {}
+        _pendingResolve = null;
+      }
       if (_timer) clearTimeout(_timer);
       if (_abort) {
         try {
@@ -251,9 +345,14 @@
         } catch (e) {}
         _abort = null;
       }
+      _pendingResolve = resolve;
       _timer = setTimeout(function () {
         _timer = null;
-        runEvaluate(state || {}, mySeq).then(resolve);
+        var fin = _pendingResolve;
+        _pendingResolve = null;
+        runEvaluate(state || {}, mySeq).then(function (result) {
+          if (fin) fin(result);
+        });
       }, DEBOUNCE_MS);
     });
   }
@@ -270,6 +369,12 @@
       _abort = null;
     }
     _seq++;
+    if (_pendingResolve) {
+      try {
+        _pendingResolve({ stale: true, verdict: "uncertain" });
+      } catch (e) {}
+      _pendingResolve = null;
+    }
   }
 
   root.PickCoach = {
@@ -277,6 +382,13 @@
     pickCoachEvaluate: pickCoachEvaluate,
     scoreWord: scoreWord,
     cancel: cancel,
+    clearCache: clearCache,
+    fingerprint: fingerprint,
+    sourceLabel: sourceLabel,
+    normalizeApiResult: normalizeApiResult,
+    uncertainResult: uncertainResult,
     CONF_GATE: CONF_GATE,
+    CACHE_TTL_MS: CACHE_TTL_MS,
+    PINNED_MODEL: PINNED_MODEL,
   };
 })(typeof window !== "undefined" ? window : globalThis);

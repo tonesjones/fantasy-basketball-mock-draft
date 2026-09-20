@@ -1,5 +1,26 @@
 # Changelog
 
+## Pick coach fix-up (source, soft errors, board context) (2026-09-20)
+- **Source of truth** — `.pc-source` shows **Jev** / **Stub · offline** /
+  **Unavailable**. On http(s), network `TypeError` → uncertain + quiet error
+  (never a stub suggest that looks live). `file://` still uses stub.
+- **Soft errors** — `res.error` copy is **unavailable ≠ low confidence**
+  (“Coach unavailable” / “Unavailable — not a low-confidence read”).
+- **Cache** — evaluate fingerprint `player|pick#|logLen`, TTL ~45s; abort via
+  `PickCoach.cancel` when leaving coach or draft ends.
+- **Board context** — `buildPickCoachPayload` sends `notableAvailable`,
+  `recentlyTaken`, `scarcityRem`, `priorityNeeds`; Function `buildState` maps
+  them into Jev `board_context`. Client board why stays display layer.
+- **Function harden** — CORS tightened to draft-lab / preview origins (not `*`);
+  secret name documented once (`TYPESAFE_API_KEY`); model pinned to
+  **`jev-1.13.0`**.
+- **README** — points at `docs/pick-coach.md` (no longer stub-only).
+- **Tests** — gate, uncertain/http TypeError, sourceLabel, fingerprint cache,
+  softAdpClause fixtures.
+- Preview-only: `tony-draft-lab-preview`. Prod `tony-draft-lab` untouched.
+- Live marker: `pc-source-truth`.
+
+
 ## Richer Pick coach tones (2026-09-20)
 - **Strength row** — `#pick-coach` shows mint-border `.pc-chip` pills from `PLAYERS[i].c`
   (same CATS strings as list row `pl.c.slice(0,4)`), including on uncertain.

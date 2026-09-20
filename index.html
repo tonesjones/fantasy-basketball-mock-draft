@@ -180,11 +180,14 @@ body{background:radial-gradient(ellipse at top right,#19352f66,transparent 55%),
 
 /* Pick coach panel (advisory-only; UX polish hooks) */
 /* pc-strength-chips: mint-border strength pills from PLAYERS[i].c */
+/* pc-source-truth: model/fallback marker + soft-error copy (preview verify) */
 #md .pick-coach{padding:4px 0 8px}
 #md .pick-coach .pc-card{border:1px solid var(--hatch-widget-border);border-radius:12px;background:#0d1724;padding:14px 16px;margin-top:8px}
 #md .pick-coach .pc-head{margin-bottom:10px}
 #md .pick-coach .pc-name{font-size:16px;font-weight:700;letter-spacing:-.2px}
 #md .pick-coach .pc-meta{font-size:12px;margin-top:4px}
+#md .pick-coach .pc-source{font-size:11px;margin-top:4px;letter-spacing:.2px}
+#md .pick-coach .pc-source[hidden]{display:none}
 #md .pick-coach .pc-strengths{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
 #md .pick-coach .pc-strengths[hidden]{display:none}
 #md .pick-coach .pc-chip{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.3px;line-height:1.3;padding:3px 9px;border-radius:999px;border:1px solid #2d7258;color:#85e5bc;background:#143d2e66}
@@ -733,7 +736,19 @@ function save(){
   else{try{localStorage.setItem(STORAGE_KEY,JSON.stringify({schema:2,dataVersion:DATA_VERSION,state:state}));}catch(e){}}
 }
 function clearSaved(){if(!HW){try{localStorage.removeItem(STORAGE_KEY);}catch(e){}}}
-function setState(patch){state=cleanState(Object.assign({},state,patch));save();render();}
+function cancelPickCoach(){
+  if(typeof window.PickCoach!=="undefined"&&window.PickCoach.cancel)try{window.PickCoach.cancel();}catch(e){}
+  _pcEvalSeq++;
+}
+function setState(patch){
+  var prevView=state.view,prevPhase=state.phase;
+  state=cleanState(Object.assign({},state,patch));
+  save();
+  if((prevView==="coach"&&state.view!=="coach")||state.phase==="done"||state.phase==="setup"||(prevPhase==="draft"&&state.phase!=="draft")){
+    cancelPickCoach();
+  }
+  render();
+}
 window.addEventListener("hatch-widget-state",function(e){state=cleanState(e.detail.state);render();});
 function el(id){return document.getElementById(id);}
 function teamForPick(idx){return CORE.teamForPick(idx,TEAMS);}
@@ -857,7 +872,7 @@ function pickCoachShellHtml(){
     +'<p class="pc-wait muted" hidden>Available on your turn.</p>'
     +'<p class="pc-loading muted" hidden>Evaluating\u2026</p>'
     +'<div class="pc-card" hidden>'
-    +'<div class="pc-head"><div class="pc-name"></div><div class="pc-meta muted"></div></div>'
+    +'<div class="pc-head"><div class="pc-name"></div><div class="pc-meta muted"></div><div class="pc-source muted" hidden></div></div>'
     +'<div class="pc-strengths" hidden></div>'
     +'<div class="pc-playoff muted" hidden></div>'
     +'<div class="pc-suggest"><div class="pc-choice"></div><p class="pc-why muted"></p><p class="pc-conf muted"></p><p class="pc-score-quiet muted" hidden></p><div class="pc-score" hidden></div></div>'
@@ -874,6 +889,7 @@ function pcShow(root, which){
 function buildPickCoachPayload(pi){
   var pl=PLAYERS[pi];
   var pickNumber=state.log.length+1;
+  var logLen=state.log.length;
   var nxt=nextUserPickIdx();
   var picksUntilNext=0;
   if(isUserTurn()){
@@ -887,15 +903,38 @@ function buildPickCoachPayload(pi){
     if(e.player){filled.push(e.slot);drafted.push({name:e.player.player.n,positions:e.player.player.p.slice(),pick:e.player.index+1});}
     else open.push(e.slot);
   });
+  var rem=scarcityRemPcts();
+  var thinCats=[];
+  CATS9.forEach(function(cat){if(rem[cat]!=null&&rem[cat]<=35)thinCats.push(cat);});
+  var priorityNeeds=[];
+  open.forEach(function(s){if(["C","PF","SF","SG","PG"].indexOf(s)>=0&&priorityNeeds.indexOf(s)<0)priorityNeeds.push(s);});
+  thinCats.forEach(function(c){if(priorityNeeds.indexOf(c)<0)priorityNeeds.push(c);});
+  priorityNeeds=priorityNeeds.slice(0,6);
+  var taken={},ti;for(ti=0;ti<state.log.length;ti++)taken[state.log[ti]]=1;
+  var notable=[],ni;
+  for(ni=0;ni<PLAYERS.length&&notable.length<6;ni++){
+    if(taken[ni]||ni===pi)continue;
+    var np=PLAYERS[ni];
+    notable.push({name:np.n,adp:np.adp,positions:np.p.slice(),rank:np.r});
+  }
+  var recently=[],ri,from=Math.max(0,state.log.length-5);
+  for(ri=from;ri<state.log.length;ri++){
+    var rp=PLAYERS[state.log[ri]];
+    if(rp)recently.push({name:rp.n,pick:ri+1});
+  }
   return {
     player:pl.n,
     pickNumber:pickNumber,
+    logLen:logLen,
     adp:pl.adp,
     rank:pl.r,
     positions:pl.p.slice(),
     team:pl.t,
     picksUntilNext:picksUntilNext,
-    rosterNeeds:{filledSlots:filled,openSlots:open,alreadyDraftedByUser:drafted}
+    rosterNeeds:{filledSlots:filled,openSlots:open,alreadyDraftedByUser:drafted,priorityNeeds:priorityNeeds},
+    notableAvailable:notable,
+    recentlyTaken:recently,
+    scarcityRem:rem
   };
 }
 function scarcityRemPcts(){
@@ -985,7 +1024,7 @@ function buildPickCoachWhy(pl, choice, pickNumber, jevWhy){
   var boardWhy=parts.join(" · ");
   var jw=(jevWhy||"").trim();
   if(jw){
-    var opaque=/stub heuristic|scoreConfidence|choiceConfidence|model:|jev-latest|pick-quality/i.test(jw);
+    var opaque=/stub heuristic|scoreConfidence|choiceConfidence|model:|jev-|pick-quality/i.test(jw);
     var dup=boardWhy&&jw.toLowerCase().indexOf(boardWhy.toLowerCase().slice(0,24))>=0;
     if(!opaque&&!dup&&boardWhy){
       // append only if it adds something non-overlapping
@@ -1039,9 +1078,23 @@ function refreshPickCoach(){
       metaEl.textContent="Pick #"+payload.pickNumber+" · ADP "+adpTxt;
     }
     fillPickCoachBoard(still, pl, payload);
+    var srcEl=still.querySelector(".pc-source");
+    if(srcEl){
+      var src=(window.PickCoach.sourceLabel&&window.PickCoach.sourceLabel(res))||"";
+      if(!src){
+        if(res.error)src="Unavailable";
+        else if(res.model==="stub"||res.fallback)src="Stub · offline";
+        else if(res.model)src=/^jev/i.test(String(res.model))?"Jev":String(res.model);
+      }
+      srcEl.textContent=src;
+      srcEl.hidden=!src;
+      srcEl.title=res.model?String(res.model):(res.error?String(res.error):"");
+    }
     var suggest=still.querySelector(".pc-suggest");
     var uncertain=still.querySelector(".pc-uncertain");
-    var verdict=res.verdict==="suggest"?"suggest":"uncertain";
+    // Soft API/network errors must never look like a live low-confidence suggest.
+    var softFail=!!res.error;
+    var verdict=(!softFail&&res.verdict==="suggest")?"suggest":"uncertain";
     if(suggest)suggest.hidden=verdict!=="suggest";
     if(uncertain)uncertain.hidden=verdict!=="suggest"?false:true;
     if(verdict==="suggest"){
@@ -1070,18 +1123,25 @@ function refreshPickCoach(){
         else{quietEl.textContent="";quietEl.hidden=true;}
       }
     }else{
+      var uTitle=still.querySelector(".pc-uncertain-title");
+      var uSub=still.querySelector(".pc-uncertain-sub");
       var uWhy=still.querySelector(".pc-uncertain-why");
-      var tagsOnly=pickCoachStrengthTags(pl);
-      if(uWhy){
-        if(tagsOnly.length){uWhy.textContent=tagsOnly.join(" · ");uWhy.hidden=false;}
-        else{uWhy.textContent="";uWhy.hidden=true;}
-      }
-      if(res.error){
-        var sub=still.querySelector(".pc-uncertain-sub");
-        if(sub)sub.textContent="Coach unavailable — your call";
+      if(softFail){
+        if(uTitle)uTitle.textContent="Coach unavailable";
+        if(uSub)uSub.textContent="Unavailable — not a low-confidence read · your call";
+        if(uWhy){
+          // Quiet error: keep diagnostic out of the hero line; optional muted note.
+          uWhy.textContent="";
+          uWhy.hidden=true;
+        }
       }else{
-        var sub2=still.querySelector(".pc-uncertain-sub");
-        if(sub2)sub2.textContent="Low confidence — your call";
+        if(uTitle)uTitle.textContent="Not sure enough to suggest";
+        if(uSub)uSub.textContent="Low confidence — your call";
+        var tagsOnly=pickCoachStrengthTags(pl);
+        if(uWhy){
+          if(tagsOnly.length){uWhy.textContent=tagsOnly.join(" · ");uWhy.hidden=false;}
+          else{uWhy.textContent="";uWhy.hidden=true;}
+        }
       }
     }
     pcShow(still,"pc-card");
@@ -1349,6 +1409,7 @@ function renderGrades(){
   return h;
 }
 function renderDone(){
+  cancelPickCoach();
   var h='<h2>Draft complete</h2><div class="muted">Final roster from pick #'+state.draftPos+' ('+state.rounds+' rounds, 12 teams)</div>';
   h+='<button class="bigbtn" id="mdnew2">Run it back</button>';
   if(state.userTurns.length)h+='<button class="ghostbtn" id="mdundo2" style="margin-left:8px">Undo my last pick</button>';

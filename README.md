@@ -59,8 +59,11 @@ The layout collapses to a single column with compact two-line player rows; all f
 
 ## Pick coach
 
-Advisory-only **Pick coach** side tab (user turn). Stub evaluator in
-`pick-coach.js` — see `docs/pick-coach.md`. Does not auto-draft.
+Advisory-only **Pick coach** side tab (user turn). Prefers live TypeSafe/Jev via
+`POST /api/pick-quality` on Pages preview (`tony-draft-lab-preview`); `file://`
+uses a labeled stub. See **`docs/pick-coach.md`** for secret name
+(`TYPESAFE_API_KEY`), pinned model (`jev-1.13.0`), CORS, and UX contract.
+Does not auto-draft. **Not ready for prod** — do not deploy `tony-draft-lab`.
 
 ## Run it
 

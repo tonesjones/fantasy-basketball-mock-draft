@@ -3,29 +3,41 @@
 Side-panel tab **Pick coach** scores the focused available player on your turn.
 Advisory only — never auto-drafts and never runs for CPU picks.
 
+**Not production-ready.** Preview project only: `tony-draft-lab-preview`.
+Do **not** deploy this branch to `tony-draft-lab` production unless explicitly asked.
+
 ## Data source
 
 `pick-coach.js` exposes `window.PickCoach.evaluate(state)`.
 
-1. **Production / Pages preview** — `POST /api/pick-quality` (Cloudflare Pages
-   Function → TypeSafe System One, model `jev-latest`). Score (0–4) + Choice
-   `take|wait|reach` match spike `scripts/pick_quality_jev.py` (PR #3).
+1. **Pages preview (http/https)** — `POST /api/pick-quality` (Cloudflare Pages
+   Function → TypeSafe System One, **pinned model `jev-1.13.0`**). Score (0–4) +
+   Choice `take|wait|reach` match spike `scripts/pick_quality_jev.py` (PR #3).
 2. **Fail-soft** — missing `TYPESAFE_API_KEY`, timeout, or API error → HTTP 200
-   with `verdict: "uncertain"` + `error` string (draft never breaks). The
-   browser uses that response; it does **not** silently swap in the stub.
-3. **Offline / local file** — `file://` or a network `TypeError` (no function
-   running) falls back to the deterministic ADP stub with `model: "stub"` so
+   with `verdict: "uncertain"` + `error` string (draft never breaks). The UI
+   shows **Coach unavailable** (not “low confidence”). Browser does **not**
+   silently swap in the stub on live hosts.
+3. **http(s) network TypeError** — uncertain + quiet error + source
+   **Unavailable** (never a stub suggest that looks live).
+4. **Offline / local file** — `file://` (or no `fetch`) falls back to the
+   deterministic ADP stub with `model: "stub"` and source **Stub · offline** so
    `index.html` still opens without wrangler.
+
+UI source marker (`.pc-source`): **Jev** | **Stub · offline** | **Unavailable**.
+Tooltip may show the raw `model` id (e.g. `jev-1.13.0`).
 
 `verdict` is `"suggest"` only when **both** confidences are ≥ **0.7**.
 
+Client cache: fingerprint `player|pickNumber|logLen`, TTL ~45s. Leaving Pick
+coach or ending the draft calls `PickCoach.cancel()` (aborts in-flight).
+
 ## Cloudflare secret
 
-Set the TypeSafe key as a **Cloudflare Pages secret** (never commit it):
+**Secret name (once):** `TYPESAFE_API_KEY`
 
 ```bash
-# Production / preview project (once per project)
-npx wrangler pages secret put TYPESAFE_API_KEY
+# Preview project only (do not put on tony-draft-lab prod unless asked)
+npx wrangler pages secret put TYPESAFE_API_KEY --project-name tony-draft-lab-preview
 # paste the key when prompted
 ```
 
@@ -44,15 +56,14 @@ npx wrangler pages dev . --port 8788
 # Smoke
 curl -sS -X POST http://localhost:8788/api/pick-quality \
   -H 'Content-Type: application/json' \
-  -d '{"player":"Tyrese Maxey","pickNumber":23,"adp":19.4,"rank":22,"positions":["PG","SG"],"team":"PHI","picksUntilNext":22}'
+  -d '{"player":"Tyrese Maxey","pickNumber":23,"adp":19.4,"rank":22,"positions":["PG","SG"],"team":"PHI","picksUntilNext":22,"notableAvailable":[{"name":"Domantas Sabonis","adp":21,"positions":["PF","C"]}],"recentlyTaken":[{"name":"Anthony Edwards","pick":20}]}'
 ```
 
 Tony must set the Pages secret (or `.dev.vars` / env for `pages dev`) for live
 Jev. Opening `index.html` via `file://` does **not** need the secret (stub only).
 
-**Do not** deploy this branch to `tony-draft-lab` production unless explicitly
-asked. Optional remote preview project name if token is available:
-`tony-draft-lab-preview` only.
+**CORS** — Function allows draft-lab / preview `*.pages.dev` origins and local
+`localhost` / `127.0.0.1` wrangler ports (not `*`).
 
 ## UX contract
 
@@ -62,9 +73,11 @@ asked. Optional remote preview project name if token is available:
 - No focus → `.pc-empty`
 - Evaluating → `.pc-loading`
 - Result card → `.pc-card` with strength row + `.pc-suggest` or `.pc-uncertain`
+- Source: `.pc-source` (**Jev** / **Stub · offline** / **Unavailable**)
 - Strength row: `.pc-strengths` / `.pc-chip` from `PLAYERS[i].c.slice(0,4)` (always when tags exist)
 - Suggest: choice chip Take|Wait|Reach + board why (strengths/scarcity/INJ/soft ADP); quiet Confidence N%; score words demoted
-- Uncertain: muted titles; strength chips still shown; no choice chip; no red
+- Uncertain (low conf): “Not sure enough…” / “Low confidence — your call”
+- Soft error (`res.error`): “Coach unavailable” / “Unavailable — not a low-confidence read”
 - Choice: `take` | `wait` | `reach`
 - Advisory only — never auto-drafts
 
@@ -74,14 +87,28 @@ asked. Optional remote preview project name if token is available:
 {
   "player": "Tyrese Maxey",
   "pickNumber": 23,
+  "logLen": 22,
   "adp": 19.4,
   "rank": 5,
   "positions": ["PG"],
   "team": "PHI",
   "picksUntilNext": 22,
-  "rosterNeeds": { "filledSlots": [], "openSlots": [], "alreadyDraftedByUser": [] }
+  "rosterNeeds": {
+    "filledSlots": [],
+    "openSlots": [],
+    "alreadyDraftedByUser": [],
+    "priorityNeeds": ["C", "PF", "STL"]
+  },
+  "notableAvailable": [
+    { "name": "Domantas Sabonis", "adp": 21.0, "positions": ["PF", "C"], "rank": 21 }
+  ],
+  "recentlyTaken": [{ "name": "Anthony Edwards", "pick": 20 }],
+  "scarcityRem": { "PTS": 72, "STL": 28 }
 }
 ```
+
+Board context feeds Jev (`notable_available` / `recently_taken` / optional
+`scarcity_rem_pct` + `priority_needs`). Client board why remains the display layer.
 
 ## Result shape
 
@@ -93,13 +120,13 @@ asked. Optional remote preview project name if token is available:
   "choiceConfidence": 0.32,
   "verdict": "uncertain",
   "why": "…",
-  "model": "jev-latest",
+  "model": "jev-1.13.0",
   "scoreLabel": "Average",
   "error": "optional soft-fail string"
 }
 ```
 
-## Smoke the stub (no API)
+## Tests
 
 ```bash
 node test-pick-coach.js
