@@ -1,6 +1,6 @@
 # Fantasy Basketball Mock Draft Simulator
 
-A static, single-page mock draft trainer for Yahoo-style fantasy basketball. Open `index.html` in a browser; it has no build step, server, or external dependency.
+A static, single-page mock draft trainer for Yahoo-style fantasy basketball. Use it at **[tony-draft-lab.pages.dev](https://tony-draft-lab.pages.dev)** (Cloudflare Pages, `main`), or open `index.html` locally — no build step, server, or external dependency.
 
 > **Nine-category leagues only.** Every rank, value, grade, and scarcity number in this app is computed from nine-category (PTS, REB, AST, STL, BLK, 3PM, FG%, FT%, TO) production. It is not a points-league tool — points leagues score on a completely different formula and would need a different dataset, so do not use these ranks or grades for one.
 
@@ -18,21 +18,21 @@ Press **Start draft**. Your picks are marked; the 11 CPU teams draft automatical
 
 ### During the draft
 
-- **Available players** — search by name, filter by position (PG/SG/SF/PF/C or G/F/UTIL), and sort by Rank, ADP, last season, MPG, or scarcity. Pages of 50 with an honest filtered count.
-- Each row shows the player's **MPG** (2025-26 minutes per game), Yahoo ADP, built-in rank, last-season nine-cat rank, position eligibility, team, a red **INJ** badge if currently injured (hover for details), and a color-coded **playoff badge** (bad/ok/good) for games in your selected playoff window.
-- Click a player on your turn to draft them. **Undo my last pick** reverses your most recent decision.
-- The **category scarcity** panel shows, per category, what share of draftable above-replacement value is still on the board (green → red, live as picks happen). Hover a category chip for its top-3 remaining contributors.
-- **Draft board** tab — every pick, round by round. Green **+12** = value (picked 12 spots later than ADP); red **-8** = reach (picked 8 spots earlier); no number = at ADP or no ADP data.
+- **Available players** — search stays primary. Position filters and sort chips (Rank, ADP, last season, MPG, scarcity, Consensus) sit behind a progressive-disclosure panel so the list stays calm; pages of 50 with an honest filtered count.
+- Each row shows the player's **MPG** (2025-26 minutes per game), Yahoo ADP, built-in rank, last-season nine-cat rank, position eligibility, team, a red **INJ** badge if currently injured (tap or hover for details), and a color-coded **playoff badge** (bad/ok/good) for games in your selected playoff window.
+- Click a player on your turn to draft them. **Undo my last pick** reverses your most recent decision. An aria-live region announces your pick, CPU batches, and draft complete.
+- **Category scarcity** is collapsed by default with a quiet hottest-cats summary; open it for the full green→red depletion gauge. Tap or keyboard a category chip for its top remaining contributors (not hover-only).
+- **Draft board** and **Grades** tabs are available mid-draft (not only after the draft completes). Board: every pick, round by round. Green **+12** = value (picked 12 spots later than ADP); red **-8** = reach (picked 8 spots earlier); no number = at ADP or no ADP data.
 
 ### After the draft
 
 - **My team** — your roster in Yahoo-style slots, your playoff-games summary, and a per-player playoff schedule table for your chosen window.
-- **Draft board** — the full board with the value/reach legend underneath.
+- **Draft board** — the full board with the value/reach legend underneath (same tab you can open mid-draft).
 - **Grades** — all 12 teams scored by summing 2025-26 per-game category values across the full roster (players without 2025-26 data count at replacement level, marked †N), ranked 1–12 with letter grades (A+ to F). The **Category matchup** column shows your historical category-value tally against each CPU team (e.g. **7-2**) plus each category (FG% FT% 3PM PTS REB AST STL BLK TO) colored green (you win it), yellow (even), or red (they win it); hover for the exact values. This is a comparison of 2025-26 z-scores, not projected category totals.
 
 ### On mobile
 
-The layout collapses to a single column with compact two-line player rows; all filters, tabs, and the draft board work the same as on desktop. Draft state saves in the browser via `localStorage`, so a refresh mid-draft resumes where you left off (browser saving can vary for local `file://` URLs — serve the folder over HTTP for the most reliable saves). Use **Clear saved draft** or **Restart** to begin fresh.
+The layout collapses to a single column with compact two-line player rows; filters, scarcity, INJ detail, tabs, and the draft board work the same as on desktop (tap targets for intel that used to be hover-only). Draft state saves in the browser via `localStorage`, so a refresh mid-draft resumes where you left off (browser saving can vary for local `file://` URLs — prefer the hosted app or serve the folder over HTTP). Use **Clear saved draft** or **Restart** to begin fresh.
 
 ## What it does
 
@@ -67,7 +67,9 @@ Does not auto-draft. **Not ready for prod** — do not deploy `tony-draft-lab`.
 
 ## Run it
 
-Open `index.html` directly, or serve this folder with any static server. Draft state is stored only in the browser that created it.
+Primary: **[https://tony-draft-lab.pages.dev](https://tony-draft-lab.pages.dev)** (deploys from `main`).
+
+Local: open `index.html` directly, or serve this folder with any static server. Draft state is stored only in the browser that created it. A `DATA_VERSION` bump (most recently `2026-09-20`, when built-in ranks were reconciled to Yahoo ADP for buried outliers — see `CHANGELOG.md`) invalidates older saved drafts.
 
 Run the logic checks with:
 
@@ -83,6 +85,11 @@ node test-draft-grades.js
 `player-data.js` contains the data provenance and generation date. The app validates saved state against that date, so an old saved draft is not silently applied to a newly refreshed player data set.
 
 The category-scarcity panel shows, for each of the nine categories, the share of draftable above-replacement per-game category value still on the board, color-coded green → red and updating live as picks happen. Each player's nine per-game category values (`cv`, stored in `player-data.js`) are BM-style z-scores against the frozen 225-player 2025-26 reference population (the 2026-09-12 derivation; the 26 players added 2026-09-13 who appeared in 2025-26 are z-scored on that same scale so every value stays comparable), in CATS9 order (PTS/REB/AST/STL/BLK/3PM/FG%/FT%/TO); FG%/FT% are volume-weighted and TO is inverted so positive means fewer turnovers. Replacement level is the mean `cv` of consensus ranks 150–170. It is a depletion gauge against last season's per-game production, not a projection model or a nine-category team evaluation.
+
+## Recent on prod (2026-09-20)
+
+- **ADP rank fix** — built-in pool order re-inserted players buried vs Yahoo ADP (`rank − round(ADP) ≥ 40`); pathological ≥100 gaps cleared. Details in `CHANGELOG.md`.
+- **UX polish** — single mint dark theme; calmer live-draft density; mid-draft board + grades; aria-live turn status; tap-friendly INJ and scarcity intel. Engine and `PLAYERS` data unchanged in the UX PR.
 
 ## Feature notes
 
