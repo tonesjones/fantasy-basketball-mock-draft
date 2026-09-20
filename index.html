@@ -179,19 +179,26 @@ body{background:radial-gradient(ellipse at top right,#19352f66,transparent 55%),
 @media(max-width:480px){#md .filters-disclose{padding:0 10px}#md .injdetail{margin-left:0}}
 
 /* Pick coach panel (advisory-only; UX polish hooks) */
+/* pc-strength-chips: mint-border strength pills from PLAYERS[i].c */
 #md .pick-coach{padding:4px 0 8px}
 #md .pick-coach .pc-card{border:1px solid var(--hatch-widget-border);border-radius:12px;background:#0d1724;padding:14px 16px;margin-top:8px}
-#md .pick-coach .pc-head{margin-bottom:12px}
+#md .pick-coach .pc-head{margin-bottom:10px}
 #md .pick-coach .pc-name{font-size:16px;font-weight:700;letter-spacing:-.2px}
 #md .pick-coach .pc-meta{font-size:12px;margin-top:4px}
-#md .pick-coach .pc-score{font-size:20px;font-weight:800;letter-spacing:-.4px;color:var(--hatch-widget-accent)}
-#md .pick-coach .pc-choice{display:inline-block;font-size:11px;font-weight:700;line-height:1.4;margin-top:6px;padding:2px 9px;border:1px solid transparent;border-radius:999px;text-transform:capitalize;letter-spacing:.2px}
+#md .pick-coach .pc-strengths{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
+#md .pick-coach .pc-strengths[hidden]{display:none}
+#md .pick-coach .pc-chip{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.3px;line-height:1.3;padding:3px 9px;border-radius:999px;border:1px solid #2d7258;color:#85e5bc;background:#143d2e66}
+#md .pick-coach .pc-playoff{margin:0 0 8px;font-size:11px}
+#md .pick-coach .pc-score{display:none} /* demoted: do not hero-render Poor–Excellent */
+#md .pick-coach .pc-score-quiet{font-size:11px;margin:6px 0 0;line-height:1.4}
+#md .pick-coach .pc-choice{display:inline-block;font-size:11px;font-weight:700;line-height:1.4;margin-top:2px;padding:2px 9px;border:1px solid transparent;border-radius:999px;text-transform:capitalize;letter-spacing:.2px}
 #md .pick-coach .pc-choice-take{color:#85e5bc;background:#143d2e;border-color:#2d7258}
 #md .pick-coach .pc-choice-wait{color:var(--hatch-widget-muted);background:var(--hatch-widget-surface-muted);border-color:var(--hatch-widget-border)}
 #md .pick-coach .pc-choice-reach{color:#ffd479;background:#493a1c;border-color:#80652a}
 #md .pick-coach .pc-why,#md .pick-coach .pc-conf{font-size:12px;margin:8px 0 0;line-height:1.5}
 #md .pick-coach .pc-uncertain-title{font-size:14px;font-weight:600;margin:0 0 4px;color:var(--hatch-widget-text)}
 #md .pick-coach .pc-uncertain-sub{margin:0;font-size:12px}
+#md .pick-coach .pc-uncertain-why{margin:6px 0 0;font-size:12px;line-height:1.45}
 #md .pick-coach .pc-empty,#md .pick-coach .pc-wait,#md .pick-coach .pc-loading{margin:10px 0;font-size:13px}
 #md .prow.pc-focus{background:#1a293bcc;box-shadow:inset 3px 0 0 var(--hatch-widget-accent)}
 #md .prow{cursor:pointer}
@@ -851,8 +858,10 @@ function pickCoachShellHtml(){
     +'<p class="pc-loading muted" hidden>Evaluating\u2026</p>'
     +'<div class="pc-card" hidden>'
     +'<div class="pc-head"><div class="pc-name"></div><div class="pc-meta muted"></div></div>'
-    +'<div class="pc-suggest"><div class="pc-score"></div><div class="pc-choice"></div><p class="pc-why muted"></p><p class="pc-conf muted"></p></div>'
-    +'<div class="pc-uncertain"><p class="pc-uncertain-title">Not sure enough to suggest</p><p class="pc-uncertain-sub muted">Low confidence \u2014 your call</p></div>'
+    +'<div class="pc-strengths" hidden></div>'
+    +'<div class="pc-playoff muted" hidden></div>'
+    +'<div class="pc-suggest"><div class="pc-choice"></div><p class="pc-why muted"></p><p class="pc-conf muted"></p><p class="pc-score-quiet muted" hidden></p><div class="pc-score" hidden></div></div>'
+    +'<div class="pc-uncertain"><p class="pc-uncertain-title">Not sure enough to suggest</p><p class="pc-uncertain-sub muted">Low confidence \u2014 your call</p><p class="pc-uncertain-why muted" hidden></p></div>'
     +'</div></section>';
 }
 function pcShow(root, which){
@@ -889,6 +898,121 @@ function buildPickCoachPayload(pi){
     rosterNeeds:{filledSlots:filled,openSlots:open,alreadyDraftedByUser:drafted}
   };
 }
+function scarcityRemPcts(){
+  var base=scarcityBase(),taken={},i,c;
+  for(i=0;i<state.log.length;i++)taken[state.log[i]]=1;
+  var rem=[0,0,0,0,0,0,0,0,0],out={};
+  base.idx.forEach(function(j){
+    if(taken[j])return;
+    var cv=PDATA[PLAYERS[j].n].cv;
+    for(c=0;c<9;c++){var v=cv[c]-base.repl[c];if(v>0)rem[c]+=v;}
+  });
+  CATS9.forEach(function(cat,ci){
+    var pct=base.start[ci]>0?Math.round(rem[ci]/base.start[ci]*100):0;
+    if(pct>100)pct=100;if(pct<0)pct=0;
+    out[cat]=pct;
+  });
+  return out;
+}
+function rosterCoveredCats(){
+  var covered={},ros=myRoster();
+  ros.slots.forEach(function(e){
+    if(!e.player||!e.player.player)return;
+    (e.player.player.c||[]).forEach(function(cat){covered[cat]=true;});
+  });
+  return covered;
+}
+function pickCoachStrengthTags(pl){
+  return (pl&&pl.c&&pl.c.length)?pl.c.slice(0,4):[];
+}
+function renderPickCoachStrengths(pl, remMap){
+  var tags=pickCoachStrengthTags(pl);
+  if(!tags.length)return "";
+  return tags.map(function(cat){
+    var pct=remMap&&remMap[cat]!=null?remMap[cat]:null;
+    var tip=pct!=null?(cat+" · "+pct+"% left"):cat;
+    return '<span class="pc-chip" title="'+esc(tip)+'">'+esc(cat)+'</span>';
+  }).join("");
+}
+function softAdpClause(choice, pickNumber, adp){
+  if(adp==null||!isFinite(Number(adp)))return "";
+  var delta=pickNumber-Number(adp);
+  if(choice==="take"){
+    if(delta>=3)return "value vs ADP";
+    if(delta<=-3)return "near ADP";
+    return "near ADP";
+  }
+  if(choice==="reach")return "early vs ADP";
+  if(choice==="wait")return "can wait vs ADP";
+  if(Math.abs(delta)<=2)return "near ADP";
+  if(delta>2)return "value vs ADP";
+  return "early vs ADP";
+}
+function buildPickCoachWhy(pl, choice, pickNumber, jevWhy){
+  var tags=pickCoachStrengthTags(pl);
+  var rem=scarcityRemPcts();
+  var covered=rosterCoveredCats();
+  var parts=[],used={};
+  var thin=[];
+  tags.forEach(function(cat){
+    var pct=rem[cat];
+    if(pct!=null&&pct<=35){
+      thin.push("fills thin "+cat+" ("+pct+"% left)");
+      used[cat]=1;
+    }
+  });
+  parts=parts.concat(thin);
+  var elite=tags.filter(function(cat){return !used[cat];});
+  if(choice==="wait"){
+    var already=elite.filter(function(cat){return covered[cat];});
+    var rest=elite.filter(function(cat){return !covered[cat];});
+    if(already.length)parts.push(already.join(" · ")+" already covered");
+    if(rest.length)parts.push(rest.length===1?("strong "+rest[0]):("elite "+rest.join(" · ")));
+  }else if(elite.length){
+    if(elite.length===1)parts.push("strong "+elite[0]);
+    else parts.push("elite "+elite.join(" · "));
+  }
+  if(pl.inj){
+    var injNote="INJ "+(pl.inj.injury||"listed");
+    if(pl.inj.ret)injNote+=" · return "+pl.inj.ret;
+    parts.push(injNote);
+  }
+  var adpBit=softAdpClause(choice, pickNumber, pl.adp);
+  if(adpBit){
+    if(choice==="reach"&&parts.length)parts.push("but "+adpBit);
+    else parts.push(adpBit);
+  }
+  var boardWhy=parts.join(" · ");
+  var jw=(jevWhy||"").trim();
+  if(jw){
+    var opaque=/stub heuristic|scoreConfidence|choiceConfidence|model:|jev-latest|pick-quality/i.test(jw);
+    var dup=boardWhy&&jw.toLowerCase().indexOf(boardWhy.toLowerCase().slice(0,24))>=0;
+    if(!opaque&&!dup&&boardWhy){
+      // append only if it adds something non-overlapping
+      var jLow=jw.toLowerCase();
+      var overlap=tags.some(function(t){return jLow.indexOf(t.toLowerCase())>=0;})||/adp|thin|inj/i.test(jw);
+      if(!overlap)boardWhy=boardWhy+" · "+jw;
+      else if(jw.length<120&&boardWhy.indexOf(jw)<0){/* prefer board vocab; skip opaque dup */}
+    }else if(!boardWhy&&!opaque)boardWhy=jw;
+    else if(!boardWhy)boardWhy="";
+  }
+  return boardWhy;
+}
+function fillPickCoachBoard(still, pl, payload){
+  var rem=scarcityRemPcts();
+  var strEl=still.querySelector(".pc-strengths");
+  if(strEl){
+    var chips=renderPickCoachStrengths(pl, rem);
+    strEl.innerHTML=chips;
+    strEl.hidden=!chips;
+  }
+  var poEl=still.querySelector(".pc-playoff");
+  if(poEl){
+    var badge=playoffBadge(pl);
+    poEl.innerHTML=badge||"";
+    poEl.hidden=!badge;
+  }
+}
 function refreshPickCoach(){
   var root=el("pick-coach");
   if(!root||typeof window.PickCoach==="undefined")return;
@@ -912,39 +1036,53 @@ function refreshPickCoach(){
     updateCoachDockPeek(pl.n);
     if(metaEl){
       var adpTxt=pl.adp!=null?String(pl.adp):"—";
-      metaEl.textContent="Pick #"+payload.pickNumber+" · ADP "+adpTxt+" · Rank "+pl.r;
+      metaEl.textContent="Pick #"+payload.pickNumber+" · ADP "+adpTxt;
     }
+    fillPickCoachBoard(still, pl, payload);
     var suggest=still.querySelector(".pc-suggest");
     var uncertain=still.querySelector(".pc-uncertain");
     var verdict=res.verdict==="suggest"?"suggest":"uncertain";
     if(suggest)suggest.hidden=verdict!=="suggest";
     if(uncertain)uncertain.hidden=verdict!=="suggest"?false:true;
     if(verdict==="suggest"){
-      var scoreEl=still.querySelector(".pc-score");
       var choiceEl=still.querySelector(".pc-choice");
       var whyEl=still.querySelector(".pc-why");
       var confEl=still.querySelector(".pc-conf");
-      var label=(window.PickCoach.scoreWord&&window.PickCoach.scoreWord(res.score))||res.scoreLabel||String(res.score);
-      if(scoreEl)scoreEl.textContent=label;
+      var quietEl=still.querySelector(".pc-score-quiet");
+      var choice=res.choice||"";
+      var choiceKind=choice==="take"?"take":choice==="reach"?"reach":"wait";
       if(choiceEl){
-        var choice=res.choice||"";
-        var choiceKind=choice==="take"?"take":choice==="reach"?"reach":"wait";
         choiceEl.className="pc-choice pc-choice-"+choiceKind;
-        choiceEl.textContent=choice;
+        choiceEl.textContent=choiceKind==="take"?"Take":choiceKind==="reach"?"Reach":"Wait";
+        choiceEl.hidden=false;
       }
-      if(whyEl)whyEl.textContent=res.why||"";
+      var boardWhy=buildPickCoachWhy(pl, choiceKind, payload.pickNumber, res.why||"");
+      if(whyEl)whyEl.textContent=boardWhy||(res.why||"");
       if(confEl){
         var sc=res.scoreConfidence!=null?Number(res.scoreConfidence):null;
         var cc=res.choiceConfidence!=null?Number(res.choiceConfidence):null;
         var conf=sc!=null&&cc!=null?Math.min(sc,cc):sc!=null?sc:cc;
         confEl.textContent=conf!=null&&isFinite(conf)?("Confidence "+Math.round(conf*100)+"%"):"";
       }
-    }else if(res.error){
-      var sub=still.querySelector(".pc-uncertain-sub");
-      if(sub)sub.textContent="Coach unavailable — your call";
+      if(quietEl){
+        var label=(window.PickCoach.scoreWord&&window.PickCoach.scoreWord(res.score))||res.scoreLabel||"";
+        if(label&&res.score!=null){quietEl.textContent=label;quietEl.hidden=false;}
+        else{quietEl.textContent="";quietEl.hidden=true;}
+      }
     }else{
-      var sub2=still.querySelector(".pc-uncertain-sub");
-      if(sub2)sub2.textContent="Low confidence — your call";
+      var uWhy=still.querySelector(".pc-uncertain-why");
+      var tagsOnly=pickCoachStrengthTags(pl);
+      if(uWhy){
+        if(tagsOnly.length){uWhy.textContent=tagsOnly.join(" · ");uWhy.hidden=false;}
+        else{uWhy.textContent="";uWhy.hidden=true;}
+      }
+      if(res.error){
+        var sub=still.querySelector(".pc-uncertain-sub");
+        if(sub)sub.textContent="Coach unavailable — your call";
+      }else{
+        var sub2=still.querySelector(".pc-uncertain-sub");
+        if(sub2)sub2.textContent="Low confidence — your call";
+      }
     }
     pcShow(still,"pc-card");
   });
@@ -1076,7 +1214,7 @@ function renderList(){
     i=cands[k];var pl2=PLAYERS[i];
     var rlabel=srt==="cons"?consRank(pl2).toFixed(1):pl2.r;
     var sub='<span>ADP '+disp(pl2.adp)+'</span><span>Last '+disp(pl2.last)+'</span><span>Tot '+disp(pl2.lastTotal)+'</span><span>MPG '+(pl2.mpg==null?'—':pl2.mpg.toFixed(1))+'</span><span>'+posBadges(pl2.p)+'</span>'+playoffBadge(pl2);
-    if(pl2.c.length)sub+='<span>'+pl2.c.slice(0,3).join(" · ")+'</span>';
+    if(pl2.c.length)sub+='<span>'+pl2.c.slice(0,4).join(" · ")+'</span>';
     var focusCls=(focusNow===i)?' pc-focus':'';
     rows.push('<div class="prow'+focusCls+'" data-pi="'+i+'" role="button" tabindex="0" aria-pressed="'+(focusNow===i?'true':'false')+'"><div class="l1"><span class="prank">'+rlabel+'</span><span class="pname">'+esc(pl2.n)+' <span class="teamtag">'+esc(pl2.t)+'</span>'+injBadge(pl2)+'</span><button class="draftbtn" data-pi="'+i+'" aria-label="Draft '+esc(pl2.n)+'"'+(ut?'':' disabled')+'>Draft</button></div><div class="l2">'+sub+'</div></div>');
   }

@@ -1,5 +1,19 @@
 # Changelog
 
+## Richer Pick coach tones (2026-09-20)
+- **Strength row** — `#pick-coach` shows mint-border `.pc-chip` pills from `PLAYERS[i].c`
+  (same CATS strings as list row `pl.c.slice(0,4)`), including on uncertain.
+- **Why builder** — client-side board vocab: `fills thin {CAT} (N% left)` from
+  scarcity rem% ≤35 (same hot threshold as scarcity chips) ∩ strengths, plus
+  elite/strong tags, INJ note, soft ADP (“near ADP” / “value vs ADP” /
+  “can wait vs ADP” / “early vs ADP”). Prefers board why over opaque Jev text.
+- **Suggest path** — choice chip Take|Wait|Reach + one-line why; Quiet
+  Confidence N%; Poor–Excellent demoted (not hero).
+- **Uncertain path** — muted titles; strength chips still shown; optional muted
+  strengths-only line; no choice chip; no red.
+- Preview-only redeploy target: `tony-draft-lab-preview`. Prod `tony-draft-lab`
+  untouched.
+
 Covers the working copy at
 `github.com/tonesjones/fantasy-basketball-mock-draft` on `main`.
 Pushes happen on demand, so the newest entries here may be ahead of the

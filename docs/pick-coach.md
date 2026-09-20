@@ -61,10 +61,12 @@ asked. Optional remote preview project name if token is available:
 - CPU turn → `.pc-wait` (“Available on your turn.”)
 - No focus → `.pc-empty`
 - Evaluating → `.pc-loading`
-- Result card → `.pc-card` with `.pc-suggest` or `.pc-uncertain`
-- Score words: Poor / Below avg / Average / Good / Excellent (0–4)
+- Result card → `.pc-card` with strength row + `.pc-suggest` or `.pc-uncertain`
+- Strength row: `.pc-strengths` / `.pc-chip` from `PLAYERS[i].c.slice(0,4)` (always when tags exist)
+- Suggest: choice chip Take|Wait|Reach + board why (strengths/scarcity/INJ/soft ADP); quiet Confidence N%; score words demoted
+- Uncertain: muted titles; strength chips still shown; no choice chip; no red
 - Choice: `take` | `wait` | `reach`
-- No red badges, list chips, or blocking modals
+- Advisory only — never auto-drafts
 
 ## Evaluate payload (browser → `/api/pick-quality`)
 
