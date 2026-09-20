@@ -5,6 +5,28 @@ Covers the working copy at
 Pushes happen on demand, so the newest entries here may be ahead of the
 remote.
 
+## Built-in rank vs Yahoo ADP gap fix (2026-09-20)
+- **Rule** — single-pass re-insert of players with a published Yahoo ADP
+  whose built-in rank is buried vs market: `(r − round-half-up(ADP)) ≥ 40`.
+  Each outlier is spliced to index `round-half-up(ADP)` (same insertion rule
+  as the 2026-09-13 pool expansion). Non-outlier players keep their exact
+  relative order. Players ranked *early* vs ADP (possible intentional
+  build-vs-market, e.g. Mikal Bridges, Ja Morant, Devin Vassell, Deandre
+  Ayton) are left alone.
+- **Why** — after ADP refreshes, 27 players had |rank − ADP| ≥ 100 (worst:
+  Luke Kornet 265 vs 87.5, Adem Bona 260 vs 85.4, Aaron Nesmith 246 vs 75.3).
+  Those were insertion/staleness bugs relative to the project's own rule,
+  not justified injuries or minutes cases. Do **not** blindly set every
+  rank = ADP; only buried outliers were moved.
+- **Result** — 64 buried outliers re-inserted; gaps ≥100: 27 → 0; gaps ≥40:
+  68 → 55 (remaining are mostly displacement of mid-board players into the
+  dense 90–125 ADP band, still review signals). Flagged pathological cases
+  now sit near round(ADP): Kornet 265→88, Bona 260→85, Nesmith 246→82,
+  Clingan 190→41, Boozer 196→63, etc.
+- **DATA_VERSION** — `2026-09-18` → `2026-09-20` (invalidates saved drafts).
+- `player-data.js` ADP/stats unchanged; only `PLAYERS` order in `index.html`
+  (which defines built-in rank) and this changelog entry.
+
 ## Pool expansion 237 → 269 (2026-09-13)
 - **32 add-candidate players added** — every player with a Yahoo ADP in
   Hashtag Basketball's 2026-27 table (updated 11 September 2026) that was
