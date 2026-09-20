@@ -5,6 +5,23 @@ Covers the working copy at
 Pushes happen on demand, so the newest entries here may be ahead of the
 remote.
 
+## Pick coach advisory panel + stub (2026-09-20)
+- **UX** — new side-panel tab **Pick coach** (`data-view="coach"`) next to
+  My team / Draft board / Grades. Mint theme / density aligned with Draft Lab
+  polish (#2). Panel shell `#pick-coach` with `.pc-empty` / `.pc-wait` /
+  `.pc-loading` / `.pc-card` (`.pc-suggest` | `.pc-uncertain`) hooks for UX.
+- **Behavior** — usable on the user's turn only; CPU turn shows muted
+  “Available on your turn.” Focuses selected available player (else first
+  visible filtered row); updates on search/filter/click. Shows name, pick #,
+  ADP/rank, score words, take|wait|reach, one-line why, quiet confidence.
+  Low confidence / UNCERTAIN → muted “Not sure enough to suggest” — no red
+  badges, list chips, or banners. **Never auto-drafts.**
+- **Data** — `pick-coach.js` stub `PickCoach.evaluate` / `pickCoachEvaluate`
+  (ADP vs pick#, bias low confidence so UNCERTAIN is default). Stub pending
+  real TypeSafe/Jev `/api/pick-quality` hook.
+- Docs: `docs/pick-coach.md`. No PLAYERS / DATA_VERSION / draft-engine changes.
+  No production deploy in this PR.
+
 ## Draft Lab UX polish (2026-09-20)
 - **One theme** — unified on the Draft Lab mint dark system; hatch blue
   accent / focus rings and light-theme value badges no longer fight mint.
