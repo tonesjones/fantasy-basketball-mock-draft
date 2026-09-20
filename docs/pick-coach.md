@@ -3,8 +3,15 @@
 Side-panel tab **Pick coach** scores the focused available player on your turn.
 Advisory only — never auto-drafts and never runs for CPU picks.
 
-**Not production-ready.** Preview project only: `tony-draft-lab-preview`.
-Do **not** deploy this branch to `tony-draft-lab` production unless explicitly asked.
+**Deploy topology (truth after merge to `main`):**
+
+| Host | Pick coach |
+|------|------------|
+| [tony-draft-lab-preview.pages.dev](https://tony-draft-lab-preview.pages.dev) | Live TypeSafe/Jev when `TYPESAFE_API_KEY` is set on **tony-draft-lab-preview** |
+| [tony-draft-lab.pages.dev](https://tony-draft-lab.pages.dev) (prod) | **Not** a live coach host — no prod ship of the TypeSafe secret |
+| Local `file://` `index.html` | Labeled **Stub · offline** only |
+
+Code lives on `main`. Do **not** put `TYPESAFE_API_KEY` on the prod Pages project unless Tony explicitly asks.
 
 ## Data source
 
