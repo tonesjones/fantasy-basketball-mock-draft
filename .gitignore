@@ -1,0 +1,9 @@
+.venv-typesafe/
+.venv/
+__pycache__/
+*.pyc
+.env
+.env.*
+.dev.vars
+.wrangler/
+node_modules/

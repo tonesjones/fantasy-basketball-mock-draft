@@ -5,6 +5,19 @@ Covers the working copy at
 Pushes happen on demand, so the newest entries here may be ahead of the
 remote.
 
+## Pick coach real TypeSafe/Jev hook (2026-09-20)
+- **API** — Cloudflare Pages Function `functions/api/pick-quality.js`:
+  `POST /api/pick-quality` → TypeSafe `POST https://api.typesafe.ai/v1/systemone`
+  with Bearer `TYPESAFE_API_KEY`, model `jev-latest`, Score (0–4) + Choice
+  take|wait|reach (spike `pick_quality_jev.py` semantics). Suggest only if both
+  confidences ≥ 0.7. Fail-soft HTTP 200 + `verdict: uncertain` + `error` on
+  missing key / timeout / API error. Never logs the API key.
+- **Client** — `pick-coach.js` prefers `/api/pick-quality`; soft API failures
+  stay uncertain (no silent stub). `file://` / network `TypeError` → stub with
+  `model: "stub"` so offline `index.html` still works. Debounce + abort stale.
+- **Docs** — `docs/pick-coach.md`: Pages secret + `wrangler pages dev` local
+  preview. **No** merge / **no** `tony-draft-lab` production deploy in this PR.
+
 ## Pick coach advisory panel + stub (2026-09-20)
 - **UX** — new side-panel tab **Pick coach** (`data-view="coach"`) next to
   My team / Draft board / Grades. Mint theme / density aligned with Draft Lab

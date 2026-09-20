@@ -1,17 +1,58 @@
-# Pick coach (advisory-only v1)
+# Pick coach (advisory-only)
 
 Side-panel tab **Pick coach** scores the focused available player on your turn.
 Advisory only — never auto-drafts and never runs for CPU picks.
 
-## Current data source
+## Data source
 
 `pick-coach.js` exposes `window.PickCoach.evaluate(state)`.
 
-**Stub first** (`model: "stub-adp-gap"`): deterministic ADP-vs-pick heuristic that
-**biases low confidence**, so `verdict: "uncertain"` is the default. A rare
-large ADP gap (≥12) can clear the 0.7 gate and return `suggest`.
+1. **Production / Pages preview** — `POST /api/pick-quality` (Cloudflare Pages
+   Function → TypeSafe System One, model `jev-latest`). Score (0–4) + Choice
+   `take|wait|reach` match spike `scripts/pick_quality_jev.py` (PR #3).
+2. **Fail-soft** — missing `TYPESAFE_API_KEY`, timeout, or API error → HTTP 200
+   with `verdict: "uncertain"` + `error` string (draft never breaks). The
+   browser uses that response; it does **not** silently swap in the stub.
+3. **Offline / local file** — `file://` or a network `TypeError` (no function
+   running) falls back to the deterministic ADP stub with `model: "stub"` so
+   `index.html` still opens without wrangler.
 
-Comment in code: stub pending real TypeSafe/Jev hook.
+`verdict` is `"suggest"` only when **both** confidences are ≥ **0.7**.
+
+## Cloudflare secret
+
+Set the TypeSafe key as a **Cloudflare Pages secret** (never commit it):
+
+```bash
+# Production / preview project (once per project)
+npx wrangler pages secret put TYPESAFE_API_KEY
+# paste the key when prompted
+```
+
+Local preview with the Function:
+
+```bash
+# from repo root (functions/ present)
+source /path/to/typesafe_env.sh   # or export TYPESAFE_API_KEY=...
+
+# Prefer .dev.vars (gitignored) OR --binding:
+#   echo "TYPESAFE_API_KEY=$TYPESAFE_API_KEY" > .dev.vars
+npx wrangler pages dev . --port 8788
+# if global wrangler missing:
+#   /tmp/wrangler-home/node_modules/.bin/wrangler pages dev . --port 8788
+
+# Smoke
+curl -sS -X POST http://localhost:8788/api/pick-quality \
+  -H 'Content-Type: application/json' \
+  -d '{"player":"Tyrese Maxey","pickNumber":23,"adp":19.4,"rank":22,"positions":["PG","SG"],"team":"PHI","picksUntilNext":22}'
+```
+
+Tony must set the Pages secret (or `.dev.vars` / env for `pages dev`) for live
+Jev. Opening `index.html` via `file://` does **not** need the secret (stub only).
+
+**Do not** deploy this branch to `tony-draft-lab` production unless explicitly
+asked. Optional remote preview project name if token is available:
+`tony-draft-lab-preview` only.
 
 ## UX contract
 
@@ -25,7 +66,7 @@ Comment in code: stub pending real TypeSafe/Jev hook.
 - Choice: `take` | `wait` | `reach`
 - No red badges, list chips, or blocking modals
 
-## Evaluate payload (browser → stub)
+## Evaluate payload (browser → `/api/pick-quality`)
 
 ```json
 {
@@ -50,23 +91,13 @@ Comment in code: stub pending real TypeSafe/Jev hook.
   "choiceConfidence": 0.32,
   "verdict": "uncertain",
   "why": "…",
-  "model": "stub-adp-gap",
-  "scoreLabel": "Average"
+  "model": "jev-latest",
+  "scoreLabel": "Average",
+  "error": "optional soft-fail string"
 }
 ```
 
-`verdict` is `"suggest"` only when **both** confidences are ≥ **0.7**.
-
-## Preview (Tony)
-
-Open `index.html` locally (or any static server). Start a draft, wait for
-**YOUR PICK**, open the **Pick coach** tab, click a player row to focus.
-Draft button still drafts; row click only focuses for the coach.
-
-No Cloudflare Pages Function or `TYPESAFE_API_KEY` required for this stub PR.
-Real Jev `/api/pick-quality` can land in a follow-up behind a flag.
-
-## Smoke the stub
+## Smoke the stub (no API)
 
 ```bash
 node test-pick-coach.js
