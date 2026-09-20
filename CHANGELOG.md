@@ -5,6 +5,9 @@ Covers the working copy at
 Pushes happen on demand, so the newest entries here may be ahead of the
 remote.
 
+## Mobile Pick coach dock (2026-09-20)
+- **UX** — on ≤900px when Pick coach + your turn, `.cols.coach-dock` splits list (~60%) and `#pick-coach` dock (~40%) so focusing a `.prow` updates coach without page yo-yo scroll (`coach-dock-mobile`).
+
 ## Pick coach real TypeSafe/Jev hook (2026-09-20)
 - **API** — Cloudflare Pages Function `functions/api/pick-quality.js`:
   `POST /api/pick-quality` → TypeSafe `POST https://api.typesafe.ai/v1/systemone`

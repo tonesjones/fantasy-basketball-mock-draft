@@ -197,6 +197,32 @@ body{background:radial-gradient(ellipse at top right,#19352f66,transparent 55%),
 #md .prow{cursor:pointer}
 #md .prow .draftbtn{cursor:pointer}
 
+
+/* Mobile Pick coach dock (≤900px): list + coach split; no page yo-yo on focus */
+/* coach-dock-mobile: distinctive marker for preview deploy verify */
+@media(max-width:900px){
+  #md.coach-dock-active{display:flex;flex-direction:column;height:100dvh;max-height:100dvh;overflow:hidden;padding-bottom:0;box-sizing:border-box}
+  #md.coach-dock-active .brandbar{flex-shrink:0;padding-bottom:12px;margin-bottom:12px}
+  #md.coach-dock-active #mdapp{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+  #md.coach-dock-active .turnbar,#md.coach-dock-active .viewtabs,#md.coach-dock-active details.scarcity{flex-shrink:0}
+  #md.coach-dock-active details.scarcity:not([open]){margin:6px 0}
+  #md .cols.coach-dock{flex:1;min-height:0;flex-direction:column;gap:0;align-items:stretch;overflow:hidden}
+  #md .cols.coach-dock .avail{flex:1.5;flex-basis:0;min-height:0;width:100%;overflow:hidden;display:flex;flex-direction:column;padding-bottom:8px;border-radius:16px 16px 0 0}
+  #md .cols.coach-dock .avail>h3{flex-shrink:0;margin-top:0}
+  #md .cols.coach-dock .avail>input,#md .cols.coach-dock .avail>.filters-disclose{flex-shrink:0}
+  #md .cols.coach-dock .plist{flex:1;min-height:0;max-height:none;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  #md .cols.coach-dock #mdpager{flex-shrink:0}
+  #md .cols.coach-dock .side{flex:1;flex-basis:0;min-height:0;width:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;border-radius:0 0 16px 16px;border-top:1px solid var(--hatch-widget-border);padding-top:10px;margin-top:0;box-shadow:0 -6px 18px #0003}
+  #md .cols.coach-dock .pc-dock-handle{display:flex;align-items:center;gap:8px;position:sticky;top:0;z-index:2;background:var(--hatch-widget-surface);padding:2px 0 10px;margin:0 0 4px;font-size:12px;font-weight:700;letter-spacing:.2px;color:var(--hatch-widget-text)}
+  #md .cols.coach-dock .pc-dock-grip{display:block;width:36px;height:4px;border-radius:999px;background:var(--hatch-widget-border);margin-right:4px;flex-shrink:0}
+  #md .cols.coach-dock .pc-side-title{display:none}
+  #md .cols.coach-dock .side>.pc-advisory{display:none}
+  #md .pc-dock-handle{display:none}
+}
+@media(min-width:901px){
+  #md .pc-dock-handle{display:none}
+}
+
 </style>
 </head>
 <body>
@@ -799,9 +825,17 @@ function setFocusPi(pi,opts){
   if(opts.rerenderList!==false){
     var list=el("mdplist");
     if(list){
+      var keepScroll=list.scrollTop;
       list.querySelectorAll(".prow.pc-focus").forEach(function(n){n.classList.remove("pc-focus");});
       var row=list.querySelector('.prow[data-pi="'+next+'"]');
-      if(row)row.classList.add("pc-focus");
+      if(row){
+        row.classList.add("pc-focus");
+        row.setAttribute("aria-pressed","true");
+      }
+      list.querySelectorAll(".prow[data-pi]").forEach(function(n){
+        if(n!==row)n.setAttribute("aria-pressed","false");
+      });
+      list.scrollTop=keepScroll; /* coach-dock: preserve list scroll; do not scroll page to #pick-coach */
     }
   }
   refreshPickCoach();
@@ -854,9 +888,9 @@ function buildPickCoachPayload(pi){
 function refreshPickCoach(){
   var root=el("pick-coach");
   if(!root||typeof window.PickCoach==="undefined")return;
-  if(!isUserTurn()){pcShow(root,"pc-wait");return;}
+  if(!isUserTurn()){pcShow(root,"pc-wait");updateCoachDockPeek("");syncCoachDock();return;}
   var pi=resolveFocusPi();
-  if(pi==null){pcShow(root,"pc-empty");return;}
+  if(pi==null){pcShow(root,"pc-empty");updateCoachDockPeek("");return;}
   pcShow(root,"pc-loading");
   var seq=++_pcEvalSeq;
   var payload=buildPickCoachPayload(pi);
@@ -871,6 +905,7 @@ function refreshPickCoach(){
     var nameEl=still.querySelector(".pc-name");
     var metaEl=still.querySelector(".pc-meta");
     if(nameEl)nameEl.textContent=pl.n;
+    updateCoachDockPeek(pl.n);
     if(metaEl){
       var adpTxt=pl.adp!=null?String(pl.adp):"—";
       metaEl.textContent="Pick #"+payload.pickNumber+" · ADP "+adpTxt+" · Rank "+pl.r;
@@ -939,6 +974,19 @@ function vBadge(pi,idx){var p=PLAYERS[pi];if(p.adp==null)return "";var d=Math.ro
 function sortLabel(s){
   return ({cons:"Consensus",rank:"Rank",adp:"ADP",last:"Last · PER",lastTotal:"Last · TOT"})[s]||"Consensus";
 }
+
+function syncCoachDock(){
+  var on=state.phase==="draft"&&state.view==="coach"&&isUserTurn();
+  var root=document.getElementById("md");
+  var cols=document.querySelector("#md .cols");
+  if(root)root.classList.toggle("coach-dock-active",!!on);
+  if(cols)cols.classList.toggle("coach-dock",!!on);
+}
+function updateCoachDockPeek(name){
+  var lab=document.querySelector("#md .pc-dock-label");
+  if(!lab)return;
+  lab.textContent=name?("Pick coach \u00b7 "+name):"Pick coach";
+}
 function renderDraft(){
   var idx=state.log.length,round=Math.floor(idx/TEAMS)+1,team=idx<totalPicks()?teamForPick(idx):-1;
   var h='<div class="turnbar">';
@@ -984,6 +1032,7 @@ function renderDraft(){
   var undo=el("mdundo");if(undo)undo.addEventListener("click",undoUserPick);
   el("mdnew").addEventListener("click",restartDraft);
   renderList();renderSide();
+  syncCoachDock();
   if(state.view==="coach")refreshPickCoach();
 }
 function renderList(){
@@ -1046,7 +1095,7 @@ function myRoster(){
 function renderSide(){
   var s=el("mdside");if(!s)return;
   if(state.view==="coach"){
-    s.innerHTML='<h3>Pick coach</h3><p class="muted">Advisory preview — never auto-drafts.</p>'+pickCoachShellHtml();
+    s.innerHTML='<div class="pc-dock-handle" id="pc-dock-handle"><span class="pc-dock-grip" aria-hidden="true"></span><span class="pc-dock-label">Pick coach</span></div><h3 class="pc-side-title">Pick coach</h3><p class="muted pc-advisory">Advisory preview — never auto-drafts.</p>'+pickCoachShellHtml();
     refreshPickCoach();
     return;
   }
