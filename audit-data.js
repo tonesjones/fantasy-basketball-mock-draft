@@ -11,6 +11,8 @@ function loadBundledData(){
   const context={};vm.createContext(context);
   vm.runInContext('var PLAYERS='+players[1]+'\nvar CATS='+tags[1],context);
   vm.runInContext(fs.readFileSync(path.join(__dirname,'player-data.js'),'utf8'),context);
+  const moversPath=path.join(__dirname,'movers-outlook.js');
+  if(fs.existsSync(moversPath))vm.runInContext(fs.readFileSync(moversPath,'utf8'),context);
   return {players:context.PLAYERS,data:context.PDATA,tags:context.CATS};
 }
 if(require.main===module){
@@ -20,7 +22,7 @@ if(require.main===module){
   else {
     console.log('Bundled data audit — internal consistency only; does not verify source accuracy or NBA pool completeness.');
     console.log('Players: '+report.players);
-    ['errors','missingData','orphanData','missingAdp','missingLast','missingLastTotal','missingCv','missingMpg','untagged','placeholderTeams'].forEach(key=>{
+    ['errors','missingData','orphanData','missingAdp','missingLast','missingLastTotal','missingCv','missingMpg','untagged','placeholderTeams','movers','roleDeltaUp','roleDeltaDown','roleDeltaFlat','roleDeltaUnknown','missingTeamPrev','withProjMpg','withProjRank'].forEach(key=>{
       console.log(key+': '+report[key].length+(report[key].length?'\n  '+report[key].join(', '):''));
     });
     console.log('Largest built-in rank / ADP gaps (40+ picks; review signals, not proven errors):');
