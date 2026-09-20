@@ -1,5 +1,10 @@
 # Changelog
 
+## Docs: Pick coach main vs preview vs prod (2026-09-20)
+- Clarify that Pick coach **code is on `main`**, live TypeSafe/Jev is on
+  **tony-draft-lab-preview** only, and **tony-draft-lab** prod is not a live
+  coach host. README + `docs/pick-coach.md` only; no app changes.
+
 ## Pick coach fix-up (source, soft errors, board context) (2026-09-20)
 - **Source of truth** — `.pc-source` shows **Jev** / **Stub · offline** /
   **Unavailable**. On http(s), network `TypeError` → uncertain + quiet error
