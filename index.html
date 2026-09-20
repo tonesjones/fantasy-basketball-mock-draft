@@ -6,8 +6,8 @@
 <title>Draft Lab — Mock Draft</title>
 <style>
 /*STANDALONE-THEME-START*/
-:root{--hatch-widget-font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;--hatch-widget-text:#ececf1;--hatch-widget-muted:#9a9aad;--hatch-widget-surface:#17171d;--hatch-widget-surface-muted:#22222c;--hatch-widget-border:#2e2e3a;--hatch-widget-accent:#5b6fae;--hatch-widget-on-accent:#ffffff}
-html{background:#101014}body{background:#101014;margin:0;min-width:320px}
+:root{color-scheme:dark;--hatch-widget-font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;--hatch-widget-text:#eef3f8;--hatch-widget-muted:#a3b1c3;--hatch-widget-surface:#121d2c;--hatch-widget-surface-muted:#1a293b;--hatch-widget-border:#293a50;--hatch-widget-accent:#85e5bc;--hatch-widget-on-accent:#09271d}
+html{background:#0b1320}body{background:#0b1320;margin:0;min-width:320px}
 /*STANDALONE-THEME-END*/
 #md *{box-sizing:border-box}
 #md{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:var(--hatch-widget-text);max-width:100%;padding:4px}
@@ -20,7 +20,7 @@ html{background:#101014}body{background:#101014;margin:0;min-width:320px}
 #md .bigbtn{background:var(--hatch-widget-accent);color:var(--hatch-widget-on-accent);border:none;border-radius:10px;padding:10px 22px;font-size:15px;font-weight:700;cursor:pointer;margin-top:10px}
 #md .ghostbtn{background:var(--hatch-widget-surface);color:var(--hatch-widget-text);border:1px solid var(--hatch-widget-border);border-radius:10px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer}
 #md .ghostbtn:disabled{opacity:.4;cursor:default}
-#md button:focus-visible,#md input:focus-visible,#md select:focus-visible{outline:3px solid #aebfff;outline-offset:2px}
+#md button:focus-visible,#md input:focus-visible,#md select:focus-visible{outline:2px solid var(--hatch-widget-accent);outline-offset:3px}
 #md .listmeta{display:flex;justify-content:space-between;gap:8px;align-items:center;margin:5px 0}
 #md .pager{display:flex;align-items:center;gap:7px;margin:7px 0;justify-content:center}
 #md select{background:var(--hatch-widget-surface);color:var(--hatch-widget-text);border:1px solid var(--hatch-widget-border);border-radius:8px;padding:6px 10px;font-size:14px}
@@ -69,15 +69,16 @@ html{background:#101014}body{background:#101014;margin:0;min-width:320px}
 #md .cbadge{font-size:10px;color:var(--hatch-widget-accent);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px}
 #md .teamtag{font-size:10px;color:var(--hatch-widget-muted)}
 #md .vdelta{font-size:10px;font-weight:800;padding:1px 6px;border-radius:9px;margin-left:5px;white-space:nowrap}
-#md .vdelta.g{color:#146c2e;background:#d9ecd9}
-#md .vdelta.b{color:#a1231b;background:#f6d9d4}
+#md .vdelta.g{color:#85e5bc;background:#143d2e}
+#md .vdelta.b{color:#ffb4ab;background:#4a1f1f}
 #md .tierbreak{border-top:2px dashed var(--hatch-widget-accent);opacity:.45;margin:8px 4px 2px}
 @media(max-width:640px){#md .cols{flex-direction:column}#md .avail,#md .side{width:100%}}
 
 /* Draft Lab: local-only visual theme */
-:root{color-scheme:dark}#md{--hatch-widget-text:#eef3f8;--hatch-widget-muted:#a3b1c3;--hatch-widget-surface:#121d2c;--hatch-widget-surface-muted:#1a293b;--hatch-widget-border:#293a50;--hatch-widget-accent:#85e5bc;--hatch-widget-on-accent:#09271d}
+/* Draft Lab: single dark mint system (vars set in STANDALONE-THEME) */
 html,body{background:#0b1320}
 body{background:radial-gradient(ellipse at top right,#19352f66,transparent 55%),#0b1320;min-height:100vh}
+#md{--hatch-widget-text:#eef3f8;--hatch-widget-muted:#a3b1c3;--hatch-widget-surface:#121d2c;--hatch-widget-surface-muted:#1a293b;--hatch-widget-border:#293a50;--hatch-widget-accent:#85e5bc;--hatch-widget-on-accent:#09271d}
 #md{max-width:1440px;margin:auto;padding:28px 32px 48px;line-height:1.5}
 #md .brandbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 0 24px;margin-bottom:24px;border-bottom:1px solid var(--hatch-widget-border)}
 #md .brand{display:flex;align-items:center;gap:12px;font-size:21px;font-weight:800;letter-spacing:-.6px}
@@ -89,7 +90,7 @@ body{background:radial-gradient(ellipse at top right,#19352f66,transparent 55%),
 #md .setup-pos{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:8px;max-width:850px;margin:14px 0 28px}
 #md .posbtn{width:100%;height:58px;border-radius:12px;font-size:18px}
 #md button{transition:background .15s,border-color .15s,box-shadow .15s}
-#md button:not(:disabled):hover{border-color:var(--hatch-widget-accent);box-shadow:0 0 0 1px #85e5bc55}
+#md button:not(:disabled):hover{border-color:var(--hatch-widget-accent);box-shadow:0 0 0 1px color-mix(in srgb, var(--hatch-widget-accent) 35%, transparent)}
 #md .bigbtn{padding:13px 24px;border-radius:12px;margin-top:18px}
 #md .ghostbtn{min-height:40px;background:transparent}
 #md .turnbar{padding:18px 20px;margin:0 0 18px;border-left:3px solid var(--hatch-widget-accent);box-shadow:0 8px 24px #0002}
@@ -147,10 +148,40 @@ body{background:radial-gradient(ellipse at top right,#19352f66,transparent 55%),
 #md .playofftable tr.ok td:last-child{color:#ffd479;font-weight:700}
 #md .playofftable tr.good td:last-child{color:#85e5bc;font-weight:700}
 
+/* UX polish: calm density, touch intel, a11y live */
+#md .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+#md .filters-disclose{margin:10px 0 4px;border:1px solid var(--hatch-widget-border);border-radius:12px;background:#0d1724;padding:0 12px}
+#md .filters-disclose>summary{list-style:none;cursor:pointer;padding:10px 2px;font-size:13px;font-weight:600;color:var(--hatch-widget-text)}
+#md .filters-disclose>summary::-webkit-details-marker{display:none}
+#md .filters-disclose>summary::before{content:"▸ ";color:var(--hatch-widget-accent)}
+#md .filters-disclose[open]>summary::before{content:"▾ "}
+#md .filters-disclose .filters{margin:0 0 12px}
+#md details.scarcity{margin:10px 0;padding:10px 14px;border:1px solid var(--hatch-widget-border);border-radius:14px;background:var(--hatch-widget-surface)}
+#md details.scarcity>summary{list-style:none;cursor:pointer;padding:4px 0;font-size:13px}
+#md details.scarcity>summary::-webkit-details-marker{display:none}
+#md details.scarcity>summary::before{content:"▸ ";color:var(--hatch-widget-accent)}
+#md details.scarcity[open]>summary::before{content:"▾ "}
+#md details.scarcity .catgrid{margin-top:10px}
+#md .catchip{cursor:pointer;position:relative;user-select:none}
+#md .catchip:focus-visible{outline:2px solid var(--hatch-widget-accent);outline-offset:2px}
+#md .catchip[aria-expanded="true"]{box-shadow:inset 0 0 0 1px var(--hatch-widget-accent)}
+#md .cattops{display:block;margin-top:8px;padding-top:8px;border-top:1px solid var(--hatch-widget-border);font-size:10px;line-height:1.45;color:var(--hatch-widget-muted);text-align:left}
+#md .cattops[hidden]{display:none}
+#md .cattops b{color:var(--hatch-widget-text);font-weight:700}
+#md .injtag{display:inline-block;border:0;border-radius:4px;background:#5a1f1f;color:#ffb4ab;padding:1px 5px;margin-left:3px;letter-spacing:.4px;font-weight:700;font-size:10px;font-family:inherit;cursor:pointer;line-height:1.4}
+#md .injtag[aria-expanded="true"]{box-shadow:0 0 0 1px #ffb4ab}
+#md .injdetail{display:block;margin:6px 0 2px 38px;padding:8px 10px;background:#3a1515;border:1px solid #7a3030;border-radius:8px;color:#ffb4ab;font-size:11px;line-height:1.45;max-width:28rem;font-weight:500}
+#md .injdetail[hidden]{display:none}
+#md .prow .injdetail,#md .rrow .injdetail{white-space:normal}
+#md .cols.glance .side{flex:1.55}#md .cols.glance .avail{flex:1}
+#md .viewtabs{display:flex;gap:7px;flex-wrap:wrap;margin:0 0 14px;align-items:center}
+#md .viewtabs .muted{margin-right:4px}
+@media(max-width:480px){#md .filters-disclose{padding:0 10px}#md .injdetail{margin-left:0}}
+
 </style>
 </head>
 <body>
-<main id="md"><header class="brandbar"><div class="brand"><span class="brandmark" aria-hidden="true">◉</span>Draft Lab</div><span class="season">2026–27 / Mock draft</span></header><div id="mdapp"></div></main>
+<main id="md"><header class="brandbar"><div class="brand"><span class="brandmark" aria-hidden="true">◉</span>Draft Lab</div><span class="season">2026–27 / Mock draft</span></header><div id="mdlive" class="sr-only" aria-live="polite" aria-atomic="true"></div><div id="mdapp"></div></main>
 <script src="player-data.js"></script>
 <script src="draft-core.js"></script>
 <script src="data-health.js"></script>
@@ -255,7 +286,25 @@ var PLAYERS=[
 PLAYERS.forEach(function(p,i){p.r=i+1;p.n=p[0];p.p=p[1];p.t=p[2]||"\u2014";});
 PLAYERS.forEach(function(p){var d=(typeof PDATA!=="undefined"&&PDATA[p.n])||null;p.adp=d&&d.adp!=null?d.adp:null;p.adpF=d&&d.adpF!=null?d.adpF:null;p.last=d&&d.last!=null?d.last:null;p.lastTotal=d&&d.lastTotal!=null?d.lastTotal:null;p.mpg=d&&d.mpg!=null?d.mpg:null;p.inj=(typeof INJ!=="undefined"&&INJ[p.n])||null;});
 function injTitle(inj){return "INJURED — "+inj.injury+". "+inj.detail+" Expected return: "+inj.ret+". Source: "+inj.src+".";}
-function injBadge(p){return p.inj?'<span class="injtag" tabindex="0" role="img" aria-label="'+esc(injTitle(p.inj))+'" title="'+esc(injTitle(p.inj))+'">INJ</span>':'';}
+function injBadge(p){
+  if(!p.inj)return "";
+  var t=injTitle(p.inj);
+  return '<button type="button" class="injtag" aria-expanded="false" aria-label="'+esc(t)+'">INJ</button><span class="injdetail" hidden>'+esc(t)+'</span>';
+}
+function wireInjToggles(root){
+  if(!root)return;
+  root.querySelectorAll(".injtag").forEach(function(btn){
+    btn.addEventListener("click",function(e){
+      e.preventDefault();e.stopPropagation();
+      var det=btn.nextElementSibling;
+      if(!det||!det.classList.contains("injdetail"))return;
+      var willOpen=det.hidden;
+      root.querySelectorAll(".injdetail").forEach(function(d){d.hidden=true;});
+      root.querySelectorAll(".injtag").forEach(function(b){b.setAttribute("aria-expanded","false");});
+      if(willOpen){det.hidden=false;btn.setAttribute("aria-expanded","true");}
+    });
+  });
+}
 /* Category strength tags: derived from 2025-26 per-game category values (cv).
    Top 4 categories with cv > 0, in descending order. The 8 entries below are a
    manual fallback for players with no 2025-26 data (injured stars + prospects
@@ -546,23 +595,52 @@ function scarcityBase(){
 function renderScarcity(){
   var base=scarcityBase(),taken={},i,c;
   for(i=0;i<state.log.length;i++)taken[state.log[i]]=1;
-  var rem=[0,0,0,0,0,0,0,0,0],tops=[];
+  var rem=[0,0,0,0,0,0,0,0,0],tops=[],pcts=[];
   for(c=0;c<9;c++)tops.push([]);
   base.idx.forEach(function(j){
     if(taken[j])return;
     var pl=PLAYERS[j],cv=PDATA[pl.n].cv;
     for(c=0;c<9;c++){var v=cv[c]-base.repl[c];if(v>0){rem[c]+=v;tops[c].push({n:pl.n,v:v});}}
   });
-  var h='<div class="scarcity"><h3>Category scarcity <span class="muted">share of draftable value still available</span></h3><div class="catgrid">';
   CATS9.forEach(function(cat,ci){
     var pct=base.start[ci]>0?Math.round(rem[ci]/base.start[ci]*100):0;
     if(pct>100)pct=100;if(pct<0)pct=0;
+    pcts.push({cat:cat,pct:pct,ci:ci});
+  });
+  var quiet=pcts.slice().sort(function(a,b){return a.pct-b.pct;}).slice(0,3).map(function(x){return x.cat+" "+x.pct+"%";}).join(" · ");
+  var h='<details class="scarcity" id="mdscarcity"'+(state.scarcityOpen?' open':'')+'>';
+  h+='<summary><b>Category scarcity</b> <span class="muted">'+(quiet||"share of draftable value still available")+' · tap a category for top contributors</span></summary>';
+  h+='<div class="catgrid">';
+  pcts.forEach(function(row){
+    var cat=row.cat,ci=row.ci,pct=row.pct;
     var hue=Math.round(pct*1.2);
     tops[ci].sort(function(a,b){return b.v-a.v;});
-    var tip=tops[ci].slice(0,3).map(function(t){return t.n+" +"+t.v.toFixed(1);}).join(", ")||"nothing above replacement";
-    h+='<div class="catchip" title="Most '+cat+' left: '+esc(tip)+'"><span class="catname">'+cat+'</span><span class="catnum" style="color:hsl('+hue+',62%,36%)">'+pct+'%</span><div class="catbar"><i style="width:'+pct+'%;background:hsl('+hue+',62%,45%)"></i></div></div>';
+    var tipRows=tops[ci].slice(0,3);
+    var tip=tipRows.map(function(t){return t.n+" +"+t.v.toFixed(1);}).join(", ")||"nothing above replacement";
+    var topsHtml=tipRows.length?tipRows.map(function(t){return esc(t.n)+" <b>+"+t.v.toFixed(1)+"</b>";}).join("<br>"):"nothing above replacement";
+    h+='<div class="catchip'+(pct<=35?' hot':'')+'" tabindex="0" role="button" aria-expanded="false" aria-label="'+esc(cat)+' '+pct+' percent remaining. Most left: '+esc(tip)+'">';
+    h+='<span class="catname">'+cat+'</span><span class="catnum" style="color:hsl('+hue+',62%,55%)">'+pct+'%</span><div class="catbar"><i style="width:'+pct+'%;background:hsl('+hue+',62%,45%)"></i></div>';
+    h+='<div class="cattops" hidden><b>Top available</b><br>'+topsHtml+'</div></div>';
   });
-  return h+'</div><p class="muted">BM-style 2025-26 per-game category values (z-scores; FG%/FT% volume-weighted, TO inverted). Replacement = mean of consensus ranks 150&ndash;170.</p></div>';
+  h+='</div><p class="muted">BM-style 2025-26 per-game category values (z-scores; FG%/FT% volume-weighted, TO inverted). Replacement = mean of consensus ranks 150&ndash;170. Tap a category chip to see top contributors.</p></details>';
+  return h;
+}
+function wireScarcityToggles(root){
+  if(!root)return;
+  var panel=root.querySelector("#mdscarcity")||root;
+  panel.querySelectorAll(".catchip").forEach(function(chip){
+    function toggle(){
+      var tops=chip.querySelector(".cattops");if(!tops)return;
+      var willOpen=tops.hidden;
+      panel.querySelectorAll(".cattops").forEach(function(d){d.hidden=true;});
+      panel.querySelectorAll(".catchip").forEach(function(c){c.setAttribute("aria-expanded","false");});
+      if(willOpen){tops.hidden=false;chip.setAttribute("aria-expanded","true");}
+    }
+    chip.addEventListener("click",function(e){e.preventDefault();toggle();});
+    chip.addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();toggle();}});
+  });
+  var det=root.querySelector("#mdscarcity");
+  if(det)det.addEventListener("toggle",function(){state.scarcityOpen=det.open;save();});
 }
 
 var TEAMS=12;
@@ -571,7 +649,7 @@ var BASE_SLOTS=["PG","SG","G","SF","PF","F","C","C","Util","Util","BN","BN","BN"
 var DATA_VERSION="2026-09-20";
 var STORAGE_KEY="fantasy-basketball-mock-draft.v2";
 var HW=(typeof window!=="undefined"&&window.hatchWidget)?window.hatchWidget:null;
-var DEFAULTS={phase:"setup",draftPos:6,rounds:13,log:[],q:"",f:"All",view:"team",sort:"cons",playoffStart:20,page:0,seed:123456789,rngState:123456789,userTurns:[]};
+var DEFAULTS={phase:"setup",draftPos:6,rounds:13,log:[],q:"",f:"All",view:"team",sort:"cons",playoffStart:20,page:0,seed:123456789,rngState:123456789,userTurns:[],filtersOpen:false,scarcityOpen:false};
 function freshState(){var seed=(Date.now()>>>0)||1;return Object.assign({},DEFAULTS,{seed:seed,rngState:seed,log:[],userTurns:[]});}
 function cleanState(raw){
   var out=Object.assign({},DEFAULTS,raw||{}), used={};
@@ -581,6 +659,9 @@ function cleanState(raw){
   out.phase=out.log.length>=TEAMS*out.rounds?"done":(out.phase==="draft"?"draft":"setup");
   out.f=["All","PG","SG","SF","PF","C"].indexOf(out.f)>=0?out.f:"All";
   out.sort=["cons","rank","adp","last","lastTotal"].indexOf(out.sort)>=0?out.sort:"cons";
+  out.view=["team","board","grades"].indexOf(out.view)>=0?out.view:"team";
+  out.filtersOpen=!!out.filtersOpen;
+  out.scarcityOpen=!!out.scarcityOpen;
   out.playoffStart=[18,19,20,21].indexOf(out.playoffStart)>=0?out.playoffStart:20;
   out.page=Math.max(0,parseInt(out.page,10)||0);
   out.seed=(parseInt(out.seed,10)>>>0)||1;out.rngState=(parseInt(out.rngState,10)>>>0)||out.seed;
@@ -611,14 +692,28 @@ function simulateToUser(log,rngState){
   }
   return {log:next,rngState:rng.getState()};
 }
+var _lastLive="";
+var _pendingLive="";
+function announceLive(msg){
+  if(!msg||msg===_lastLive)return;
+  _lastLive=msg;
+  var n=el("mdlive");
+  if(n){n.textContent="";n.textContent=msg;}
+}
 function advance(){
+  var before=state.log.length;
   var next=simulateToUser(state.log,state.rngState);
+  var n=next.log.length-before;
+  if(n>0)_pendingLive=n+" CPU pick"+(n===1?"":"s")+" completed. ";
   setState({log:next.log,rngState:next.rngState,phase:next.log.length>=totalPicks()?"done":"draft"});
 }
 function userDraft(pi){
   if(!isUserTurn()||!CORE.validPlayerIndex(PLAYERS,state.log,pi))return;
   var checkpoint={log:state.log.slice(),rngState:state.rngState};
+  var name=PLAYERS[pi].n;
   var next=simulateToUser(state.log.concat([pi]),state.rngState);
+  var cpu=next.log.length-(checkpoint.log.length+1);
+  _pendingLive="You drafted "+name+". "+(cpu>0?cpu+" CPU pick"+(cpu===1?"":"s")+" followed. ":"");
   setState({log:next.log,rngState:next.rngState,userTurns:state.userTurns.concat([checkpoint]).slice(-20),phase:next.log.length>=totalPicks()?"done":"draft",page:0});
 }
 function undoUserPick(){
@@ -633,7 +728,7 @@ function pickLabel(idx){var r=Math.floor(idx/TEAMS)+1;var w=idx%TEAMS+1;return "
 var HEALTH=window.DataHealth.audit(PLAYERS,typeof PDATA!=="undefined"?PDATA:{},CATS);
 function renderDataHealth(){
   var h='<details class="scarcity"><summary><b>Data health</b> &middot; '+(HEALTH.players-HEALTH.missingAdp.length)+'/'+HEALTH.players+' players with ADP &middot; bundled snapshot</summary>';
-  h+='<p class="muted">Snapshot '+esc(DATA_VERSION)+'. Yahoo and Fantrax ADP, NBA team, and Yahoo position eligibility were refreshed from Hashtag Basketball\'s 2026-27 ADP table (Yahoo and Fantrax columns, updated 17 September 2026). A red INJ badge marks the 10 players listed as injured as of 14 September 2026; hover or focus it for the injury, context, expected return, and source. Prior-season ranks and category values are historical and unchanged. Category scarcity and the per-row strength tags both derive from BM-style per-game z-scores, not a current-season projection. This audit checks internal consistency; NBA player-pool completeness remains unverified.</p>';
+  h+='<p class="muted">Snapshot '+esc(DATA_VERSION)+'. Yahoo and Fantrax ADP, NBA team, and Yahoo position eligibility were refreshed from Hashtag Basketball\'s 2026-27 ADP table (Yahoo and Fantrax columns, updated 17 September 2026). A red INJ badge marks the 10 players listed as injured as of 14 September 2026; tap or activate the INJ badge for the injury, context, expected return, and source. Prior-season ranks and category values are historical and unchanged. Category scarcity and the per-row strength tags both derive from BM-style per-game z-scores, not a current-season projection. This audit checks internal consistency; NBA player-pool completeness remains unverified.</p>';
   h+='<p>'+HEALTH.missingAdp.length+' missing Yahoo ADP (CPUs use Fantrax ADP when Yahoo is missing, else median of 2025-26 totals rank, per-game rank, and built-in rank); '+HEALTH.missingLast.length+' missing prior-season rank; '+HEALTH.untagged.length+' without category tags; '+HEALTH.placeholderTeams.length+' unknown teams.</p>';
   h+='<p class="muted">Built-in rank is the original list order, not a fresh projection. Missing ranks stay blank. The legacy category labels on player rows are informational only; scarcity calculations use the historical `cv` values.</p>';
   if(HEALTH.errors.length||HEALTH.missingData.length||HEALTH.orphanData.length)h+='<p>Data consistency issues: '+(HEALTH.errors.length+HEALTH.missingData.length+HEALTH.orphanData.length)+'. Run node audit-data.js for details.</p>';
@@ -664,12 +759,16 @@ function nextUserPickIdx(){
 }
 function consRank(p){var a=p.adp,f=p.adpF;return a==null?(f==null?p.r:f):(f==null?a:(a+f)/2);}
 function vBadge(pi,idx){var p=PLAYERS[pi];if(p.adp==null)return "";var d=Math.round(p.adp)-(idx+1);if(d===0)return "";return '<span class="vdelta '+(d>0?'g':'b')+'" title="'+(d>0?'Value':'Reach')+' vs ADP '+p.adp+'">'+(d>0?'+':'')+d+'</span>';}
+function sortLabel(s){
+  return ({cons:"Consensus",rank:"Rank",adp:"ADP",last:"Last · PER",lastTotal:"Last · TOT"})[s]||"Consensus";
+}
 function renderDraft(){
   var idx=state.log.length,round=Math.floor(idx/TEAMS)+1,team=idx<totalPicks()?teamForPick(idx):-1;
   var h='<div class="turnbar">';
-  if(state.phase==="done"){h+='<span><b>Draft complete.</b></span>';}
-  else if(isUserTurn()){h+='<span class="you">YOUR PICK</span><span class="muted">Round '+round+', overall pick '+(idx+1)+' of '+totalPicks()+'</span>';}
-  else{h+='<span><b>'+esc(teamName(team))+'</b> is picking...</span><span class="muted">Round '+round+', overall pick '+(idx+1)+'</span>';}
+  var liveCore="";
+  if(state.phase==="done"){h+='<span><b>Draft complete.</b></span>';liveCore="Draft complete.";}
+  else if(isUserTurn()){h+='<span class="you">YOUR PICK</span><span class="muted">Round '+round+', overall pick '+(idx+1)+' of '+totalPicks()+'</span>';liveCore="Your pick. Round "+round+", overall pick "+(idx+1)+" of "+totalPicks()+".";}
+  else{h+='<span><b>'+esc(teamName(team))+'</b> is picking...</span><span class="muted">Round '+round+', overall pick '+(idx+1)+'</span>';liveCore=teamName(team)+" is picking. Round "+round+", overall pick "+(idx+1)+".";}
   var nxt=nextUserPickIdx();
   if(nxt>=0&&!isUserTurn())h+='<span class="nextpick">Your next pick: <b>#'+(nxt+1)+'</b> ('+(nxt-idx)+' picks away)</span>';
   if(nxt>=0&&isUserTurn()){var nxt2=-1,tot2=totalPicks();for(var j=nxt+1;j<tot2;j++)if(teamForPick(j)===userTeam()){nxt2=j;break;}
@@ -680,20 +779,31 @@ function renderDraft(){
   h+='<button class="ghostbtn" id="mdnew">Restart</button></div>';
   h+=renderDataHealth();
   h+=renderScarcity();
-  h+='<div class="tabs"><button class="fchip'+(state.view==='team'?' sel':'')+'" data-view="team">My team</button>';
-  h+='<button class="fchip'+(state.view==='board'?' sel':'')+'" data-view="board">Draft board</button></div>';
-  h+='<div class="cols"><div class="avail">';
+  h+='<div class="viewtabs tabs" role="tablist" aria-label="Draft room views"><span class="muted">Room</span>';
+  h+='<button class="fchip'+(state.view==='team'?' sel':'')+'" data-view="team" role="tab" aria-selected="'+(state.view==='team'?'true':'false')+'">My team</button>';
+  h+='<button class="fchip'+(state.view==='board'?' sel':'')+'" data-view="board" role="tab" aria-selected="'+(state.view==='board'?'true':'false')+'">Draft board</button>';
+  h+='<button class="fchip'+(state.view==='grades'?' sel':'')+'" data-view="grades" role="tab" aria-selected="'+(state.view==='grades'?'true':'false')+'">Grades</button></div>';
+  var glance=state.view==="board"||state.view==="grades";
+  h+='<div class="cols'+(glance?' glance':'')+'"><div class="avail">';
   h+='<h3>Available players</h3><input type="text" id="mdq" aria-label="Search available players" placeholder="Search players..." value="'+esc(state.q)+'">';
+  var filterSummary=(state.f==="All"?"All positions":state.f)+" · "+sortLabel(state.sort||"cons");
+  h+='<details class="filters-disclose" id="mdfilters"'+(state.filtersOpen?' open':'')+'>';
+  h+='<summary>Filters &amp; sort <span class="muted">'+esc(filterSummary)+'</span></summary>';
   h+='<div class="filters">';
   ["All","PG","SG","SF","PF","C"].forEach(function(f){h+='<button class="fchip'+(state.f===f?' sel':'')+'" data-f="'+f+'">'+f+'</button>';});
   h+='</div><div class="filters"><span class="muted">Sort:</span>';
   [["cons","Consensus","Average of Yahoo and Fantrax ADP"],["rank","Rank","Built-in preseason rank (sim order)"],["adp","ADP","Yahoo ADP via Hashtag Basketball (14 Sep 2026)"],["last","Last · PER","2025-26 nine-category per-game rank (Basketball Monster / Hashtag)"],["lastTotal","Last · TOT","2025-26 nine-category TOTALS rank — derived from Basketball-Reference season totals, not a published rank"]].forEach(function(s){h+='<button class="fchip'+((state.sort||"cons")===s[0]?' sel':'')+'" data-sort="'+s[0]+'" title="'+s[2]+'">'+s[1]+'</button>';});
-  h+='</div><div class="plist" id="mdplist"></div><div id="mdpager"></div></div>';
+  h+='</div></details><div class="plist" id="mdplist"></div><div id="mdpager"></div></div>';
   h+='<div class="side" id="mdside"></div></div>';
   el("mdapp").innerHTML=h;
+  announceLive((_pendingLive||"")+liveCore);
+  _pendingLive="";
   el("mdapp").querySelectorAll("[data-view]").forEach(function(b){b.addEventListener("click",function(){setState({view:b.getAttribute("data-view")});});});
-  el("mdapp").querySelectorAll("[data-f]").forEach(function(b){b.addEventListener("click",function(){setState({f:b.getAttribute("data-f"),page:0});});});
-  el("mdapp").querySelectorAll("[data-sort]").forEach(function(b){b.addEventListener("click",function(){setState({sort:b.getAttribute("data-sort"),page:0});});});
+  el("mdapp").querySelectorAll("[data-f]").forEach(function(b){b.addEventListener("click",function(){setState({f:b.getAttribute("data-f"),page:0,filtersOpen:true});});});
+  el("mdapp").querySelectorAll("[data-sort]").forEach(function(b){b.addEventListener("click",function(){setState({sort:b.getAttribute("data-sort"),page:0,filtersOpen:true});});});
+  var fd=el("mdfilters");
+  if(fd)fd.addEventListener("toggle",function(){state.filtersOpen=fd.open;save();});
+  wireScarcityToggles(el("mdapp"));
   var q=el("mdq");q.addEventListener("input",function(){state.q=q.value;state.page=0;save();renderList();});
   q.addEventListener("keydown",function(e){e.stopPropagation();});
   var sim=el("mdsim");if(sim)sim.addEventListener("click",advance);
@@ -735,6 +845,7 @@ function renderList(){
   var pager='<div class="pager"><button class="ghostbtn" id="mdprev" '+(state.page?"":"disabled")+'>Previous</button><button class="ghostbtn" id="mdnext" '+(state.page+1<pageCount?"":"disabled")+'>Next</button></div>';
   el("mdpager").innerHTML=pager;
   el("mdplist").querySelectorAll(".draftbtn").forEach(function(b){b.addEventListener("click",function(){userDraft(parseInt(b.getAttribute("data-pi"),10));});});
+  wireInjToggles(el("mdplist"));
   el("mdprev").addEventListener("click",function(){state.page=Math.max(0,state.page-1);save();renderList();});
   el("mdnext").addEventListener("click",function(){state.page=Math.min(pageCount-1,state.page+1);save();renderList();});
 }
@@ -744,7 +855,7 @@ function myRoster(){
 }
 function renderSide(){
   var s=el("mdside");if(!s)return;
-  if(state.view==="grades"){s.innerHTML=renderGrades();return;}
+  if(state.view==="grades"){s.innerHTML=renderGrades();wireInjToggles(s);return;}
   if(state.view==="board"){
     var h='<h3>Draft board</h3><div class="boardwrap"><table class="board"><tr><th>Rd</th>';
     for(var t=0;t<TEAMS;t++)h+='<th>'+esc(teamName(t))+'</th>';
@@ -761,6 +872,7 @@ function renderSide(){
       h+='</tr>';
     }
     s.innerHTML=h+'</table></div><p class="muted"><span class="vdelta g">+12</span> value: picked 12 spots later than ADP &nbsp;·&nbsp; <span class="vdelta b">-8</span> reach: picked 8 spots earlier than ADP &nbsp;·&nbsp; no number: picked at ADP or no ADP data</p>';
+    wireInjToggles(s);return;
   }else{
     var mine=[];state.log.forEach(function(pi,idx){if(teamForPick(idx)===userTeam())mine.push({pi:pi,idx:idx});});
     var ros=myRoster();
@@ -775,6 +887,7 @@ function renderSide(){
       h2+='<div class="rrow"><span class="rpick">'+pickLabel(m.idx)+'</span><span class="pname">'+esc(pl.n)+' <span class="teamtag">'+esc(pl.t)+'</span>'+injBadge(pl)+vBadge(m.pi,m.idx)+'</span><span class="ppos">'+posBadges(pl.p)+'</span></div>';});
     s.innerHTML=h2+'</div>';
   }
+  wireInjToggles(s);
 }
 function draftGrades(){
   var repl=(typeof scarcityBase!=="undefined"?scarcityBase().repl:[0,0,0,0,0,0,0,0,0]);
@@ -843,8 +956,10 @@ function renderDone(){
   var h='<h2>Draft complete</h2><div class="muted">Final roster from pick #'+state.draftPos+' ('+state.rounds+' rounds, 12 teams)</div>';
   h+='<button class="bigbtn" id="mdnew2">Run it back</button>';
   if(state.userTurns.length)h+='<button class="ghostbtn" id="mdundo2" style="margin-left:8px">Undo my last pick</button>';
-  h+='<div class="tabs"><button class="fchip'+(state.view==='team'?' sel':'')+'" data-view="team">My team</button><button class="fchip'+(state.view==='board'?' sel':'')+'" data-view="board">Draft board</button><button class="fchip'+(state.view==='grades'?' sel':'')+'" data-view="grades">Grades</button></div><div id="mdside"></div>';
+  h+='<div class="viewtabs tabs" role="tablist" aria-label="Draft room views"><span class="muted">Room</span><button class="fchip'+(state.view==='team'?' sel':'')+'" data-view="team" role="tab" aria-selected="'+(state.view==='team'?'true':'false')+'">My team</button><button class="fchip'+(state.view==='board'?' sel':'')+'" data-view="board" role="tab" aria-selected="'+(state.view==='board'?'true':'false')+'">Draft board</button><button class="fchip'+(state.view==='grades'?' sel':'')+'" data-view="grades" role="tab" aria-selected="'+(state.view==='grades'?'true':'false')+'">Grades</button></div><div id="mdside"></div>';
   el("mdapp").innerHTML=h;
+  announceLive((_pendingLive||"")+"Draft complete.");
+  _pendingLive="";
   el("mdnew2").addEventListener("click",restartDraft);
   var undo=el("mdundo2");if(undo)undo.addEventListener("click",undoUserPick);
   el("mdapp").querySelectorAll("[data-view]").forEach(function(b){b.addEventListener("click",function(){setState({view:b.getAttribute("data-view")});});});
