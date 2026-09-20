@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>TypeSafe Jev pick-quality — spike preview</title>
+<style>
+  :root {
+    --bg: #0f1419; --panel: #1a2332; --border: #2d3a4d;
+    --text: #e7ecf3; --muted: #8b9bb4; --accent: #5b9fd4;
+    --suggest: #3d9a6a; --suggest-bg: #1a3d2a;
+    --uncertain: #c9a227; --uncertain-bg: #3d351a;
+    --error: #c45c5c; --error-bg: #3d1a1a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.45; padding: 1.5rem;
+  }
+  h1 { font-size: 1.35rem; margin: 0 0 0.25rem; }
+  .sub { color: var(--muted); font-size: 0.9rem; margin-bottom: 1.25rem; }
+  .meta {
+    display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+    padding: 0.75rem 1rem; margin-bottom: 1.25rem; font-size: 0.875rem;
+  }
+  .meta strong { color: var(--accent); }
+  table {
+    width: 100%; border-collapse: collapse; background: var(--panel);
+    border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
+    font-size: 0.875rem; margin-bottom: 1.5rem;
+  }
+  th, td { padding: 0.65rem 0.75rem; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { background: #121a26; color: var(--muted); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em; }
+  tr:last-child td { border-bottom: none; }
+  .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .muted { color: var(--muted); font-size: 0.85em; }
+  .tag {
+    display: inline-block; font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.04em; color: var(--accent); background: #1e2a3a;
+    padding: 0.15rem 0.45rem; border-radius: 4px;
+  }
+  .desc { color: var(--muted); font-size: 0.8rem; margin-top: 0.25rem; }
+  .badge {
+    display: inline-block; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em;
+    padding: 0.2rem 0.5rem; border-radius: 4px;
+  }
+  .badge.suggest { background: var(--suggest-bg); color: #7ddeb0; }
+  .badge.uncertain { background: var(--uncertain-bg); color: #f0d56a; }
+  .badge.error { background: var(--error-bg); color: #f0a0a0; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem; border-top: 3px solid var(--border);
+  }
+  .card.suggest { border-top-color: var(--suggest); }
+  .card.uncertain { border-top-color: var(--uncertain); }
+  .card.error { border-top-color: var(--error); }
+  .card header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+  .card h2 { margin: 0 0 0.35rem; font-size: 1.1rem; }
+  .card dl { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin: 0.75rem 0; font-size: 0.85rem; }
+  .card dt { color: var(--muted); font-size: 0.7rem; text-transform: uppercase; }
+  .card dd { margin: 0; font-weight: 600; }
+  .verdict-text { font-size: 0.8rem; color: var(--muted); margin: 0; word-break: break-word; }
+  code { background: #121a26; padding: 0.1rem 0.35rem; border-radius: 3px; font-size: 0.9em; }
+  details { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem 1rem; }
+  summary { cursor: pointer; color: var(--muted); font-size: 0.85rem; }
+  pre { overflow: auto; font-size: 0.75rem; color: #b8c5d6; margin: 0.75rem 0 0; }
+  .note { font-size: 0.8rem; color: var(--muted); margin-top: 1rem; }
+</style>
+</head>
+<body>
+  <h1>TypeSafe pick-quality spike preview</h1>
+  <p class="sub">PR #3 · <code>spike/typesafe-pick-quality</code> · baked results (no browser API calls) · not production</p>
+
+  <div class="meta">
+    <div>Model: <strong>jev-latest</strong></div>
+    <div>Confidence threshold: <strong>0.7</strong> (both score &amp; choice ≥ threshold → SUGGEST)</div>
+    <div>Samples: <strong>5</strong></div>
+    <div>Score axis: <strong>0 Poor · 1 Below avg · 2 Average · 3 Good · 4 Excellent</strong></div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Case</th>
+        <th>Player</th>
+        <th>Pick #</th>
+        <th>ADP / Rank</th>
+        <th>Score (conf)</th>
+        <th>Choice (conf)</th>
+        <th>Verdict</th>
+      </tr>
+    </thead>
+    <tbody>
+      
+    <tr class="uncertain">
+      <td><span class="tag">Value</span><div class="desc">Late-ADP guy available deep (ADP~40 at pick~55)</div></td>
+      <td><strong>Naz Reid</strong></td>
+      <td class="num">55</td>
+      <td class="num">40.0 <span class="muted">/ rank 42</span></td>
+      <td class="num">0.700 <span class="muted">(0.410)</span></td>
+      <td><code>wait</code> <span class="muted">(0.320)</span></td>
+      <td><span class="badge uncertain">UNCERTAIN</span></td>
+    </tr>
+    <tr class="uncertain">
+      <td><span class="tag">On-ADP star</span><div class="desc">Star mid-round near ADP</div></td>
+      <td><strong>Desmond Bane</strong></td>
+      <td class="num">25</td>
+      <td class="num">24.5 <span class="muted">/ rank 25</span></td>
+      <td class="num">1.650 <span class="muted">(0.320)</span></td>
+      <td><code>wait</code> <span class="muted">(0.240)</span></td>
+      <td><span class="badge uncertain">UNCERTAIN</span></td>
+    </tr>
+    <tr class="uncertain">
+      <td><span class="tag">Reach</span><div class="desc">Elite/big name well before ADP vs needs</div></td>
+      <td><strong>Domantas Sabonis</strong></td>
+      <td class="num">12</td>
+      <td class="num">21.0 <span class="muted">/ rank 21</span></td>
+      <td class="num">0.930 <span class="muted">(0.230)</span></td>
+      <td><code>reach</code> <span class="muted">(0.180)</span></td>
+      <td><span class="badge uncertain">UNCERTAIN</span></td>
+    </tr>
+    <tr class="uncertain">
+      <td><span class="tag">Wait case</span><div class="desc">Solid player but ADP much later — can wait</div></td>
+      <td><strong>Jalen Brunson</strong></td>
+      <td class="num">28</td>
+      <td class="num">45.0 <span class="muted">/ rank 44</span></td>
+      <td class="num">0.730 <span class="muted">(0.490)</span></td>
+      <td><code>wait</code> <span class="muted">(0.360)</span></td>
+      <td><span class="badge uncertain">UNCERTAIN</span></td>
+    </tr>
+    <tr class="uncertain">
+      <td><span class="tag">Borderline</span><div class="desc">Near-ADP mid/late — judgment call</div></td>
+      <td><strong>OG Anunoby</strong></td>
+      <td class="num">45</td>
+      <td class="num">42.0 <span class="muted">/ rank 43</span></td>
+      <td class="num">1.000 <span class="muted">(0.170)</span></td>
+      <td><code>wait</code> <span class="muted">(0.350)</span></td>
+      <td><span class="badge uncertain">UNCERTAIN</span></td>
+    </tr>
+    </tbody>
+  </table>
+
+  <div class="cards">
+    
+    <article class="card uncertain">
+      <header>
+        <span class="tag">Value</span>
+        <span class="badge uncertain">UNCERTAIN</span>
+      </header>
+      <h2>Naz Reid</h2>
+      <p class="desc">Late-ADP guy available deep (ADP~40 at pick~55)</p>
+      <dl>
+        <div><dt>Pick #</dt><dd>55</dd></div>
+        <div><dt>ADP / Rank</dt><dd>40.0 / 42</dd></div>
+        <div><dt>Score + conf</dt><dd>0.700 <span class="muted">conf 0.410</span></dd></div>
+        <div><dt>Choice + conf</dt><dd><code>wait</code> <span class="muted">conf 0.320</span></dd></div>
+      </dl>
+      <p class="verdict-text">UNCERTAIN: choice confidence 0.320 &lt; 0.7; score confidence 0.410 &lt; 0.7 — surface for human review, do not auto-act</p>
+    </article>
+    <article class="card uncertain">
+      <header>
+        <span class="tag">On-ADP star</span>
+        <span class="badge uncertain">UNCERTAIN</span>
+      </header>
+      <h2>Desmond Bane</h2>
+      <p class="desc">Star mid-round near ADP</p>
+      <dl>
+        <div><dt>Pick #</dt><dd>25</dd></div>
+        <div><dt>ADP / Rank</dt><dd>24.5 / 25</dd></div>
+        <div><dt>Score + conf</dt><dd>1.650 <span class="muted">conf 0.320</span></dd></div>
+        <div><dt>Choice + conf</dt><dd><code>wait</code> <span class="muted">conf 0.240</span></dd></div>
+      </dl>
+      <p class="verdict-text">UNCERTAIN: choice confidence 0.240 &lt; 0.7; score confidence 0.320 &lt; 0.7 — surface for human review, do not auto-act</p>
+    </article>
+    <article class="card uncertain">
+      <header>
+        <span class="tag">Reach</span>
+        <span class="badge uncertain">UNCERTAIN</span>
+      </header>
+      <h2>Domantas Sabonis</h2>
+      <p class="desc">Elite/big name well before ADP vs needs</p>
+      <dl>
+        <div><dt>Pick #</dt><dd>12</dd></div>
+        <div><dt>ADP / Rank</dt><dd>21.0 / 21</dd></div>
+        <div><dt>Score + conf</dt><dd>0.930 <span class="muted">conf 0.230</span></dd></div>
+        <div><dt>Choice + conf</dt><dd><code>reach</code> <span class="muted">conf 0.180</span></dd></div>
+      </dl>
+      <p class="verdict-text">UNCERTAIN: choice confidence 0.180 &lt; 0.7; score confidence 0.230 &lt; 0.7 — surface for human review, do not auto-act</p>
+    </article>
+    <article class="card uncertain">
+      <header>
+        <span class="tag">Wait case</span>
+        <span class="badge uncertain">UNCERTAIN</span>
+      </header>
+      <h2>Jalen Brunson</h2>
+      <p class="desc">Solid player but ADP much later — can wait</p>
+      <dl>
+        <div><dt>Pick #</dt><dd>28</dd></div>
+        <div><dt>ADP / Rank</dt><dd>45.0 / 44</dd></div>
+        <div><dt>Score + conf</dt><dd>0.730 <span class="muted">conf 0.490</span></dd></div>
+        <div><dt>Choice + conf</dt><dd><code>wait</code> <span class="muted">conf 0.360</span></dd></div>
+      </dl>
+      <p class="verdict-text">UNCERTAIN: choice confidence 0.360 &lt; 0.7; score confidence 0.490 &lt; 0.7 — surface for human review, do not auto-act</p>
+    </article>
+    <article class="card uncertain">
+      <header>
+        <span class="tag">Borderline</span>
+        <span class="badge uncertain">UNCERTAIN</span>
+      </header>
+      <h2>OG Anunoby</h2>
+      <p class="desc">Near-ADP mid/late — judgment call</p>
+      <dl>
+        <div><dt>Pick #</dt><dd>45</dd></div>
+        <div><dt>ADP / Rank</dt><dd>42.0 / 43</dd></div>
+        <div><dt>Score + conf</dt><dd>1.000 <span class="muted">conf 0.170</span></dd></div>
+        <div><dt>Choice + conf</dt><dd><code>wait</code> <span class="muted">conf 0.350</span></dd></div>
+      </dl>
+      <p class="verdict-text">UNCERTAIN: choice confidence 0.350 &lt; 0.7; score confidence 0.170 &lt; 0.7 — surface for human review, do not auto-act</p>
+    </article>
+  </div>
+
+  <details>
+    <summary>Raw baked JSON</summary>
+    <pre>{
+  &quot;confidence_threshold&quot;: 0.7,
+  &quot;model&quot;: &quot;jev-latest&quot;,
+  &quot;samples&quot;: [
+    {
+      &quot;label&quot;: &quot;Value&quot;,
+      &quot;desc&quot;: &quot;Late-ADP guy available deep (ADP~40 at pick~55)&quot;,
+      &quot;player&quot;: &quot;Naz Reid&quot;,
+      &quot;pick_number&quot;: 55,
+      &quot;adp&quot;: 40.0,
+      &quot;rank&quot;: 42,
+      &quot;score&quot;: 0.7,
+      &quot;score_conf&quot;: 0.41,
+      &quot;choice&quot;: &quot;wait&quot;,
+      &quot;choice_conf&quot;: 0.32,
+      &quot;verdict&quot;: &quot;UNCERTAIN&quot;,
+      &quot;verdict_text&quot;: &quot;UNCERTAIN: choice confidence 0.320 &lt; 0.7; score confidence 0.410 &lt; 0.7 \u2014 surface for human review, do not auto-act&quot;,
+      &quot;model&quot;: &quot;jev-1.13.0&quot;,
+      &quot;request_id&quot;: &quot;req_01a0c0cfa76d7105b7bfd00e0908ee39&quot;,
+      &quot;ok&quot;: true,
+      &quot;error&quot;: null
+    },
+    {
+      &quot;label&quot;: &quot;On-ADP star&quot;,
+      &quot;desc&quot;: &quot;Star mid-round near ADP&quot;,
+      &quot;player&quot;: &quot;Desmond Bane&quot;,
+      &quot;pick_number&quot;: 25,
+      &quot;adp&quot;: 24.5,
+      &quot;rank&quot;: 25,
+      &quot;score&quot;: 1.65,
+      &quot;score_conf&quot;: 0.32,
+      &quot;choice&quot;: &quot;wait&quot;,
+      &quot;choice_conf&quot;: 0.24,
+      &quot;verdict&quot;: &quot;UNCERTAIN&quot;,
+      &quot;verdict_text&quot;: &quot;UNCERTAIN: choice confidence 0.240 &lt; 0.7; score confidence 0.320 &lt; 0.7 \u2014 surface for human review, do not auto-act&quot;,
+      &quot;model&quot;: &quot;jev-1.13.0&quot;,
+      &quot;request_id&quot;: &quot;req_01a0c0cfa9427a7a89848ecf84b18cb8&quot;,
+      &quot;ok&quot;: true,
+      &quot;error&quot;: null
+    },
+    {
+      &quot;label&quot;: &quot;Reach&quot;,
+      &quot;desc&quot;: &quot;Elite/big name well before ADP vs needs&quot;,
+      &quot;player&quot;: &quot;Domantas Sabonis&quot;,
+      &quot;pick_number&quot;: 12,
+      &quot;adp&quot;: 21.0,
+      &quot;rank&quot;: 21,
+      &quot;score&quot;: 0.93,
+      &quot;score_conf&quot;: 0.23,
+      &quot;choice&quot;: &quot;reach&quot;,
+      &quot;choice_conf&quot;: 0.18,
+      &quot;verdict&quot;: &quot;UNCERTAIN&quot;,
+      &quot;verdict_text&quot;: &quot;UNCERTAIN: choice confidence 0.180 &lt; 0.7; score confidence 0.230 &lt; 0.7 \u2014 surface for human review, do not auto-act&quot;,
+      &quot;model&quot;: &quot;jev-1.13.0&quot;,
+      &quot;request_id&quot;: &quot;req_01a0c0cfaad0793ba4c5fbb6b6c9d08b&quot;,
+      &quot;ok&quot;: true,
+      &quot;error&quot;: null
+    },
+    {
+      &quot;label&quot;: &quot;Wait case&quot;,
+      &quot;desc&quot;: &quot;Solid player but ADP much later \u2014 can wait&quot;,
+      &quot;player&quot;: &quot;Jalen Brunson&quot;,
+      &quot;pick_number&quot;: 28,
+      &quot;adp&quot;: 45.0,
+      &quot;rank&quot;: 44,
+      &quot;score&quot;: 0.73,
+      &quot;score_conf&quot;: 0.49,
+      &quot;choice&quot;: &quot;wait&quot;,
+      &quot;choice_conf&quot;: 0.36,
+      &quot;verdict&quot;: &quot;UNCERTAIN&quot;,
+      &quot;verdict_text&quot;: &quot;UNCERTAIN: choice confidence 0.360 &lt; 0.7; score confidence 0.490 &lt; 0.7 \u2014 surface for human review, do not auto-act&quot;,
+      &quot;model&quot;: &quot;jev-1.13.0&quot;,
+      &quot;request_id&quot;: &quot;req_01a0c0cfac287a108574509f510548f2&quot;,
+      &quot;ok&quot;: true,
+      &quot;error&quot;: null
+    },
+    {
+      &quot;label&quot;: &quot;Borderline&quot;,
+      &quot;desc&quot;: &quot;Near-ADP mid/late \u2014 judgment call&quot;,
+      &quot;player&quot;: &quot;OG Anunoby&quot;,
+      &quot;pick_number&quot;: 45,
+      &quot;adp&quot;: 42.0,
+      &quot;rank&quot;: 43,
+      &quot;score&quot;: 1.0,
+      &quot;score_conf&quot;: 0.17,
+      &quot;choice&quot;: &quot;wait&quot;,
+      &quot;choice_conf&quot;: 0.35,
+      &quot;verdict&quot;: &quot;UNCERTAIN&quot;,
+      &quot;verdict_text&quot;: &quot;UNCERTAIN: choice confidence 0.350 &lt; 0.7; score confidence 0.170 &lt; 0.7 \u2014 surface for human review, do not auto-act&quot;,
+      &quot;model&quot;: &quot;jev-1.13.0&quot;,
+      &quot;request_id&quot;: &quot;req_01a0c0cfad797ac89be24f2969b50414&quot;,
+      &quot;ok&quot;: true,
+      &quot;error&quot;: null
+    }
+  ]
+}</pre>
+  </details>
+
+  <p class="note">
+    Generated locally from <code>scripts/pick_quality_jev.py</code> on branch spike/typesafe-pick-quality.
+    Demo state hardcodes roster/board context; only player / pick / ADP / rank vary per row.
+    Auto-suggest gate: both confidences ≥ 0.7. Preview only — do not deploy over tony-draft-lab.
+  </p>
+</body>
+</html>
