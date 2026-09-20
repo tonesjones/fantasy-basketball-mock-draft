@@ -185,7 +185,10 @@ body{background:radial-gradient(ellipse at top right,#19352f66,transparent 55%),
 #md .pick-coach .pc-name{font-size:16px;font-weight:700;letter-spacing:-.2px}
 #md .pick-coach .pc-meta{font-size:12px;margin-top:4px}
 #md .pick-coach .pc-score{font-size:20px;font-weight:800;letter-spacing:-.4px;color:var(--hatch-widget-accent)}
-#md .pick-coach .pc-choice{font-size:14px;font-weight:700;margin-top:4px;text-transform:capitalize}
+#md .pick-coach .pc-choice{display:inline-block;font-size:11px;font-weight:700;line-height:1.4;margin-top:6px;padding:2px 9px;border:1px solid transparent;border-radius:999px;text-transform:capitalize;letter-spacing:.2px}
+#md .pick-coach .pc-choice-take{color:#85e5bc;background:#143d2e;border-color:#2d7258}
+#md .pick-coach .pc-choice-wait{color:var(--hatch-widget-muted);background:var(--hatch-widget-surface-muted);border-color:var(--hatch-widget-border)}
+#md .pick-coach .pc-choice-reach{color:#ffd479;background:#493a1c;border-color:#80652a}
 #md .pick-coach .pc-why,#md .pick-coach .pc-conf{font-size:12px;margin:8px 0 0;line-height:1.5}
 #md .pick-coach .pc-uncertain-title{font-size:14px;font-weight:600;margin:0 0 4px;color:var(--hatch-widget-text)}
 #md .pick-coach .pc-uncertain-sub{margin:0;font-size:12px}
@@ -884,12 +887,18 @@ function refreshPickCoach(){
       var confEl=still.querySelector(".pc-conf");
       var label=(window.PickCoach.scoreWord&&window.PickCoach.scoreWord(res.score))||res.scoreLabel||String(res.score);
       if(scoreEl)scoreEl.textContent=label;
-      if(choiceEl)choiceEl.textContent=res.choice||"";
+      if(choiceEl){
+        var choice=res.choice||"";
+        var choiceKind=choice==="take"?"take":choice==="reach"?"reach":"wait";
+        choiceEl.className="pc-choice pc-choice-"+choiceKind;
+        choiceEl.textContent=choice;
+      }
       if(whyEl)whyEl.textContent=res.why||"";
       if(confEl){
         var sc=res.scoreConfidence!=null?Number(res.scoreConfidence):null;
         var cc=res.choiceConfidence!=null?Number(res.choiceConfidence):null;
-        confEl.textContent=(sc!=null&&cc!=null)?("Confidence "+sc.toFixed(2)+" / "+cc.toFixed(2)):"";
+        var conf=sc!=null&&cc!=null?Math.min(sc,cc):sc!=null?sc:cc;
+        confEl.textContent=conf!=null&&isFinite(conf)?("Confidence "+Math.round(conf*100)+"%"):"";
       }
     }else if(res.error){
       var sub=still.querySelector(".pc-uncertain-sub");
@@ -1037,7 +1046,7 @@ function myRoster(){
 function renderSide(){
   var s=el("mdside");if(!s)return;
   if(state.view==="coach"){
-    s.innerHTML='<h3>Pick coach</h3><p class="muted">Advisory only — never auto-drafts. Stub pending real Jev hook.</p>'+pickCoachShellHtml();
+    s.innerHTML='<h3>Pick coach</h3><p class="muted">Advisory preview — never auto-drafts.</p>'+pickCoachShellHtml();
     refreshPickCoach();
     return;
   }

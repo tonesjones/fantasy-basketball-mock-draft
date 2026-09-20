@@ -21,6 +21,7 @@ remote.
   real TypeSafe/Jev `/api/pick-quality` hook.
 - Docs: `docs/pick-coach.md`. No PLAYERS / DATA_VERSION / draft-engine changes.
   No production deploy in this PR.
+- **Polish** — take/wait/reach are quiet mint/muted/warm chips, suggest confidence is one percent, and the panel says “Advisory preview.”
 
 ## Draft Lab UX polish (2026-09-20)
 - **One theme** — unified on the Draft Lab mint dark system; hatch blue
