@@ -1,0 +1,2 @@
+# Spike-only deps for scripts/pick_quality_jev.py (not used by the static draft UI).
+typesafe-sdk>=0.7.0

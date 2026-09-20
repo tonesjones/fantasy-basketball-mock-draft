@@ -5,6 +5,16 @@ Covers the working copy at
 Pushes happen on demand, so the newest entries here may be ahead of the
 remote.
 
+## Spike: TypeSafe (Jev) pick-quality (2026-09-20)
+- **Spike only** — not production; does not change `index.html` draft UX.
+- Adds `scripts/pick_quality_jev.py`: one `TypeSafeClient().system_one(...)`
+  call (model `jev-latest`) with Score (pick quality levels) + Choice
+  (`take` | `wait` | `reach`) over a hardcoded mid-draft JSON state.
+- Auto-suggest only when both answer confidences are ≥ 0.7; otherwise
+  surfaces UNCERTAIN for human review.
+- `scripts/requirements-typesafe.txt` (`pip install typesafe-sdk`) and
+  `docs/spike-typesafe-pick-quality.md` with run instructions.
+
 ## Draft Lab UX polish (2026-09-20)
 - **One theme** — unified on the Draft Lab mint dark system; hatch blue
   accent / focus rings and light-theme value badges no longer fight mint.

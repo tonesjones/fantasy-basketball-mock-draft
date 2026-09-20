@@ -57,6 +57,14 @@ The layout collapses to a single column with compact two-line player rows; all f
 - `scripts/` — `build-widget.py` (rebuilds the standalone in-chat widget), `build-playoff-data.py` and `import-playoff-schedule.py` (playoff schedule refresh).
 - `CHANGELOG.md` — dated change log. `OPEN-ME.txt` / `desktop-changes.patch` — desktop handoff notes.
 
+
+## Spikes
+
+- **TypeSafe pick-quality (spike)** — `scripts/pick_quality_jev.py` +
+  `docs/spike-typesafe-pick-quality.md`. One Jev System One call for
+  take/wait/reach; not wired into the UI. Requires `TYPESAFE_API_KEY` and
+  `pip install -r scripts/requirements-typesafe.txt`.
+
 ## Run it
 
 Open `index.html` directly, or serve this folder with any static server. Draft state is stored only in the browser that created it.
