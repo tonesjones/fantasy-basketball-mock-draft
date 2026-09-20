@@ -5,6 +5,22 @@ Covers the working copy at
 Pushes happen on demand, so the newest entries here may be ahead of the
 remote.
 
+## Draft Lab UX polish (2026-09-20)
+- **One theme** — unified on the Draft Lab mint dark system; hatch blue
+  accent / focus rings and light-theme value badges no longer fight mint.
+- **Calmer live draft** — position filters and sort chips sit behind a
+  progressive-disclosure panel; category scarcity is collapsed by default
+  with a quiet hottest-cats summary (capability retained).
+- **Mid-draft board + grades** — Draft board and Grades tabs are available
+  during the live draft (not only after complete); board/grades glance
+  gets a bit more side-column weight.
+- **aria-live turn status** — polite live region announces your pick, CPU
+  pick batches after sim/advance, and draft complete.
+- **Touch-friendly intel** — INJ badge expands detail on tap; scarcity
+  category chips expand top contributors on tap/keyboard (not hover-only).
+- `index.html` UI/CSS only; PLAYERS order, built-in ranks, DATA_VERSION, and
+  draft-core engine semantics unchanged.
+
 ## Built-in rank vs Yahoo ADP gap fix (2026-09-20)
 - **Rule** — single-pass re-insert of players with a published Yahoo ADP
   whose built-in rank is buried vs market: `(r − round-half-up(ADP)) ≥ 40`.
