@@ -5,6 +5,16 @@ Covers the working copy at
 Pushes happen on demand, so the newest entries here may be ahead of the
 remote.
 
+## Fix Pick coach dock trapping Room tabs (2026-09-20)
+- **Bug** — `#md.coach-dock-active { height:100dvh; overflow:hidden }` locked the whole
+  page so Room tabs (My team / Draft board / Grades / Pick coach) could end up
+  off-screen or unclickable after opening Pick coach on mobile.
+- **Fix** (`coach-dock-fix`) — overflow/height lock only on `.cols.coach-dock` +
+  panes; turn bar + Room tabs stay above the split with higher z-index.
+  `syncCoachDock()` runs on every `render()` so leaving coach clears
+  `coach-dock-active` / `coach-dock` immediately. Pick coach dock still splits
+  list/coach on ≤900px + your turn.
+
 ## Mobile Pick coach dock (2026-09-20)
 - **UX** — on ≤900px when Pick coach + your turn, `.cols.coach-dock` splits list (~60%) and `#pick-coach` dock (~40%) so focusing a `.prow` updates coach without page yo-yo scroll (`coach-dock-mobile`).
 

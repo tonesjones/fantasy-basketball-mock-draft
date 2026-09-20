@@ -200,19 +200,23 @@ body{background:radial-gradient(ellipse at top right,#19352f66,transparent 55%),
 
 /* Mobile Pick coach dock (≤900px): list + coach split; no page yo-yo on focus */
 /* coach-dock-mobile: distinctive marker for preview deploy verify */
+/* coach-dock-fix: overflow lock only on .cols — Room tabs stay clickable above dock */
 @media(max-width:900px){
-  #md.coach-dock-active{display:flex;flex-direction:column;height:100dvh;max-height:100dvh;overflow:hidden;padding-bottom:0;box-sizing:border-box}
+  /* Do NOT height/overflow-lock #md — that trapped Room tabs under 100dvh + overflow:hidden */
+  #md.coach-dock-active{display:flex;flex-direction:column;padding-bottom:0;box-sizing:border-box}
   #md.coach-dock-active .brandbar{flex-shrink:0;padding-bottom:12px;margin-bottom:12px}
-  #md.coach-dock-active #mdapp{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
-  #md.coach-dock-active .turnbar,#md.coach-dock-active .viewtabs,#md.coach-dock-active details.scarcity{flex-shrink:0}
+  #md.coach-dock-active #mdapp{display:flex;flex-direction:column}
+  /* Nav chrome above the split: never inside the overflow:hidden dock pane */
+  #md.coach-dock-active .turnbar,#md.coach-dock-active .viewtabs,#md.coach-dock-active details.scarcity,#md.coach-dock-active .datahealth{flex-shrink:0;position:relative;z-index:6}
   #md.coach-dock-active details.scarcity:not([open]){margin:6px 0}
-  #md .cols.coach-dock{flex:1;min-height:0;flex-direction:column;gap:0;align-items:stretch;overflow:hidden}
+  /* Viewport split lives only on .cols — list top / coach bottom */
+  #md .cols.coach-dock{display:flex;flex-direction:column;gap:0;align-items:stretch;overflow:hidden;height:min(70dvh,calc(100dvh - 240px));min-height:260px;max-height:70dvh;position:relative;z-index:1}
   #md .cols.coach-dock .avail{flex:1.5;flex-basis:0;min-height:0;width:100%;overflow:hidden;display:flex;flex-direction:column;padding-bottom:8px;border-radius:16px 16px 0 0}
   #md .cols.coach-dock .avail>h3{flex-shrink:0;margin-top:0}
   #md .cols.coach-dock .avail>input,#md .cols.coach-dock .avail>.filters-disclose{flex-shrink:0}
   #md .cols.coach-dock .plist{flex:1;min-height:0;max-height:none;overflow-y:auto;-webkit-overflow-scrolling:touch}
   #md .cols.coach-dock #mdpager{flex-shrink:0}
-  #md .cols.coach-dock .side{flex:1;flex-basis:0;min-height:0;width:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;border-radius:0 0 16px 16px;border-top:1px solid var(--hatch-widget-border);padding-top:10px;margin-top:0;box-shadow:0 -6px 18px #0003}
+  #md .cols.coach-dock .side{flex:1;flex-basis:0;min-height:0;width:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;border-radius:0 0 16px 16px;border-top:1px solid var(--hatch-widget-border);padding-top:10px;margin-top:0;box-shadow:0 -6px 18px #0003;position:relative;z-index:1}
   #md .cols.coach-dock .pc-dock-handle{display:flex;align-items:center;gap:8px;position:sticky;top:0;z-index:2;background:var(--hatch-widget-surface);padding:2px 0 10px;margin:0 0 4px;font-size:12px;font-weight:700;letter-spacing:.2px;color:var(--hatch-widget-text)}
   #md .cols.coach-dock .pc-dock-grip{display:block;width:36px;height:4px;border-radius:999px;background:var(--hatch-widget-border);margin-right:4px;flex-shrink:0}
   #md .cols.coach-dock .pc-side-title{display:none}
@@ -979,8 +983,18 @@ function syncCoachDock(){
   var on=state.phase==="draft"&&state.view==="coach"&&isUserTurn();
   var root=document.getElementById("md");
   var cols=document.querySelector("#md .cols");
-  if(root)root.classList.toggle("coach-dock-active",!!on);
-  if(cols)cols.classList.toggle("coach-dock",!!on);
+  if(root){
+    root.classList.toggle("coach-dock-active",!!on);
+    if(!on)root.classList.remove("coach-dock-active");
+  }
+  if(cols){
+    cols.classList.toggle("coach-dock",!!on);
+    if(!on)cols.classList.remove("coach-dock");
+  }
+  /* Leaving coach/board/grades/team or non-user-turn clears dock immediately */
+  if(!on&&root){
+    root.querySelectorAll(".cols.coach-dock").forEach(function(n){n.classList.remove("coach-dock");});
+  }
 }
 function updateCoachDockPeek(name){
   var lab=document.querySelector("#md .pc-dock-label");
@@ -1241,6 +1255,8 @@ function render(){
   if(state.phase==="setup")renderSetup();
   else if(state.phase==="done")renderDone();
   else renderDraft();
+  /* Every view/phase change: clear or restore dock (tabs must stay reachable) */
+  syncCoachDock();
 }
 render();
 })();
