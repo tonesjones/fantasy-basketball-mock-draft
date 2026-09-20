@@ -1,9 +1,88 @@
 # Changelog
 
+## Pick coach fix-up (source, soft errors, board context) (2026-09-20)
+- **Source of truth** — `.pc-source` shows **Jev** / **Stub · offline** /
+  **Unavailable**. On http(s), network `TypeError` → uncertain + quiet error
+  (never a stub suggest that looks live). `file://` still uses stub.
+- **Soft errors** — `res.error` copy is **unavailable ≠ low confidence**
+  (“Coach unavailable” / “Unavailable — not a low-confidence read”).
+- **Cache** — evaluate fingerprint `player|pick#|logLen`, TTL ~45s; abort via
+  `PickCoach.cancel` when leaving coach or draft ends.
+- **Board context** — `buildPickCoachPayload` sends `notableAvailable`,
+  `recentlyTaken`, `scarcityRem`, `priorityNeeds`; Function `buildState` maps
+  them into Jev `board_context`. Client board why stays display layer.
+- **Function harden** — CORS tightened to draft-lab / preview origins (not `*`);
+  secret name documented once (`TYPESAFE_API_KEY`); model pinned to
+  **`jev-1.13.0`**.
+- **README** — points at `docs/pick-coach.md` (no longer stub-only).
+- **Tests** — gate, uncertain/http TypeError, sourceLabel, fingerprint cache,
+  softAdpClause fixtures.
+- Preview-only: `tony-draft-lab-preview`. Prod `tony-draft-lab` untouched.
+- Live marker: `pc-source-truth`.
+
+
+## Richer Pick coach tones (2026-09-20)
+- **Strength row** — `#pick-coach` shows mint-border `.pc-chip` pills from `PLAYERS[i].c`
+  (same CATS strings as list row `pl.c.slice(0,4)`), including on uncertain.
+- **Why builder** — client-side board vocab: `fills thin {CAT} (N% left)` from
+  scarcity rem% ≤35 (same hot threshold as scarcity chips) ∩ strengths, plus
+  elite/strong tags, INJ note, soft ADP (“near ADP” / “value vs ADP” /
+  “can wait vs ADP” / “early vs ADP”). Prefers board why over opaque Jev text.
+- **Suggest path** — choice chip Take|Wait|Reach + one-line why; Quiet
+  Confidence N%; Poor–Excellent demoted (not hero).
+- **Uncertain path** — muted titles; strength chips still shown; optional muted
+  strengths-only line; no choice chip; no red.
+- Preview-only redeploy target: `tony-draft-lab-preview`. Prod `tony-draft-lab`
+  untouched.
+
 Covers the working copy at
 `github.com/tonesjones/fantasy-basketball-mock-draft` on `main`.
 Pushes happen on demand, so the newest entries here may be ahead of the
 remote.
+
+## Fix Pick coach dock trapping Room tabs (2026-09-20)
+- **Bug** — `#md.coach-dock-active { height:100dvh; overflow:hidden }` locked the whole
+  page so Room tabs (My team / Draft board / Grades / Pick coach) could end up
+  off-screen or unclickable after opening Pick coach on mobile.
+- **Fix** (`coach-dock-fix`) — overflow/height lock only on `.cols.coach-dock` +
+  panes; turn bar + Room tabs stay above the split with higher z-index.
+  `syncCoachDock()` runs on every `render()` so leaving coach clears
+  `coach-dock-active` / `coach-dock` immediately. Pick coach dock still splits
+  list/coach on ≤900px + your turn.
+
+## Mobile Pick coach dock (2026-09-20)
+- **UX** — on ≤900px when Pick coach + your turn, `.cols.coach-dock` splits list (~60%) and `#pick-coach` dock (~40%) so focusing a `.prow` updates coach without page yo-yo scroll (`coach-dock-mobile`).
+
+## Pick coach real TypeSafe/Jev hook (2026-09-20)
+- **API** — Cloudflare Pages Function `functions/api/pick-quality.js`:
+  `POST /api/pick-quality` → TypeSafe `POST https://api.typesafe.ai/v1/systemone`
+  with Bearer `TYPESAFE_API_KEY`, model `jev-latest`, Score (0–4) + Choice
+  take|wait|reach (spike `pick_quality_jev.py` semantics). Suggest only if both
+  confidences ≥ 0.7. Fail-soft HTTP 200 + `verdict: uncertain` + `error` on
+  missing key / timeout / API error. Never logs the API key.
+- **Client** — `pick-coach.js` prefers `/api/pick-quality`; soft API failures
+  stay uncertain (no silent stub). `file://` / network `TypeError` → stub with
+  `model: "stub"` so offline `index.html` still works. Debounce + abort stale.
+- **Docs** — `docs/pick-coach.md`: Pages secret + `wrangler pages dev` local
+  preview. **No** merge / **no** `tony-draft-lab` production deploy in this PR.
+
+## Pick coach advisory panel + stub (2026-09-20)
+- **UX** — new side-panel tab **Pick coach** (`data-view="coach"`) next to
+  My team / Draft board / Grades. Mint theme / density aligned with Draft Lab
+  polish (#2). Panel shell `#pick-coach` with `.pc-empty` / `.pc-wait` /
+  `.pc-loading` / `.pc-card` (`.pc-suggest` | `.pc-uncertain`) hooks for UX.
+- **Behavior** — usable on the user's turn only; CPU turn shows muted
+  “Available on your turn.” Focuses selected available player (else first
+  visible filtered row); updates on search/filter/click. Shows name, pick #,
+  ADP/rank, score words, take|wait|reach, one-line why, quiet confidence.
+  Low confidence / UNCERTAIN → muted “Not sure enough to suggest” — no red
+  badges, list chips, or banners. **Never auto-drafts.**
+- **Data** — `pick-coach.js` stub `PickCoach.evaluate` / `pickCoachEvaluate`
+  (ADP vs pick#, bias low confidence so UNCERTAIN is default). Stub pending
+  real TypeSafe/Jev `/api/pick-quality` hook.
+- Docs: `docs/pick-coach.md`. No PLAYERS / DATA_VERSION / draft-engine changes.
+  No production deploy in this PR.
+- **Polish** — take/wait/reach are quiet mint/muted/warm chips, suggest confidence is one percent, and the panel says “Advisory preview.”
 
 ## Draft Lab UX polish (2026-09-20)
 - **One theme** — unified on the Draft Lab mint dark system; hatch blue

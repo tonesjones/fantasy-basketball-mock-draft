@@ -57,6 +57,14 @@ The layout collapses to a single column with compact two-line player rows; all f
 - `scripts/` — `build-widget.py` (rebuilds the standalone in-chat widget), `build-playoff-data.py` and `import-playoff-schedule.py` (playoff schedule refresh).
 - `CHANGELOG.md` — dated change log. `OPEN-ME.txt` / `desktop-changes.patch` — desktop handoff notes.
 
+## Pick coach
+
+Advisory-only **Pick coach** side tab (user turn). Prefers live TypeSafe/Jev via
+`POST /api/pick-quality` on Pages preview (`tony-draft-lab-preview`); `file://`
+uses a labeled stub. See **`docs/pick-coach.md`** for secret name
+(`TYPESAFE_API_KEY`), pinned model (`jev-1.13.0`), CORS, and UX contract.
+Does not auto-draft. **Not ready for prod** — do not deploy `tony-draft-lab`.
+
 ## Run it
 
 Open `index.html` directly, or serve this folder with any static server. Draft state is stored only in the browser that created it.
