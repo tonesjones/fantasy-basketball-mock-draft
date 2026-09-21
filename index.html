@@ -26,6 +26,13 @@ html{background:#0b1320}body{background:#0b1320;margin:0;min-width:320px}
 #md select{background:var(--hatch-widget-surface);color:var(--hatch-widget-text);border:1px solid var(--hatch-widget-border);border-radius:8px;padding:6px 10px;font-size:14px}
 #md .turnbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--hatch-widget-surface);border:1px solid var(--hatch-widget-border);border-radius:12px;padding:10px 12px;margin:8px 0}
 #md .turnbar .you{font-weight:800;color:var(--hatch-widget-accent)}
+#md .livechip{font-size:11px;font-weight:800;letter-spacing:1px;color:#fff;background:#c33;border-radius:6px;padding:3px 8px}
+#md .setup-div{border:0;border-top:1px solid var(--hatch-widget-border);margin:22px 0 6px}
+#md .yhrow{display:flex;gap:8px;margin:10px 0;flex-wrap:wrap}
+#md .yhrow input{flex:1;min-width:220px}
+#md .yhrow textarea{flex:1;min-width:220px;min-height:54px;font-family:ui-monospace,SFMono-Regular,monospace;font-size:11px;word-break:break-all}
+#md .yhsync{margin:8px 0}
+#md .yhsync summary{cursor:pointer;font-size:13px;color:var(--muted,#888)}
 #md .cols{display:flex;gap:12px;align-items:flex-start}
 #md .avail{flex:1.4;min-width:0}
 #md .side{flex:1;min-width:0}
@@ -773,10 +780,25 @@ var HW=(typeof window!=="undefined"&&window.hatchWidget)?window.hatchWidget:null
 var DEFAULTS={phase:"setup",draftPos:6,rounds:13,log:[],q:"",f:"All",view:"team",sort:"cons",playoffStart:20,page:0,seed:123456789,rngState:123456789,userTurns:[],filtersOpen:false,scarcityOpen:false,focusPi:null};
 function freshState(){var seed=(Date.now()>>>0)||1;return Object.assign({},DEFAULTS,{seed:seed,rngState:seed,log:[],userTurns:[]});}
 function cleanState(raw){
-  var out=Object.assign({},DEFAULTS,raw||{}), used={};
+  var raw0=raw||{};
+  TEAMS=(raw0.yahooLive&&parseInt(raw0.yahooLive.teams,10))||12;
+  var out=Object.assign({},DEFAULTS,raw0), used={};
   out.draftPos=Math.max(1,Math.min(TEAMS,parseInt(out.draftPos,10)||DEFAULTS.draftPos));
-  out.rounds=Math.max(10,Math.min(15,parseInt(out.rounds,10)||DEFAULTS.rounds));
-  out.log=Array.isArray(out.log)?out.log.filter(function(pi){if(!CORE.validPlayerIndex(PLAYERS,[],pi)||used[pi])return false;used[pi]=true;return true;}).slice(0,TEAMS*out.rounds):[];
+  var rMin=out.yahooLive?5:10, rMax=out.yahooLive?20:15;
+  out.rounds=Math.max(rMin,Math.min(rMax,parseInt(out.rounds,10)||DEFAULTS.rounds));
+  /* log entries may be -1: a Yahoo pick outside the 270-player pool. -1s are
+     kept (duplicates allowed) so pick counting stays exact; yahooNames holds
+     the display name for those cells in lockstep. */
+  var yn=Array.isArray(raw0.yahooNames)?raw0.yahooNames:[];
+  var pairs=(Array.isArray(raw0.log)?raw0.log:[]).map(function(pi,i){return {pi:pi,nm:yn[i]!=null?yn[i]:null};});
+  pairs=pairs.filter(function(e){
+    if(e.pi===-1)return true;
+    if(!CORE.validPlayerIndex(PLAYERS,[],e.pi)||used[e.pi])return false;
+    used[e.pi]=true;return true;
+  }).slice(0,TEAMS*out.rounds);
+  out.log=pairs.map(function(e){return e.pi;});
+  out.yahooNames=pairs.map(function(e){return e.nm;});
+  out.yahooLive=(raw0.yahooLive&&parseInt(raw0.yahooLive.teams,10))?{teams:TEAMS,teamNames:raw0.yahooLive.teamNames||{}}:null;
   out.phase=out.log.length>=TEAMS*out.rounds?"done":(out.phase==="draft"?"draft":"setup");
   out.f=["All","PG","SG","SF","PF","C"].indexOf(out.f)>=0?out.f:"All";
   out.sort=["cons","rank","adp","last","lastTotal"].indexOf(out.sort)>=0?out.sort:"cons";
@@ -813,7 +835,7 @@ function setState(patch){
 window.addEventListener("hatch-widget-state",function(e){state=cleanState(e.detail.state);render();});
 function el(id){return document.getElementById(id);}
 function teamForPick(idx){return CORE.teamForPick(idx,TEAMS);}
-function teamName(t){return t===state.draftPos-1?"You":"CPU "+(t+1);}
+function teamName(t){if(state.yahooLive&&state.yahooLive.teamNames)return t===userTeam()?"You":(state.yahooLive.teamNames[String(t+1)]||("Team "+(t+1)));return t===state.draftPos-1?"You":"CPU "+(t+1);}
 function totalPicks(){return TEAMS*state.rounds;}
 function userTeam(){return state.draftPos-1;}
 function isUserTurn(){return state.log.length<totalPicks()&&teamForPick(state.log.length)===userTeam();}
@@ -842,6 +864,7 @@ function advance(){
   setState({log:next.log,rngState:next.rngState,phase:next.log.length>=totalPicks()?"done":"draft"});
 }
 function userDraft(pi){
+  if(state.yahooLive)return; /* picks happen in Yahoo; Draft Lab only mirrors */
   if(!isUserTurn()||!CORE.validPlayerIndex(PLAYERS,state.log,pi))return;
   var checkpoint={log:state.log.slice(),rngState:state.rngState};
   var name=PLAYERS[pi].n;
@@ -1434,6 +1457,84 @@ function refreshPickCoach(){
   });
 }
 
+/* ---- Yahoo live draft mode ----
+   Mirror a real Yahoo mock/live draft inside Draft Lab. The agent polls
+   Yahoo's draftresults and sends a compact sync code (tools/yahoo-copilot/
+   sync.py, yh1.<teams>.<slot>.<rounds>.~b64,...) in chat; this page decodes
+   it and hydrates state.log. Pool-matched picks store the PLAYERS index;
+   off-pool picks store -1 with the Yahoo name in the parallel
+   state.yahooNames array (see cleanState). Picks are still made in Yahoo
+   — Draft Lab is view + advice. */
+var _yahooNameMap=null;
+function yahooNorm(s){return String(s||"").normalize("NFKD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9 ]/g,"").replace(/\s+/g," ").trim();}
+function yahooPoolIndex(poolName){
+  if(!poolName)return -1;
+  if(!_yahooNameMap){_yahooNameMap={};for(var i=0;i<PLAYERS.length;i++)_yahooNameMap[yahooNorm(PLAYERS[i].n)]=i;}
+  var k=yahooNorm(poolName);
+  return (_yahooNameMap[k]!=null)?_yahooNameMap[k]:-1;
+}
+function b64dUrl(t){t=String(t||"").replace(/-/g,"+").replace(/_/g,"/");while(t.length%4)t+="=";var b=atob(t),u8=new Uint8Array(b.length);for(var i=0;i<b.length;i++)u8[i]=b.charCodeAt(i);return new TextDecoder().decode(u8);}
+function yahooDecode(raw){
+  try{
+    var code=String(raw||"").trim(),hi=code.indexOf("#");
+    if(hi>=0)code=code.slice(hi+1);
+    if(code.slice(0,4)!=="yh1.")return null;
+    var parts=code.split("."),teams=parseInt(parts[1],10),slot=parseInt(parts[2],10),rounds=parseInt(parts[3],10);
+    if(!(teams>=2&&teams<=20&&slot>=1&&slot<=teams&&rounds>=1&&rounds<=30))return null;
+    var payload=parts.slice(4).join("."),names=payload?payload.split(",").map(function(t){return b64dUrl(t.charAt(0)==="~"?t.slice(1):t);}):[];
+    return {teams:teams,slot:slot,rounds:rounds,names:names};
+  }catch(e){return null;}
+}
+function yahooApplyPicks(names,log,yn){
+  (names||[]).forEach(function(nm){
+    var pi=yahooPoolIndex(nm);
+    log.push(pi);yn.push(pi>=0?null:nm);
+  });
+}
+function yahooLoadCode(raw){
+  var status=function(m){var s=el("yhstatus")||el("yhsyncstatus");if(s)s.textContent=m;};
+  var d=yahooDecode(raw);
+  if(!d&&!String(raw||"").trim()){
+    var teams=parseInt((el("yhteams")||{value:"12"}).value,10)||12,slot=parseInt((el("yhslot")||{value:"6"}).value,10)||6,rounds=parseInt((el("yhrounds")||{value:"13"}).value,10)||13;
+    d={teams:teams,slot:Math.min(slot,teams),rounds:rounds,names:[]};
+  }
+  if(!d){status("That doesn't look like a draft sync code \u2014 paste the code or link from the chat.");return;}
+  var log=[],yn=[];
+  yahooApplyPicks(d.names,log,yn);
+  var keepView=state.view,keepQ=state.q,keepF=state.f,keepSort=state.sort,keepPW=state.playoffStart;
+  var fresh=freshState();
+  fresh.view=keepView;fresh.q=keepQ;fresh.f=keepF;fresh.sort=keepSort;fresh.playoffStart=keepPW;
+  fresh.yahooLive={teams:d.teams,teamNames:{}};
+  fresh.draftPos=d.slot;fresh.rounds=d.rounds;
+  fresh.log=log;fresh.yahooNames=yn;
+  fresh.phase=(log.length>=d.teams*d.rounds)?"done":"draft";
+  setState(fresh);
+  status(log.length?("Board synced \u2014 "+log.length+" of "+(d.teams*d.rounds)+" picks."):"Empty board ready. Paste a new code (or tap a new link) as picks come in.");
+}
+function yahooAdvice(){
+  try{
+    if(!state.yahooLive||typeof window.PickSignals==="undefined")return null;
+    var idx=state.log.length,tot=totalPicks();
+    if(idx>=tot)return null;
+    var taken={},i;for(i=0;i<state.log.length;i++)taken[state.log[i]]=1;
+    var PS=window.PickSignals;
+    if(!window._netVacCache&&typeof MOVES!=="undefined"&&typeof VACATED_USAGE!=="undefined")window._netVacCache=PS.netVacated(PLAYERS,MOVES,VACATED_USAGE);
+    var ctx={moves:(typeof MOVES!=="undefined")?MOVES:{},netVac:window._netVacCache||{},playoffStart:state.playoffStart||20};
+    var avail=[];for(i=0;i<PLAYERS.length;i++)if(!taken[i]&&!PLAYERS[i].inj)avail.push(PLAYERS[i]);
+    var ranked=avail.map(function(p){return {p:p,V:PS.trueValue(p,ctx).V};}).sort(function(a,b){return a.V-b.V;}).slice(0,8);
+    var ros=myRoster(),open=[];
+    ros.slots.forEach(function(e){if(!e.player)open.push(e.slot);});
+    var nxt2=-1;for(var j=idx+1;j<tot;j++)if(teamForPick(j)===userTeam()){nxt2=j;break;}
+    var vr={take:0,wait:1,reach:2,pass:3},best=null;
+    ranked.forEach(function(r){
+      var ev=buildPickSignals(r.p,idx+1,nxt2>=0?nxt2+1:idx+1+2*TEAMS,open,taken);
+      if(!ev)return;
+      var s={name:r.p.n,verdict:ev.verdict,valueAtPick:ev.valueAtPick};
+      if(!best||vr[s.verdict]<vr[best.verdict]||(vr[s.verdict]===vr[best.verdict]&&s.valueAtPick>best.valueAtPick))best=s;
+    });
+    return best;
+  }catch(e){return null;}
+}
 function renderSetup(){
   clearPlayoffHost();
   var h='<div class="season">Your draft room</div><h2>Build your next contender.</h2>';
@@ -1443,6 +1544,15 @@ function renderSetup(){
   h+='</div><h3>Rounds</h3><select id="mdrounds">';
   [10,11,12,13,14,15].forEach(function(r){h+='<option value="'+r+'"'+(state.rounds===r?' selected':'')+'>'+r+' rounds</option>';});
   h+='</select><div class="setup-actions"><button class="bigbtn" id="mdstart">Start Mock Draft</button></div>';
+  h+='<hr class="setup-div"><h3>Yahoo live draft</h3><div class="muted">Mirror a real Yahoo mock or live draft: your agent watches the Yahoo board and sends you a sync code in chat \u2014 paste it (or tap the link) and every pick so far comes off your board. No CPU picks; you draft in Yahoo, Draft Lab is the live board plus the engine\u2019s take on your turns. Before the draft starts, leave the code empty and set teams / slot / rounds.</div>';
+  h+='<div class="yhrow"><textarea id="yhcode" rows="3" placeholder="Paste the sync code or link from the chat (empty = fresh board)" aria-label="Draft sync code"></textarea></div>';
+  h+='<div class="yhrow"><select id="yhteams" aria-label="Teams">';
+  [8,10,12,14].forEach(function(t){h+='<option value="'+t+'"'+(t===12?' selected':'')+'>'+t+' teams</option>';});
+  h+='</select><select id="yhslot" aria-label="Your draft slot">';
+  for(var s2=1;s2<=14;s2++)h+='<option value="'+s2+'"'+(s2===6?' selected':'')+'>Slot '+s2+'</option>';
+  h+='</select><select id="yhrounds" aria-label="Rounds">';
+  [10,11,12,13,14,15].forEach(function(r){h+='<option value="'+r+'"'+(r===13?' selected':'')+'>'+r+' rounds</option>';});
+  h+='</select><button class="bigbtn" id="yhconnect">Load board</button></div><div class="muted" id="yhstatus" role="status"></div>';
   h+='<div class="muted" style="margin-top:8px">Drafts save automatically in this browser. Data version: '+DATA_VERSION+'. · <button type="button" class="textlink" id="mdclear">Clear saved draft</button></div>';
   h+=playoffSettingsHtml();
   h+=renderDataHealth();
@@ -1453,6 +1563,7 @@ function renderSetup(){
     var chosenPlayoff=state.playoffStart,chosenPos=state.draftPos,chosenRounds=parseInt(el("mdrounds").value,10);state=freshState();state.draftPos=chosenPos;state.rounds=chosenRounds;state.playoffStart=chosenPlayoff;state.phase="draft";save();advance();
   });
   el("mdclear").addEventListener("click",function(){restartDraft();});
+  el("yhconnect").addEventListener("click",function(){yahooLoadCode(el("yhcode").value);});
   wirePlayoffSettings(el("mdapp"));
 }
 function nextUserPickIdx(){
@@ -1461,7 +1572,7 @@ function nextUserPickIdx(){
   return -1;
 }
 function consRank(p){var a=p.adp,f=p.adpF;return a==null?(f==null?p.r:f):(f==null?a:(a+f)/2);}
-function vBadge(pi,idx){var p=PLAYERS[pi];if(p.adp==null)return "";var d=Math.round(p.adp)-(idx+1);if(d===0)return "";return '<span class="vdelta '+(d>0?'g':'b')+'" title="'+(d>0?'Value':'Reach')+' vs ADP '+p.adp+'">'+(d>0?'+':'')+d+'</span>';}
+function vBadge(pi,idx){if(pi<0)return "";var p=PLAYERS[pi];if(p.adp==null)return "";var d=Math.round(p.adp)-(idx+1);if(d===0)return "";return '<span class="vdelta '+(d>0?'g':'b')+'" title="'+(d>0?'Value':'Reach')+' vs ADP '+p.adp+'">'+(d>0?'+':'')+d+'</span>';}
 function sortLabel(s){
   return ({cons:"Consensus",rank:"Rank",adp:"ADP",last:"Last · PER",lastTotal:"Last · TOT"})[s]||"Consensus";
 }
@@ -1492,7 +1603,14 @@ function renderDraft(){
   var idx=state.log.length,round=Math.floor(idx/TEAMS)+1,team=idx<totalPicks()?teamForPick(idx):-1;
   var h='<div class="turnbar">';
   var liveCore="";
+  if(state.yahooLive)h+='<span class="livechip">LIVE · Yahoo draft</span>';
   if(state.phase==="done"){h+='<span><b>Draft complete.</b></span>';liveCore="Draft complete.";}
+  else if(isUserTurn()&&state.yahooLive){
+    h+='<span class="you">YOUR PICK — make it in Yahoo</span><span class="muted">Round '+round+', overall pick '+(idx+1)+' of '+totalPicks()+'</span>';
+    var adv=yahooAdvice();
+    if(adv)h+='<span class="nextpick">Engine\u2019s take: <b>'+esc(adv.name)+'</b> ('+adv.verdict+', '+(adv.valueAtPick>0?"+":"")+adv.valueAtPick+')</span>';
+    liveCore="Your pick in Yahoo. Round "+round+", overall pick "+(idx+1)+". Engine's take: "+(adv?adv.name:"—")+".";
+  }
   else if(isUserTurn()){h+='<span class="you">YOUR PICK</span><span class="muted">Round '+round+', overall pick '+(idx+1)+' of '+totalPicks()+'</span>';liveCore="Your pick. Round "+round+", overall pick "+(idx+1)+" of "+totalPicks()+".";}
   else{h+='<span><b>'+esc(teamName(team))+'</b> is picking...</span><span class="muted">Round '+round+', overall pick '+(idx+1)+'</span>';liveCore=teamName(team)+" is picking. Round "+round+", overall pick "+(idx+1)+".";}
   var nxt=nextUserPickIdx();
@@ -1500,9 +1618,10 @@ function renderDraft(){
   if(nxt>=0&&isUserTurn()){var nxt2=-1,tot2=totalPicks();for(var j=nxt+1;j<tot2;j++)if(teamForPick(j)===userTeam()){nxt2=j;break;}
     if(nxt2>=0)h+='<span class="nextpick">Your next pick: <b>#'+(nxt2+1)+'</b> ('+(nxt2-nxt)+' picks away)</span>';}
   h+='<span style="flex:1"></span>';
-  if(state.userTurns.length)h+='<button class="ghostbtn" id="mdundo">Undo my last pick</button>';
-  if(state.phase!=="done"&&!isUserTurn())h+='<button class="ghostbtn" id="mdsim">Sim to my pick</button>';
+  if(state.userTurns.length&&!state.yahooLive)h+='<button class="ghostbtn" id="mdundo">Undo my last pick</button>';
+  if(state.phase!=="done"&&!isUserTurn()&&!state.yahooLive)h+='<button class="ghostbtn" id="mdsim">Sim to my pick</button>';
   h+='<button class="ghostbtn" id="mdnew">Restart</button></div>';
+  if(state.yahooLive&&state.phase!=="done")h+='<details class="yhsync"><summary>Sync board</summary><div class="yhrow"><textarea id="yhcode2" rows="2" placeholder="Paste the latest sync code from the chat"></textarea><button class="ghostbtn" id="yhsync">Sync</button></div><div class="muted" id="yhsyncstatus" role="status"></div></details>';
   h+=renderScarcity();
   h+=viewTabsHtml();
   var glance=state.view==="board"||state.view==="grades"||state.view==="coach";
@@ -1531,13 +1650,14 @@ function renderDraft(){
   var sim=el("mdsim");if(sim)sim.addEventListener("click",advance);
   var undo=el("mdundo");if(undo)undo.addEventListener("click",undoUserPick);
   el("mdnew").addEventListener("click",restartDraft);
+  var yhs=el("yhsync");if(yhs)yhs.addEventListener("click",function(){yahooLoadCode(el("yhcode2").value);});
   renderList();renderSide();
   syncCoachDock();
   if(state.view==="coach")refreshPickCoach();
 }
 function renderList(){
   var taken={},i;for(i=0;i<state.log.length;i++)taken[state.log[i]]=1;
-  var q=state.q.toLowerCase(),f=state.f,ut=isUserTurn(),cands=[];
+  var q=state.q.toLowerCase(),f=state.f,ut=isUserTurn()&&!state.yahooLive,cands=[];
   for(i=0;i<PLAYERS.length;i++){
     if(taken[i])continue;var pl=PLAYERS[i];
     if(f!=="All"&&pl.p.indexOf(f)<0)continue;
@@ -1610,7 +1730,7 @@ function renderSide(){
       for(t=0;t<TEAMS;t++){
         var idx=r*TEAMS+(r%2===0?t:TEAMS-1-t);
         var cell='&nbsp;',cls=(t===userTeam()?'you':'');
-        if(idx<state.log.length){var pl=PLAYERS[state.log[idx]];cell=esc(pl.n)+' <span class="teamtag">'+esc(pl.t)+'</span>'+injBadge(pl)+vBadge(state.log[idx],idx);}
+        if(idx<state.log.length){var piB=state.log[idx];if(piB>=0){var pl=PLAYERS[piB];cell=esc(pl.n)+' <span class="teamtag">'+esc(pl.t)+'</span>'+injBadge(pl)+vBadge(piB,idx);}else{cell='<span class="muted">'+esc((state.yahooNames&&state.yahooNames[idx])||"off-board")+'</span>';}}
         else if(t===userTeam()){cls+=' future-you';}
         h+='<td class="'+cls+'">'+cell+'</td>';
       }
@@ -1629,7 +1749,8 @@ function renderSide(){
     h2+='<h3>My team ('+mine.length+'/'+state.rounds+')</h3><div class="rlist">';
     if(!mine.length)h2+='<div class="rrow"><span class="muted">No picks yet.</span></div>';
     mine.forEach(function(m){var pl=PLAYERS[m.pi];
-      h2+='<div class="rrow"><span class="rpick">'+pickLabel(m.idx)+'</span><span class="pname">'+esc(pl.n)+' <span class="teamtag">'+esc(pl.t)+'</span>'+injBadge(pl)+vBadge(m.pi,m.idx)+'</span><span class="ppos">'+posBadges(pl.p)+'</span></div>';});
+      if(pl)h2+='<div class="rrow"><span class="rpick">'+pickLabel(m.idx)+'</span><span class="pname">'+esc(pl.n)+' <span class="teamtag">'+esc(pl.t)+'</span>'+injBadge(pl)+vBadge(m.pi,m.idx)+'</span><span class="ppos">'+posBadges(pl.p)+'</span></div>';
+      else h2+='<div class="rrow"><span class="rpick">'+pickLabel(m.idx)+'</span><span class="pname">'+esc((state.yahooNames&&state.yahooNames[m.idx])||"off-board")+' <span class="muted">· off-board</span></span></div>';});
     h2+='</div>'+playoffRoster(mine);
     s.innerHTML=h2;
   }
@@ -1719,6 +1840,7 @@ function playoffBadge(pl){
  return '<span class="playoffbadge '+r+'" title="Schedule quality: '+r+' (2 games in a week = bad, 3 = ok, 4+ = good)">Playoffs W1 '+v[0]+' \u00b7 W2 '+v[1]+' \u00b7 W3 '+v[2]+' = '+window.PlayoffCore.total(v)+'</span>';
 }
 function playoffRoster(mine){
+ mine=mine.filter(function(m){return m.pi>=0;});
  var sum=window.PlayoffCore.summary(window.PlayoffData,mine.map(function(m){return PLAYERS[m.pi];}),state.playoffStart);
  var quiet=sum.games.map(function(n,i){return 'W'+(i+1)+' '+n;}).join(' \u00b7 ');
  var h='<details class="setup-details" id="mdplayoffroster"><summary><b>Playoff games \u00b7 your roster</b> <span class="muted">'+quiet+'</span></summary>';
@@ -1760,6 +1882,7 @@ function render(){
   syncCoachDock();
 }
 render();
+try{var _hm=/#(yh1\..*)$/.exec(location.hash||"");if(_hm&&state.phase==="setup")yahooLoadCode(_hm[1]);}catch(e){}
 })();
 </script>
 

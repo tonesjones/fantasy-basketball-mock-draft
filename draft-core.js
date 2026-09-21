@@ -38,7 +38,7 @@
     return {slots:filled,overflow:overflow};
   }
   function slotsForRounds(rounds, baseSlots){var slots=baseSlots.slice();while(slots.length<rounds)slots.push("BN");return slots;}
-  function teamEntries(players, log, team, teams){var out=[];log.forEach(function(pi,index){if(teamForPick(index,teams)===team)out.push({player:players[pi],pi:pi,index:index});});return out;}
+  function teamEntries(players, log, team, teams){var out=[];log.forEach(function(pi,index){var pl=players[pi];if(pl&&teamForPick(index,teams)===team)out.push({player:pl,pi:pi,index:index});});return out;}
   function positionalNeed(entries, candidate, slots){
     var before=assignRoster(entries,slots).slots.filter(function(x){return x.player&&x.slot!=="BN"&&x.slot!=="Util";}).length;
     var after=assignRoster(entries.concat([{player:candidate,pi:-1,index:-1}]),slots).slots.filter(function(x){return x.player&&x.slot!=="BN"&&x.slot!=="Util";}).length;

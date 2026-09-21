@@ -20,6 +20,26 @@ clicks in the draft room himself.
   `PLAYERS` literal from `index.html` in a vm sandbox — exactly the way
   the browser and the test suites do — then ranks available players by
   true value and evaluates the top candidates at the given pick.
+- `sync.py` — compact board codec for Draft Lab's Yahoo Live view.
+  `encode_sync(teams, slot, rounds, yahoo_names)` ->
+  `yh1.<teams>.<slot>.<rounds>.~b64,~b64,...`; `decode_sync` tolerates a
+  full `#`-link; `sync_code_for_state(state)` builds a code from a poll
+  state; `sync_link(base_url, ...)` builds a tappable link. The chat is
+  the transport: the agent sends the code/link, Tony taps or pastes it,
+  Draft Lab hydrates the board. ~2.5KB for a full 140-pick board. The
+  page maps names to its pool itself (diacritic-insensitive), so off-pool
+  Yahoo picks ride along as names.
+
+## Draft Lab Yahoo Live view (index.html)
+
+Setup screen: paste a sync code/link (or tap one from chat — the `#yh1.`
+fragment auto-loads), or start an empty board from the teams/slot/rounds
+selects. Mid-draft, a "Sync board" disclosure under the turn bar takes the
+latest code. Yahoo mode: no CPU picks, no draft buttons — Tony clicks in
+the Yahoo room; Draft Lab mirrors the board, his roster, and shows the
+engine's take on his turns. Picks outside the 270-player pool consume the
+correct pick slot, show the Yahoo name, and stay out of roster math.
+State persists in localStorage so a refresh resumes mid-draft.
 
 ## Auth
 
