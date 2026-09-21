@@ -1,4 +1,4 @@
-/* PickCoach tests: stub bias, 0.7 suggest / 0.5 lean gates, preview soft-fail → labeled stub,
+/* PickCoach tests: stub bias, TEMPORARY 0.55 suggest / 0.35 lean gates, fixtures, preview soft-fail → labeled stub,
  * non-preview https TypeError → uncertain (not stub), soft-error shape,
  * fingerprint cache, sourceLabel, softAdpClause fixtures. */
 var assert = require("assert");
@@ -31,36 +31,36 @@ assert.ok(PC, "PickCoach exported");
 // --- Stub heuristics ---
 var mid = PC.pickCoachEvaluate({ player: "X", pickNumber: 50, adp: 48, rank: 50 });
 assert.strictEqual(mid.verdict, "uncertain", "near-ADP should be uncertain");
-assert.ok(mid.scoreConfidence < 0.7);
+assert.ok(mid.scoreConfidence < 0.55);
 
 var value = PC.pickCoachEvaluate({ player: "Y", pickNumber: 80, adp: 40, rank: 40 });
 assert.strictEqual(value.verdict, "suggest", "large ADP fall should suggest");
 assert.strictEqual(value.choice, "take");
-assert.ok(value.scoreConfidence >= 0.7 && value.choiceConfidence >= 0.7);
+assert.ok(value.scoreConfidence >= 0.55 && value.choiceConfidence >= 0.55);
 assert.strictEqual(PC.scoreWord(value.score), "Excellent");
 
 var reach = PC.pickCoachEvaluate({ player: "Z", pickNumber: 20, adp: 55, rank: 55 });
 assert.strictEqual(reach.choice, "reach");
-assert.strictEqual(reach.verdict, "lean", "mid-gap reach is lean (≥0.5, <0.7)");
-assert.ok(reach.scoreConfidence >= 0.5 && reach.scoreConfidence < 0.7);
-assert.ok(reach.choiceConfidence >= 0.5 && reach.choiceConfidence < 0.7);
+assert.strictEqual(reach.verdict, "lean", "mid-gap reach is lean (≥0.35, <0.55)");
+assert.ok(reach.scoreConfidence >= 0.35 && reach.scoreConfidence < 0.55);
+assert.ok(reach.choiceConfidence >= 0.35 && reach.choiceConfidence < 0.55);
 
 // Near-ADP stays below lean floor
 var near = PC.pickCoachEvaluate({ player: "N", pickNumber: 50, adp: 49, rank: 50 });
 assert.strictEqual(near.verdict, "uncertain", "near-ADP below lean floor");
-assert.ok(Math.min(near.scoreConfidence, near.choiceConfidence) < 0.5);
+assert.ok(Math.min(near.scoreConfidence, near.choiceConfidence) < 0.35);
 
-// --- Gate: normalizeApiResult demotes suggest when conf < 0.7 ---
+// --- Gate: normalizeApiResult demotes suggest when conf < CONF_GATE ---
 var demoted = PC.normalizeApiResult({
   score: 3,
   scoreConfidence: 0.9,
   choice: "take",
-  choiceConfidence: 0.4,
+  choiceConfidence: 0.20,
   verdict: "suggest",
   model: "jev-1.13.0",
   why: "x",
 });
-assert.strictEqual(demoted.verdict, "uncertain", "gate demotes when choice conf low");
+assert.strictEqual(demoted.verdict, "uncertain", "gate demotes when choice conf below lean");
 
 var kept = PC.normalizeApiResult({
   score: 3,
@@ -72,12 +72,12 @@ var kept = PC.normalizeApiResult({
 });
 assert.strictEqual(kept.verdict, "suggest");
 
-// Lean band: both conf ≥ 0.5 and < 0.7 (client-side from confs; API may say uncertain)
+// Lean band: both conf ≥ 0.35 and < 0.55 (client-side from confs; API may say uncertain)
 var leanNorm = PC.normalizeApiResult({
   score: 2,
-  scoreConfidence: 0.62,
+  scoreConfidence: 0.48,
   choice: "take",
-  choiceConfidence: 0.55,
+  choiceConfidence: 0.42,
   verdict: "uncertain",
   model: "jev-1.13.0",
   why: "mid",
@@ -86,29 +86,40 @@ assert.strictEqual(leanNorm.verdict, "lean", "mid conf → lean");
 
 var leanEdge = PC.normalizeApiResult({
   score: 2,
-  scoreConfidence: 0.5,
+  scoreConfidence: 0.35,
   choice: "wait",
-  choiceConfidence: 0.5,
+  choiceConfidence: 0.35,
   verdict: "suggest",
   model: "jev-1.13.0",
 });
-assert.strictEqual(leanEdge.verdict, "lean", "exactly 0.5 is lean not suggest");
+assert.strictEqual(leanEdge.verdict, "lean", "exactly 0.35 is lean not suggest");
+
+var suggestEdge = PC.normalizeApiResult({
+  score: 3,
+  scoreConfidence: 0.55,
+  choice: "take",
+  choiceConfidence: 0.55,
+  verdict: "uncertain",
+  model: "jev-1.13.0",
+});
+assert.strictEqual(suggestEdge.verdict, "suggest", "exactly 0.55 is suggest");
 
 var belowLean = PC.normalizeApiResult({
   score: 2,
-  scoreConfidence: 0.49,
+  scoreConfidence: 0.34,
   choice: "take",
   choiceConfidence: 0.9,
   verdict: "suggest",
   model: "jev-1.13.0",
 });
-assert.strictEqual(belowLean.verdict, "uncertain", "min conf below 0.5 → uncertain");
+assert.strictEqual(belowLean.verdict, "uncertain", "min conf below 0.35 → uncertain");
 
 assert.strictEqual(PC.classifyVerdict(0.8, 0.75), "suggest");
-assert.strictEqual(PC.classifyVerdict(0.6, 0.55), "lean");
-assert.strictEqual(PC.classifyVerdict(0.4, 0.9), "uncertain");
-assert.strictEqual(PC.LEAN_GATE, 0.5);
-assert.strictEqual(PC.CONF_GATE, 0.7);
+assert.strictEqual(PC.classifyVerdict(0.48, 0.42), "lean");
+assert.strictEqual(PC.classifyVerdict(0.6, 0.55), "suggest");
+assert.strictEqual(PC.classifyVerdict(0.2, 0.9), "uncertain");
+assert.strictEqual(PC.LEAN_GATE, 0.35);
+assert.strictEqual(PC.CONF_GATE, 0.55);
 
 // SoftFail payload with error stays uncertain even with mid confs
 var softLean = PC.normalizeApiResult({
@@ -128,6 +139,30 @@ assert.ok(soft.error && /TYPESAFE_API_KEY/.test(soft.error));
 assert.strictEqual(PC.sourceLabel(soft), "Unavailable");
 assert.strictEqual(PC.sourceLabel(value), "Stub · offline");
 assert.strictEqual(PC.sourceLabel(kept), "Jev");
+
+// --- QA fixtures: leanDemo / coachFixture / forceConf (never Jev) ---
+var fixLean = PC.fixtureResult({ player: "Edwards", pickNumber: 5, adp: 8 }, { mode: "leanDemo", band: "lean" });
+assert.strictEqual(fixLean.verdict, "lean");
+assert.strictEqual(fixLean.model, "stub");
+assert.strictEqual(fixLean.fallback, "fixture");
+assert.ok(fixLean.scoreConfidence >= 0.35 && fixLean.scoreConfidence < 0.55);
+assert.strictEqual(PC.sourceLabel(fixLean), "Stub/Fixture");
+
+var fixSuggest = PC.fixtureResult({ player: "Jokic", pickNumber: 1, adp: 1 }, { mode: "forceConf", band: "suggest" });
+assert.strictEqual(fixSuggest.verdict, "suggest");
+assert.strictEqual(PC.sourceLabel(fixSuggest), "Stub/Fixture");
+
+var fixUnc = PC.fixtureResult({ player: "X", pickNumber: 50, adp: 50 }, { mode: "forceConf", band: "uncertain" });
+assert.strictEqual(fixUnc.verdict, "uncertain");
+
+var fixCoachLean = PC.fixtureResult({ player: "Edwards", pickNumber: 10, adp: 5 }, { mode: "coachFixture", band: null });
+assert.strictEqual(fixCoachLean.verdict, "lean", "coachFixture mid gap → lean");
+assert.notStrictEqual(fixCoachLean.model, "jev-1.13.0");
+
+var fixCoachSug = PC.fixtureResult({ player: "Y", pickNumber: 40, adp: 20 }, { mode: "coachFixture", band: null });
+assert.strictEqual(fixCoachSug.verdict, "suggest", "coachFixture large value → suggest");
+
+
 
 // --- Fingerprint ---
 assert.strictEqual(

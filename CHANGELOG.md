@@ -1,5 +1,22 @@
 # Changelog
 
+## Pick coach TEMPORARY gates 0.55/0.35 + fixture lean demo (2026-09-20)
+- **TEMPORARY** client gates: **suggest** ≥ **0.55**, **lean** ≥ **0.35** (&lt;0.55),
+  else uncertain; softFail → uncertain. Prior 0.7/0.5 hid mid-conf live Jev
+  (near-zero scoreConfidence → all uncertain). Documented temporary in code +
+  `docs/pick-coach.md`.
+- Always show quiet conf line: `Confidence N% · suggest|lean|uncertain`
+  (`N=round(min*100)`). Soft-fail unavailable may omit conf %.
+- `functions/api/pick-quality.js`: SCORE/CHOICE instructions ask calibrated
+  confidence (clarity vs ADP/board — do not collapse ~0 on Average/Good). Model
+  stays **jev-1.13.0**. `buildState` already accepts top-level
+  `notableAvailable` / `recentlyTaken` / `scarcityRem`.
+- QA: `?leanDemo=1` / `?coachFixture=1` / `?forceConf=` force Stub/Fixture paths
+  (never Jev). UX lean paint URL: `/?leanDemo=1`.
+- Tests updated. Preview **tony-draft-lab-preview** only — prod **tony-draft-lab**
+  untouched. Hierarchy #14 parked.
+
+
 ## Pick coach lean band (0.5–0.7) (2026-09-20)
 - Dual **0.7** gate was too strict — almost always “Not sure enough…” except elite
   (e.g. Wembanyama). Add **lean** when `min(scoreConf, choiceConf) ≥ 0.5` and &lt; 0.7.

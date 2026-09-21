@@ -7,15 +7,22 @@
  * to labeled stub (model:"stub", source "Stub") so QA can exercise suggest /
  * lean / "Not sure enough…" — never labeled as Jev.
  * Other http(s) hosts: network TypeError → uncertain + quiet error (NOT stub).
+ * QA query (preview): ?leanDemo=1 | ?coachFixture=1 | ?forceConf=suggest|lean|uncertain
+ * forces Stub/Fixture paths (never Jev) for paint QA.
  */
 (function (root) {
   "use strict";
 
   var SCORE_WORDS = ["Poor", "Below avg", "Average", "Good", "Excellent"];
-  /** Full suggest when min(scoreConf, choiceConf) ≥ CONF_GATE. */
-  var CONF_GATE = 0.7;
-  /** Lean band when min ≥ LEAN_GATE and < CONF_GATE (not softFail). */
-  var LEAN_GATE = 0.5;
+  /**
+   * TEMPORARY gates (2026-09-20): lowered so live Jev mid-conf paints lean/suggest.
+   * Live samples often return scoreConfidence ~0–0.65; prior 0.7/0.5 hid almost all
+   * mid band. Revisit after prompt calibration lands. softFail → uncertain always.
+   * Full suggest when min(scoreConf, choiceConf) ≥ CONF_GATE.
+   */
+  var CONF_GATE = 0.55;
+  /** TEMPORARY: lean when min ≥ LEAN_GATE and < CONF_GATE (not softFail). */
+  var LEAN_GATE = 0.35;
   var DEBOUNCE_MS = 200;
   var CACHE_TTL_MS = 45000;
   var API_PATH = "/api/pick-quality";
@@ -34,7 +41,7 @@
 
   /**
    * Client-side verdict from confidences (API may return raw confs only).
-   * suggest ≥ 0.7; lean ≥ 0.5 and < 0.7; else uncertain.
+   * TEMPORARY: suggest ≥ 0.55; lean ≥ 0.35 and < 0.55; else uncertain.
    * SoftFail / error paths should not call this — stay uncertain.
    */
   function classifyVerdict(scoreConf, choiceConf) {
@@ -91,6 +98,127 @@
     // Never carry soft-fail error onto stub — would force Unavailable UI.
     delete stub.error;
     return stub;
+  }
+
+
+  /** Parse preview QA query: ?coachFixture=1 | ?leanDemo=1 | ?forceConf=suggest|lean|uncertain */
+  function readCoachQaMode() {
+    try {
+      if (typeof location === "undefined" || !location.search) return null;
+      var search = String(location.search || "");
+      if (search.charAt(0) === "?") search = search.slice(1);
+      var params = Object.create(null);
+      if (search) {
+        search.split("&").forEach(function (pair) {
+          var i = pair.indexOf("=");
+          var k = i >= 0 ? pair.slice(0, i) : pair;
+          var v = i >= 0 ? pair.slice(i + 1) : "";
+          try {
+            k = decodeURIComponent(k.replace(/\+/g, " "));
+            v = decodeURIComponent(v.replace(/\+/g, " "));
+          } catch (eDec) {}
+          params[String(k)] = String(v);
+        });
+      }
+      var force = String(params.forceConf || "").toLowerCase();
+      if (force === "suggest" || force === "lean" || force === "uncertain") {
+        return { mode: "forceConf", band: force };
+      }
+      if (params.leanDemo === "1" || params.leanDemo === "true") {
+        return { mode: "leanDemo", band: "lean" };
+      }
+      if (params.coachFixture === "1" || params.coachFixture === "true") {
+        return { mode: "coachFixture", band: null };
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /**
+   * Deterministic Stub/Fixture result — never labeled Jev.
+   * coachFixture: map ADP/pick gap → suggest|lean|uncertain.
+   * leanDemo / forceConf: fixed band for UX paint QA.
+   */
+  function fixtureResult(state, qa) {
+    var band = (qa && qa.band) || null;
+    var choice = "wait";
+    var score = 2;
+    var scoreConf = 0.28;
+    var choiceConf = 0.26;
+    var why = "Fixture — deterministic QA path (not Jev).";
+
+    if (!band && qa && qa.mode === "coachFixture") {
+      var pick = Number(state && state.pickNumber) || 1;
+      var adp = state && state.adp != null ? Number(state.adp) : null;
+      var rank = state && state.rank != null ? Number(state.rank) : null;
+      var market = adp != null ? adp : rank != null ? rank : pick;
+      var delta = pick - market;
+      if (delta >= 8) band = "suggest";
+      else if (Math.abs(delta) >= 3) band = "lean";
+      else band = "uncertain";
+      // Prefer take on value, reach on early, wait near market — Edwards-like mid lean uses wait/take.
+      if (delta >= 3) {
+        choice = "take";
+        score = 3;
+      } else if (delta <= -3) {
+        choice = "reach";
+        score = 1;
+      } else {
+        choice = "wait";
+        score = 2;
+      }
+    }
+
+    if (band === "suggest") {
+      scoreConf = 0.72;
+      choiceConf = 0.68;
+      if (!qa || qa.mode !== "coachFixture") {
+        choice = "take";
+        score = 4;
+      }
+      why = "Fixture suggest — high confidence stub (not Jev).";
+    } else if (band === "lean") {
+      // Mid-conf Edwards-like: paints outline Lean take/wait/reach + Soft lean.
+      scoreConf = 0.48;
+      choiceConf = 0.42;
+      if (!qa || qa.mode === "leanDemo" || qa.mode === "forceConf") {
+        choice = "take";
+        score = 2;
+      }
+      why = "Fixture lean — mid confidence stub (not Jev). Soft lean path for UX QA.";
+    } else {
+      band = "uncertain";
+      scoreConf = 0.22;
+      choiceConf = 0.18;
+      choice = null;
+      score = null;
+      why = "Fixture uncertain — low confidence stub (not Jev).";
+    }
+
+    var verdict = classifyVerdict(
+      scoreConf,
+      choiceConf
+    );
+    // forceConf/leanDemo must honor requested band even if classify drifts
+    if (qa && (qa.mode === "forceConf" || qa.mode === "leanDemo") && qa.band) {
+      verdict = qa.band;
+    }
+
+    return {
+      score: score,
+      scoreConfidence: scoreConf,
+      choice: choice,
+      choiceConfidence: choiceConf,
+      verdict: verdict,
+      why: why,
+      model: "stub",
+      scoreLabel: score != null ? scoreWord(score) : undefined,
+      fallback: "fixture",
+      fixture: true,
+      stale: false,
+    };
   }
 
   /** Fingerprint: player + pick# + logLen (board identity for cache). */
@@ -156,9 +284,9 @@
       choice = "reach";
     }
 
-    // Bias: rare large-value → suggest (≥0.7); mid gap → lean (≥0.5); else uncertain.
-    var scoreConf = delta >= 12 ? 0.78 : Math.abs(delta) >= 6 ? 0.55 : 0.35;
-    var choiceConf = delta >= 12 ? 0.76 : Math.abs(delta) >= 6 ? 0.52 : 0.32;
+    // Bias under TEMPORARY gates: large-value → suggest (≥0.55); mid → lean (≥0.35); else uncertain.
+    var scoreConf = delta >= 12 ? 0.72 : Math.abs(delta) >= 6 ? 0.48 : 0.28;
+    var choiceConf = delta >= 12 ? 0.70 : Math.abs(delta) >= 6 ? 0.45 : 0.26;
 
     var why;
     if (adp != null) {
@@ -239,7 +367,10 @@
     if (res.error) return "Unavailable";
     var m = String(res.model || "");
     if (m === "stub" || res.fallback) {
-      // Preview soft-fail stub is QA-only — never look like Jev.
+      // Preview soft-fail / fixture stub is QA-only — never look like Jev.
+      if (res.fallback === "fixture" || res.fixture) {
+        return "Stub/Fixture";
+      }
       if (
         res.fallback === "preview-softfail" ||
         res.fallback === "preview-network"
@@ -292,6 +423,15 @@
   function runEvaluate(state, mySeq) {
     if (mySeq !== _seq) {
       return Promise.resolve({ stale: true, verdict: "uncertain" });
+    }
+
+    var qa = readCoachQaMode();
+    if (qa) {
+      try {
+        return Promise.resolve(fixtureResult(state || {}, qa));
+      } catch (eFix) {
+        return Promise.resolve(uncertainResult("Fixture failed", "stub"));
+      }
     }
 
     var fp = fingerprint(state);
@@ -470,6 +610,8 @@
     isStubbableSoftFail: isStubbableSoftFail,
     labeledStubResult: labeledStubResult,
     classifyVerdict: classifyVerdict,
+    readCoachQaMode: readCoachQaMode,
+    fixtureResult: fixtureResult,
     CONF_GATE: CONF_GATE,
     LEAN_GATE: LEAN_GATE,
     CACHE_TTL_MS: CACHE_TTL_MS,

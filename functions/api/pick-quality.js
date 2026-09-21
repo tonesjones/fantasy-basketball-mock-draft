@@ -12,6 +12,7 @@
  *   npx wrangler pages secret put TYPESAFE_API_KEY --project-name tony-draft-lab-preview
  */
 
+/** API suggest hint only; client TEMPORARY gates (0.55/0.35) reclassify lean. */
 const CONF_GATE = 0.7;
 /** Pin versioned id (aliases like jev-latest may move). */
 const MODEL = "jev-1.13.0";
@@ -205,7 +206,13 @@ function buildQuestions() {
       instructions:
         "How good is drafting `candidate` at this pick right now, given " +
         "`roster_needs`, ADP/rank vs `draft.pick_number`, and `board_context`? " +
-        "Use the ordered levels in criteria (lowest to highest).",
+        "Use the ordered levels in criteria (lowest to highest). " +
+        "IMPORTANT — calibrated confidence: report how clear the ranking is vs " +
+        "ADP and the remaining board, NOT how elite the player is. Average or " +
+        "Good market picks should still carry moderate-to-high confidence " +
+        "(roughly 0.45–0.85) when the grade is clear relative to ADP/alternatives. " +
+        "Reserve near-zero confidence only when evidence is contradictory or sparse. " +
+        "Do not collapse score confidence toward 0 just because the pick is Average.",
       criteria: SCORE_CRITERIA,
     },
     choice: {
@@ -213,7 +220,12 @@ function buildQuestions() {
       instructions:
         "Should the user take this player now, wait for a later pick, or " +
         "treat drafting them now as a reach? Consider ADP vs pick number, " +
-        "positional/category needs, and who else is available.",
+        "positional/category needs, and who else is available. " +
+        "IMPORTANT — calibrated confidence: confidence reflects clarity of the " +
+        "take/wait/reach decision given ADP and board context, not star power. " +
+        "Clear market-rate decisions (including wait on Average picks) should " +
+        "keep moderate confidence; use very low confidence only when take vs " +
+        "wait vs reach is genuinely ambiguous.",
       criteria: CHOICE_CRITERIA,
     },
   };

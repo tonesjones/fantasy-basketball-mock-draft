@@ -897,7 +897,7 @@ function pickCoachShellHtml(){
     +'<div class="pc-playoff muted" hidden></div>'
     +'<div class="pc-suggest"><div class="pc-choice"></div><p class="pc-why muted"></p><p class="pc-conf muted"></p><p class="pc-score-quiet muted" hidden></p><div class="pc-score" hidden></div></div>'
     +'<div class="pc-lean" hidden><div class="pc-choice pc-choice-lean"></div><p class="pc-lean-sub muted">Soft lean \u2014 mid confidence</p><p class="pc-why muted"></p><p class="pc-conf muted"></p></div>'
-    +'<div class="pc-uncertain"><p class="pc-uncertain-title">Not sure enough to suggest</p><p class="pc-uncertain-sub muted">Low confidence \u2014 your call</p><p class="pc-uncertain-why muted" hidden></p></div>'
+    +'<div class="pc-uncertain"><p class="pc-uncertain-title">Not sure enough to suggest</p><p class="pc-uncertain-sub muted">Low confidence \u2014 your call</p><p class="pc-uncertain-why muted" hidden></p><p class="pc-conf muted" hidden></p></div>'
     +'</div></section>';
 }
 function pcShow(root, which){
@@ -1214,14 +1214,16 @@ function refreshPickCoach(){
       verdict=window.PickCoach.classifyVerdict(scN,ccN);
     }else{
       var minC=Math.min(scN,ccN);
-      verdict=(isFinite(minC)&&minC>=0.7)?"suggest":(isFinite(minC)&&minC>=0.5)?"lean":"uncertain";
+      verdict=(isFinite(minC)&&minC>=0.55)?"suggest":(isFinite(minC)&&minC>=0.35)?"lean":"uncertain";
     }
     if(suggest)suggest.hidden=verdict!=="suggest";
     if(lean)lean.hidden=verdict!=="lean";
     if(uncertain)uncertain.hidden=verdict!=="uncertain";
-    function pcFmtConf(sc,cc){
+    function pcFmtConf(sc,cc,band){
       var conf=isFinite(sc)&&isFinite(cc)?Math.min(sc,cc):isFinite(sc)?sc:cc;
-      return isFinite(conf)?("Confidence "+Math.round(conf*100)+"%"):"";
+      if(!isFinite(conf))return "";
+      var b=band||"uncertain";
+      return "Confidence "+Math.round(conf*100)+"% \u00b7 "+b;
     }
     var choice=res.choice||"";
     var choiceKind=choice==="take"?"take":choice==="reach"?"reach":"wait";
@@ -1237,7 +1239,7 @@ function refreshPickCoach(){
       }
       var boardWhy=buildPickCoachWhy(pl, choiceKind, payload.pickNumber, res.why||"");
       if(whyEl)whyEl.textContent=boardWhy||(res.why||"");
-      if(confEl)confEl.textContent=pcFmtConf(scN,ccN);
+      if(confEl){confEl.textContent=pcFmtConf(scN,ccN,verdict);confEl.hidden=!confEl.textContent;}
       if(quietEl){
         var label=(window.PickCoach.scoreWord&&window.PickCoach.scoreWord(res.score))||res.scoreLabel||"";
         if(label&&res.score!=null){quietEl.textContent=label;quietEl.hidden=false;}
@@ -1256,7 +1258,7 @@ function refreshPickCoach(){
       if(leanSub)leanSub.textContent="Soft lean — mid confidence";
       var leanBoardWhy=buildPickCoachWhy(pl, choiceKind, payload.pickNumber, res.why||"");
       if(leanWhy)leanWhy.textContent=leanBoardWhy||(res.why||"");
-      if(leanConf)leanConf.textContent=pcFmtConf(scN,ccN);
+      if(leanConf){leanConf.textContent=pcFmtConf(scN,ccN,verdict);leanConf.hidden=!leanConf.textContent;}
     }else{
       var uTitle=still.querySelector(".pc-uncertain-title");
       var uSub=still.querySelector(".pc-uncertain-sub");
@@ -1277,6 +1279,15 @@ function refreshPickCoach(){
       if(uWhy){
         uWhy.textContent=uBits.join(" · ");
         uWhy.hidden=!uBits.length;
+      }
+      var uConf=still.querySelector(".pc-uncertain .pc-conf");
+      if(uConf){
+        // Soft-fail may keep error quiet — skip conf % line when unavailable.
+        if(softFail){uConf.textContent="";uConf.hidden=true;}
+        else{
+          uConf.textContent=pcFmtConf(scN,ccN,verdict);
+          uConf.hidden=!uConf.textContent;
+        }
       }
     }
     pcShow(still,"pc-card");

@@ -38,15 +38,36 @@ UI source marker (`.pc-source`): **Jev** | **Stub** (preview soft-fail) |
 Tooltip may show the raw `model` id (e.g. `jev-1.13.0` / `stub`).
 
 **Confidence gates** (client-side from `min(scoreConfidence, choiceConfidence)`;
-API may return raw confs — Function unchanged):
+API may return raw confs — Function verdict hint unchanged at 0.7):
 
 | Band | Gate | UI |
 |------|------|-----|
-| **suggest** | min ≥ **0.7** | Filled Take / Wait / Reach chip |
-| **lean** | min ≥ **0.5** and &lt; 0.7 | Outline `.pc-choice-lean-*` — `Lean take|wait|reach`, subline “Soft lean — mid confidence” |
-| **uncertain** | min &lt; 0.5 | “Not sure enough to suggest” (no choice chip); softFail stays here |
+| **suggest** | min ≥ **0.55** | Filled Take / Wait / Reach chip |
+| **lean** | min ≥ **0.35** and &lt; 0.55 | Outline `.pc-choice-lean-*` — `Lean take|wait|reach`, subline “Soft lean — mid confidence” |
+| **uncertain** | min &lt; 0.35 | “Not sure enough to suggest” (no choice chip); softFail stays here |
+
+**TEMPORARY (2026-09-20):** gates lowered from 0.7 / 0.5 because live Jev often
+returns near-zero `scoreConfidence` on Average/Good picks, so `min(score,choice)`
+collapsed everything to uncertain. SCORE/CHOICE prompts now ask for calibrated
+confidence (clarity vs ADP/board, not star power). Revisit gates after live
+confs stabilize.
+
+Always paint a quiet conf line on suggest / lean / uncertain:
+`Confidence N% · suggest|lean|uncertain` (`N = round(min*100)`). Soft-fail
+unavailable may omit the conf % line (error stays quiet).
 
 SoftFail / unavailable (`res.error`) → **uncertain** always (never lean).
+
+### Preview QA fixtures (never Jev)
+
+| Query | Effect |
+|-------|--------|
+| `?leanDemo=1` | Force mid-conf **lean** Stub/Fixture (outline Lean take + Soft lean) |
+| `?coachFixture=1` | Deterministic suggest / lean / uncertain from ADP gap; source **Stub/Fixture** |
+| `?forceConf=suggest` / `lean` / `uncertain` | Force that band |
+
+Open e.g. https://tony-draft-lab-preview.pages.dev/?leanDemo=1 — start a mock,
+select a player on your turn, open Pick coach.
 
 Client cache: fingerprint `player|pickNumber|logLen`, TTL ~45s. Leaving Pick
 coach or ending the draft calls `PickCoach.cancel()` (aborts in-flight).
@@ -111,10 +132,10 @@ preview `*.pages.dev` and local wrangler origins when Origin is sent (not `*`).
 - Result card → `.pc-card` with strength row + `.pc-suggest` | `.pc-lean` | `.pc-uncertain`
 - Source: `.pc-source` (**Jev** / **Stub** preview soft-fail / **Stub · offline** / **Unavailable**)
 - Strength row: `.pc-strengths` / `.pc-chip` from `PLAYERS[i].c.slice(0,4)` (always when tags exist)
-- Suggest (min conf ≥ 0.7): filled Take|Wait|Reach + board why; quiet Confidence N%; score words demoted
-- Lean (0.5 ≤ min &lt; 0.7): outline `.pc-choice-lean-take|wait|reach`, label `Lean take|wait|reach`,
-  subline “Soft lean — mid confidence”, board why + conf % (quieter than suggest; no glow)
-- Uncertain (min &lt; 0.5): “Not sure enough…” / “Low confidence — your call” — **no** choice chip;
+- Suggest (min conf ≥ 0.55 TEMPORARY): filled Take|Wait|Reach + board why; quiet `Confidence N% · suggest`; score words demoted
+- Lean (0.35 ≤ min &lt; 0.55 TEMPORARY): outline `.pc-choice-lean-take|wait|reach`, label `Lean take|wait|reach`,
+  subline “Soft lean — mid confidence”, board why + `Confidence N% · lean` (quieter than suggest; no glow)
+- Uncertain (min &lt; 0.35): “Not sure enough…” / “Low confidence — your call” — **no** choice chip; + `Confidence N% · uncertain`;
   still shows strengths + mover/vacated why
 - Soft error (`res.error`): “Coach unavailable” / “Unavailable — not a low-confidence read”
   — **still paints** muted `.pc-uncertain-why` mover/role clause when applicable
