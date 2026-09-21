@@ -1,7 +1,11 @@
 # Movers / role outlook (phase 1)
 
-Preview feature for **tony-draft-lab-preview** (`feat/movers-outlook`). Not a
-vacated-usage model and not a full projection layer.
+Code is on `main`. **Shipped to preview only:**
+[tony-draft-lab-preview.pages.dev](https://tony-draft-lab-preview.pages.dev).
+**Not** on prod [tony-draft-lab.pages.dev](https://tony-draft-lab.pages.dev).
+
+Not a vacated-usage model and not a full projection layer. Bundled audit:
+**71** movers (`teamPrev` → `teamCurr`).
 
 ## Fields (on PDATA → PLAYERS)
 
@@ -48,11 +52,13 @@ replace them.
 
 ## UI
 
-- List row `.l2`: muted **NEW** chip when `mover`; **↑ role** / **↓ role** for
-  `up`/`down` only (`flat`/`unknown` hidden). `roleNote` is tooltip only.
+- List row `.l2`: quiet muted **NEW** when `mover`; quiet **↑ role** / **↓ role**
+  for `up`/`down` only (`flat`/`unknown` hidden). Tooltip = `roleNote`
+  (heuristic ADP-vs-last wording — not a projection).
 - Pick coach: same chips near strengths; `buildPickCoachWhy` appends
   `new team · {note≤60}` or `expanded role` / `smaller role`. Uncertain keeps
-  chips (no choice chip). Proj meta only if `projMpg`/`projRank` present.
+  chips (no choice chip).
+- **`projMpg` / `projRank`:** not shipped (0 in bundle). Do not document as present.
 
 ## Regenerate
 
