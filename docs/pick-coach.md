@@ -100,7 +100,7 @@ preview `*.pages.dev` and local wrangler origins when Origin is sent (not `*`).
 - No focus → `.pc-empty`
 - Evaluating → `.pc-loading`
 - Result card → `.pc-card` with strength row + `.pc-suggest` or `.pc-uncertain`
-- Source: `.pc-source` (**Jev** / **Stub · offline** / **Unavailable**)
+- Source: `.pc-source` (**Jev** / **Stub** preview soft-fail / **Stub · offline** / **Unavailable**)
 - Strength row: `.pc-strengths` / `.pc-chip` from `PLAYERS[i].c.slice(0,4)` (always when tags exist)
 - Suggest: choice chip Take|Wait|Reach + board why (strengths/scarcity/INJ/soft ADP); quiet Confidence N%; score words demoted
 - Uncertain (low conf): “Not sure enough…” / “Low confidence — your call”
