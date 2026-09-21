@@ -1,27 +1,35 @@
 /**
- * Cloudflare Pages Function: POST /api/pick-quality
+ * Cloudflare Pages _worker.js (advanced mode).
  *
- * Calls TypeSafe System One (pinned jev-1.13.0) with Score + Choice questions
- * matching scripts/pick_quality_jev.py (spike / PR #3) semantics.
+ * Single worker for the whole site:
+ *   - /api/pick-quality  -> Jev (TypeSafe System One, pinned jev-1.13.0)
+ *   - everything else     -> static assets (env.ASSETS), with SPA fallback
+ *                            to /index.html for HTML navigations.
  *
- * Fail-soft: missing key / timeout / API error → HTTP 200 with
+ * Why _worker.js instead of functions/: wrangler's `pages deploy` compiles
+ * functions/ locally and the resulting worker intermittently fails to route
+ * (empty 405 on /api/pick-quality despite uses_functions=true). Advanced
+ * mode removes that compilation step entirely - this file IS the worker, on
+ * both `wrangler pages deploy` and git-integration deploys.
+ *
+ * Fail-soft: missing key / timeout / API error -> HTTP 200 with
  * verdict "uncertain" + error string (never break the draft).
  * Never logs TYPESAFE_API_KEY.
  *
  * Secret (Pages project): TYPESAFE_API_KEY
- *   npx wrangler pages secret put TYPESAFE_API_KEY --project-name tony-draft-lab-preview
+ *   npx wrangler pages secret put TYPESAFE_API_KEY --project-name tony-draft-lab
  */
 
 /** API suggest hint only; client TEMPORARY gates (0.55/0.35) reclassify lean. */
-const CONF_GATE = 0.7;
+var CONF_GATE = 0.7;
 /** Pin versioned id (aliases like jev-latest may move). */
-const MODEL = "jev-1.13.0";
-const TYPESAFE_URL = "https://api.typesafe.ai/v1/systemone";
-const FETCH_TIMEOUT_MS = 25000;
+var MODEL = "jev-1.13.0";
+var TYPESAFE_URL = "https://api.typesafe.ai/v1/systemone";
+var FETCH_TIMEOUT_MS = 25000;
 
-const SCORE_WORDS = ["Poor", "Below avg", "Average", "Good", "Excellent"];
+var SCORE_WORDS = ["Poor", "Below avg", "Average", "Good", "Excellent"];
 
-const SCORE_CRITERIA = [
+var SCORE_CRITERIA = [
   "Poor — clear reach or wrong positional fit given roster needs",
   "Below average — better options likely available at similar ADP",
   "Average — fair market pick; neither strong value nor costly reach",
@@ -29,14 +37,14 @@ const SCORE_CRITERIA = [
   "Excellent — high-confidence value or must-draft fit right now",
 ];
 
-const CHOICE_CRITERIA = {
+var CHOICE_CRITERIA = {
   take: "Draft this player now; waiting risks losing them without a better replacement",
   wait: "Prefer to wait; similar or better value should remain for a later pick",
   reach: "Picking now would be an early reach relative to ADP and available alternatives",
 };
 
-/** Allowed browser origins for preview + local wrangler (not *). */
-const ALLOWED_ORIGINS = [
+/** Allowed browser origins for preview + prod + local wrangler (not *). */
+var ALLOWED_ORIGINS = [
   "https://tony-draft-lab-preview.pages.dev",
   "https://tony-draft-lab.pages.dev",
   "http://localhost:8788",
@@ -48,7 +56,6 @@ const ALLOWED_ORIGINS = [
 function isAllowedOrigin(origin) {
   if (!origin) return false;
   if (ALLOWED_ORIGINS.indexOf(origin) >= 0) return true;
-  // Preview deploy aliases: https://<hash>.tony-draft-lab-preview.pages.dev
   try {
     var u = new URL(origin);
     if (u.protocol !== "https:" && u.protocol !== "http:") return false;
@@ -226,12 +233,6 @@ function buildQuestions(hasSignals) {
     "treat drafting them now as a reach? Consider ADP vs pick number, " +
     "positional/category needs, and who else is available. ";
   if (hasSignals) {
-    // Deterministic signals are present: Jev explains them, it doesn't vote.
-    // The verdict was computed from market data + curated edges. Ground your
-    // explanation in the deterministic_signals numbers — cite the true-value
-    // rank, the value_at_pick, and the specific edges. Do NOT contradict the
-    // deterministic verdict; explain WHY the numbers say what they say in
-    // natural, conversational language.
     var grounding =
       "IMPORTANT — deterministic signals provided: `deterministic_signals` " +
       "contains a precomputed verdict (take/wait/pass/reach), true_value_rank, " +
@@ -291,10 +292,7 @@ function buildWhy(scoreAns, choiceAns, score, choice) {
   return parts.join("; ") + ".";
 }
 
-export async function onRequest(context) {
-  var request = context.request;
-  var env = context.env || {};
-
+async function handlePickQuality(request, env) {
   if (request.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders(request) });
   }
@@ -361,7 +359,6 @@ export async function onRequest(context) {
     } catch (_) {
       errText = "";
     }
-    // Do not echo secrets; truncate body for diagnostics only.
     var snippet = (errText || "").slice(0, 200).replace(/\s+/g, " ");
     return uncertain(
       "TypeSafe HTTP " + upstream.status + (snippet ? ": " + snippet : ""),
@@ -414,3 +411,20 @@ export async function onRequest(context) {
     scoreLabel: label,
   }, 200, request);
 }
+
+export default {
+  async fetch(request, env, ctx) {
+    var url = new URL(request.url);
+    if (url.pathname === "/api/pick-quality" || url.pathname === "/api/pick-quality/") {
+      return handlePickQuality(request, env);
+    }
+    var res = await env.ASSETS.fetch(request);
+    if (res.status === 404) {
+      var accept = request.headers.get("Accept") || "";
+      if (accept.indexOf("text/html") >= 0) {
+        return env.ASSETS.fetch(new Request(new URL("/index.html", url), request));
+      }
+    }
+    return res;
+  },
+};

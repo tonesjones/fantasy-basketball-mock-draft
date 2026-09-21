@@ -1,5 +1,15 @@
 # Changelog
 
+## _worker.js replaces functions/ (2026-09-20)
+- `wrangler pages deploy` compiled `functions/` locally but the resulting
+  worker intermittently failed to route (empty 405 on `POST /api/pick-quality`
+  despite `uses_functions=true`). Advanced mode removes that step: `_worker.js`
+  IS the worker — identical on `wrangler pages deploy` and git integration.
+  `functions/api/pick-quality.js` deleted; Jev logic now lives in `_worker.js`
+  (`/api/pick-quality` → TypeSafe, everything else → `env.ASSETS` + SPA
+  fallback). Logic byte-equivalent; verified locally (OPTIONS 204, GET 405
+  JSON, POST-no-key 200 uncertain, static passthrough, SPA fallback).
+
 ## Pick coach TEMP recal: gates 0.45/0.25 + score/ADP floors (2026-09-20)
 - **Why max() wasn't enough:** live Jev for Wemby/Edwards often returns
   score≈Average (≈2.4), `scoreConfidence≈0`, `choiceConfidence≈0.25–0.30` →
@@ -45,7 +55,7 @@
   `docs/pick-coach.md`.
 - Always show quiet conf line: `Confidence N% · suggest|lean|uncertain`
   (`N=round(min*100)`). Soft-fail unavailable may omit conf %.
-- `functions/api/pick-quality.js`: SCORE/CHOICE instructions ask calibrated
+- `_worker.js`: SCORE/CHOICE instructions ask calibrated
   confidence (clarity vs ADP/board — do not collapse ~0 on Average/Good). Model
   stays **jev-1.13.0**. `buildState` already accepts top-level
   `notableAvailable` / `recentlyTaken` / `scarcityRem`.
@@ -172,7 +182,7 @@ remote.
 - **UX** — on ≤900px when Pick coach + your turn, `.cols.coach-dock` splits list (~60%) and `#pick-coach` dock (~40%) so focusing a `.prow` updates coach without page yo-yo scroll (`coach-dock-mobile`).
 
 ## Pick coach real TypeSafe/Jev hook (2026-09-20)
-- **API** — Cloudflare Pages Function `functions/api/pick-quality.js`:
+- **API** — `_worker.js` (Pages advanced mode, replaces `functions/`):
   `POST /api/pick-quality` → TypeSafe `POST https://api.typesafe.ai/v1/systemone`
   with Bearer `TYPESAFE_API_KEY`, model `jev-latest`, Score (0–4) + Choice
   take|wait|reach (spike `pick_quality_jev.py` semantics). Suggest only if both
