@@ -445,6 +445,92 @@ chain = chain.then(function () {
   });
 });
 
+// API 404 on non-pages host WITH deterministic signals → verdict survives.
+// The engine's numbers stand on their own; only Jev's explanation degrades.
+chain = chain.then(function () {
+  var calls = 0;
+  var PC7 = loadPickCoach({
+    location: { protocol: "https:", hostname: "example.com" },
+    fetch: function () {
+      calls++;
+      return Promise.resolve({ ok: false, status: 404, text: function () { return Promise.resolve(""); } });
+    },
+  });
+  PC7.clearCache();
+  var sig = {
+    verdict: "take", V: 1, consensus: 2, valueAtPick: 0,
+    reasons: ["+0 value at pick 1 (our #1) — at market and best available"],
+    edges: [], target: { valueRank: 1, marketRank: 2, earliest: 1, targetPick: 1, lastChance: 6 }
+  };
+  var state = { player: "Victor Wembanyama", pickNumber: 1, logLen: 0, adp: 1.8, signals: sig };
+  return PC7.evaluate(state).then(function (r) {
+    assert.strictEqual(r.deterministic, true);
+    assert.strictEqual(r.verdict, "take", "deterministic verdict survives API 404");
+    assert.strictEqual(r.choice, "take");
+    assert.ok(r.error && /404/.test(r.error), "error preserved for labeling");
+    assert.notStrictEqual(r.model, "stub", "must not fall back to stub heuristic");
+    assert.strictEqual(PC7.sourceLabel(r), "Deterministic · Jev unavailable");
+    // Deterministic-with-error results cache: the numbers don't depend on Jev.
+    return PC7.evaluate(state).then(function (r2) {
+      assert.strictEqual(r2.verdict, "take");
+      assert.ok(r2.cached, "deterministic+error should cache");
+      assert.strictEqual(calls, 1, "cache skips second fetch");
+    });
+  });
+});
+
+// Network failure on non-pages host WITH deterministic signals → pass verdict survives.
+chain = chain.then(function () {
+  var PC8 = loadPickCoach({
+    location: { protocol: "https:", hostname: "example.com" },
+    fetch: function () { return Promise.reject(new TypeError("Failed to fetch")); },
+  });
+  PC8.clearCache();
+  var sig = {
+    verdict: "pass", V: 136, consensus: 98, valueAtPick: -38,
+    reasons: ["-38 below value at pick 98 (our #136 vs slot #98)"],
+    edges: [], target: null
+  };
+  return PC8.evaluate({ player: "Nikola Vucevic", pickNumber: 98, logLen: 97, adp: 111.9, signals: sig }).then(function (r) {
+    assert.strictEqual(r.deterministic, true);
+    assert.strictEqual(r.verdict, "pass", "a confident pass is NOT uncertain on network failure");
+    assert.ok(r.error, "error preserved");
+    assert.notStrictEqual(r.model, "stub");
+    assert.strictEqual(PC8.sourceLabel(r), "Deterministic · Jev unavailable");
+  });
+});
+
+// Preview softfail WITH deterministic signals → deterministic result, NOT the stub heuristic.
+chain = chain.then(function () {
+  var PC9 = loadPickCoach({
+    location: { protocol: "https:", hostname: "feat-x.tony-draft-lab-preview.pages.dev" },
+    fetch: function () {
+      return Promise.resolve({
+        ok: true, status: 200,
+        text: function () {
+          return Promise.resolve(JSON.stringify({
+            score: null, scoreConfidence: 0, choice: null, choiceConfidence: 0,
+            verdict: "uncertain", why: "", model: "jev-1.13.0",
+            error: "TYPESAFE_API_KEY not configured"
+          }));
+        },
+      });
+    },
+  });
+  PC9.clearCache();
+  var sig = {
+    verdict: "wait", V: 70, consensus: 72, valueAtPick: 0,
+    reasons: ["-1 value — he's fine, but not this pick"],
+    edges: [], target: null
+  };
+  return PC9.evaluate({ player: "WaitCase", pickNumber: 70, logLen: 69, adp: 72, signals: sig }).then(function (r) {
+    assert.strictEqual(r.deterministic, true);
+    assert.strictEqual(r.verdict, "wait", "deterministic verdict survives preview softfail");
+    assert.notStrictEqual(r.model, "stub", "stub heuristic reserved for states without signals");
+    assert.strictEqual(PC9.sourceLabel(r), "Deterministic · Jev unavailable");
+  });
+});
+
 assert.ok(PC.isStubbableSoftFail("TYPESAFE_API_KEY not configured"));
 assert.ok(PC.isPreviewPagesHost === undefined || typeof PC.isPreviewPagesHost === "function");
 
@@ -472,6 +558,157 @@ chain = chain.then(function () {
   }, 250);
   return p.then(function (r) {
     assert.ok(r.stale || r.verdict === "uncertain");
+  });
+});
+
+chain = chain.then(function () {
+  // Deterministic signals: verdict comes from computed value, not confidence gates.
+  // Jev explains; it doesn't vote.
+  var PC5 = loadPickCoach();
+  var sigTake = {
+    verdict: "take", V: 28, consensus: 70, valueAtPick: 42,
+    reasons: ["+42 value at pick 70 (our #28) — outperforms this slot"],
+    edges: [{ k: "actuals", v: 8.5, note: "produced #39 last season vs market #70" }],
+    target: { valueRank: 28, marketRank: 70, earliest: 20, targetPick: 28, lastChance: 75 }
+  };
+  var resTake = PC5.normalizeApiResult(
+    { score: 4, scoreConfidence: 0.1, choice: "take", choiceConfidence: 0.1, why: "Jev explains the value.", model: "jev-1.13.0" },
+    { player: "Derrick White", pickNumber: 70, signals: sigTake }
+  );
+  assert.strictEqual(resTake.deterministic, true, "should flag deterministic");
+  assert.strictEqual(resTake.verdict, "take", "native take verdict (not confidence-mapped)");
+  assert.strictEqual(resTake.choice, "take", "choice follows deterministic");
+  assert.ok(resTake.why.indexOf("+42 value") >= 0, "deterministic reasons in why");
+  assert.ok(resTake.why.indexOf("Jev explains") >= 0, "agreeing Jev explanation appended");
+
+  // Pass is its own native verdict — a confident pass is NOT "uncertain".
+  var sigPass = {
+    verdict: "pass", V: 136, consensus: 98, valueAtPick: -38,
+    reasons: ["-38 below value at pick 98 (our #136 vs slot #98)", "better: Neemias Queta (+13 value, our #85)"],
+    edges: [], target: null
+  };
+  var resPass = PC5.normalizeApiResult(
+    { score: 2, scoreConfidence: 0.9, choice: "take", choiceConfidence: 0.9, why: "Jev disagrees.", model: "jev-1.13.0" },
+    { player: "Nikola Vucevic", pickNumber: 98, signals: sigPass }
+  );
+  assert.strictEqual(resPass.verdict, "pass", "native pass verdict");
+  assert.strictEqual(resPass.choice, "pass", "choice follows deterministic, not Jev");
+  assert.ok(resPass.why.indexOf("-38 below value") >= 0, "pass reason preserved");
+  assert.ok(resPass.why.indexOf("Jev disagrees") < 0, "contradicting Jev prose must be dropped");
+
+  // Deterministic pass + Jev "wait" is schema-level agreement: Jev's choice
+  // schema has no "pass" (the API prompt maps pass -> wait), so a "wait"
+  // explanation is retained while a "take" still contradicts and is dropped.
+  var resPassWait = PC5.normalizeApiResult(
+    { score: 2, scoreConfidence: 0.7, choice: "wait", choiceConfidence: 0.7, why: "Jev: not worth it here.", model: "jev-1.13.0" },
+    { player: "Nikola Vucevic", pickNumber: 98, signals: sigPass }
+  );
+  assert.strictEqual(resPassWait.verdict, "pass", "pass verdict unchanged");
+  assert.ok(resPassWait.why.indexOf("Jev: not worth it here.") >= 0, "Jev wait prose retained for deterministic pass");
+  var resPassTake = PC5.normalizeApiResult(
+    { score: 4, scoreConfidence: 0.9, choice: "take", choiceConfidence: 0.9, why: "Jev: take him!", model: "jev-1.13.0" },
+    { player: "Nikola Vucevic", pickNumber: 98, signals: sigPass }
+  );
+  assert.strictEqual(resPassTake.verdict, "pass", "verdict not swayed by Jev take");
+  assert.ok(resPassTake.why.indexOf("Jev: take him!") < 0, "Jev take prose still dropped for deterministic pass");
+
+  // Deterministic verdict survives a Jev/API error — only the explanation degrades.
+  var resErrTake = PC5.normalizeApiResult(
+    { score: null, scoreConfidence: 0, choice: null, choiceConfidence: 0, why: "", model: "jev-1.13.0", error: "TYPESAFE_API_KEY not configured" },
+    { player: "Derrick White", pickNumber: 70, signals: sigTake }
+  );
+  assert.strictEqual(resErrTake.deterministic, true, "deterministic flagged even on error");
+  assert.strictEqual(resErrTake.verdict, "take", "deterministic verdict survives Jev error");
+  assert.ok(resErrTake.error && /TYPESAFE_API_KEY/.test(resErrTake.error), "error preserved for labeling");
+  assert.strictEqual(PC5.sourceLabel(resErrTake), "Deterministic · Jev unavailable");
+  assert.strictEqual(PC5.sourceLabel(resTake), "Jev", "healthy deterministic result still labeled Jev");
+
+  // wait and reach are native verdicts too (not lean/suggest).
+  var resWait = PC5.normalizeApiResult(
+    { score: 3, scoreConfidence: 0.5, choice: "wait", choiceConfidence: 0.5, why: "Jev: wait.", model: "jev-1.13.0" },
+    { player: "W", pickNumber: 70, signals: { verdict: "wait", V: 70, consensus: 72, valueAtPick: 0, reasons: ["-1 value — fine, but not this pick"], edges: [], target: null } }
+  );
+  assert.strictEqual(resWait.verdict, "wait", "native wait verdict");
+  var resReach = PC5.normalizeApiResult(
+    { score: 2, scoreConfidence: 0.5, choice: "reach", choiceConfidence: 0.5, why: "Jev: reach.", model: "jev-1.13.0" },
+    { player: "R", pickNumber: 70, signals: { verdict: "reach", V: 90, consensus: 88, valueAtPick: -20, reasons: ["-20 below value — but fills an open C slot"], edges: [], target: null } }
+  );
+  assert.strictEqual(resReach.verdict, "reach", "native reach verdict");
+
+  // No signals: falls back to legacy confidence gates.
+  var resLegacy = PC5.normalizeApiResult(
+    { score: 4, scoreConfidence: 0.8, choice: "take", choiceConfidence: 0.8, why: "", model: "jev-1.13.0" },
+    { player: "X", pickNumber: 50 }
+  );
+  assert.strictEqual(resLegacy.deterministic, false, "no signals -> not deterministic");
+  assert.strictEqual(resLegacy.verdict, "suggest", "high conf -> suggest (legacy)");
+});
+
+chain = chain.then(function () {
+  // Client timeout backstop: a hung /api/pick-quality must degrade to a
+  // graceful "Jev timed out" error (deterministic verdict survives), never
+  // freeze the coach card. Fake timers fire immediately so the test doesn't
+  // wait out the real 30s backstop.
+  var fired = [];
+  var allMs = [];
+  function fakeSetTimeout(fn, ms) {
+    var id = fired.length + 1;
+    fired.push({ id: id, fn: fn, ms: ms });
+    allMs.push(ms);
+    return id;
+  }
+  function fakeClearTimeout(id) {
+    for (var i = 0; i < fired.length; i++) {
+      if (fired[i] && fired[i].id === id) fired[i] = null;
+    }
+  }
+  function fireAll() {
+    var guard = 0;
+    while (guard++ < 10) {
+      var next = null;
+      for (var i = 0; i < fired.length; i++) {
+        if (fired[i]) { next = fired[i]; fired[i] = null; break; }
+      }
+      if (!next) break;
+      next.fn();
+    }
+  }
+  function hangingFetch(_url, opts) {
+    return new Promise(function (_resolve, reject) {
+      if (opts && opts.signal) {
+        opts.signal.addEventListener("abort", function () {
+          var e = new Error("aborted");
+          e.name = "AbortError";
+          reject(e);
+        });
+      }
+      // never resolves on its own: simulates the hung upstream
+    });
+  }
+  var PC6 = loadPickCoach({
+    setTimeout: fakeSetTimeout,
+    clearTimeout: fakeClearTimeout,
+    fetch: hangingFetch,
+  });
+  var p1 = PC6.evaluate({ player: "Hang", pickNumber: 1, logLen: 0 });
+  fireAll();
+  return p1.then(function (r1) {
+    assert.ok(allMs.indexOf(30000) >= 0, "client timeout armed at 30000ms");
+    assert.ok(!r1.stale, "timeout resolves a real result, not stale");
+    assert.strictEqual(r1.verdict, "uncertain", "no signals -> uncertain on timeout");
+    assert.ok(r1.error && /timed out/i.test(r1.error), "error names the timeout, got: " + r1.error);
+    // Deterministic verdict survives a Jev timeout — only the explanation degrades.
+    var sig = {
+      verdict: "take", V: 28, consensus: 70, valueAtPick: 42,
+      reasons: ["+42 value at pick 70 (our #28)"], edges: [], target: null
+    };
+    var p2 = PC6.evaluate({ player: "Hang2", pickNumber: 70, logLen: 69, signals: sig });
+    fireAll();
+    return p2.then(function (r2) {
+      assert.strictEqual(r2.deterministic, true, "deterministic flagged on timeout");
+      assert.strictEqual(r2.verdict, "take", "deterministic verdict survives Jev timeout");
+      assert.ok(r2.error && /timed out/i.test(r2.error), "timeout error preserved for labeling");
+    });
   });
 });
 

@@ -29,6 +29,14 @@
   var CACHE_TTL_MS = 45000;
   var API_PATH = "/api/pick-quality";
   var PINNED_MODEL = "jev-1.13.0";
+  /**
+   * Client-side backstop for /api/pick-quality. The Pages Function aborts its
+   * upstream Jev call at 25s and returns a structured fail-soft; this timer
+   * only fires when the function itself never responds (observed once: 60s+
+   * with zero bytes). Longer than the server timeout so the server's
+   * structured "uncertain" wins whenever it arrives.
+   */
+  var CLIENT_TIMEOUT_MS = 30000;
 
   var _timer = null;
   var _seq = 0;
@@ -280,8 +288,11 @@
   }
 
   function cacheSet(key, value) {
-    if (!value || value.stale || value.error) return;
-    // Cache successful suggest/lean/uncertain-without-error only.
+    if (!value || value.stale) return;
+    // Cache successful results. Deterministic verdicts are cacheable even
+    // when Jev errored — the numbers don't depend on Jev.
+    if (value.error && !value.deterministic) return;
+    // Cache take/wait/pass/reach + legacy bands (uncertain-without-error only).
     _cache[key] = { t: Date.now(), v: value };
   }
 
@@ -383,9 +394,55 @@
       rank: s.rank != null ? s.rank : data.rank,
       pickNumber: s.pickNumber != null ? s.pickNumber : data.pickNumber,
     };
+    // Deterministic signals (from PickSignals.evaluate): the verdict comes
+    // from computed value, NOT from Jev's confidence thresholds. Jev's role
+    // is to explain the numbers, not to vote via uncalibrated confidences.
+    var sig = s.signals || null;
+    var verdict, choice, deterministic = false;
+    if (sig && sig.verdict) {
+      deterministic = true;
+      // Native deterministic verdicts: take | wait | pass | reach.
+      // Computed from market value + curated edges — never re-derived from
+      // Jev's confidence thresholds. The UI maps these to display bands; a
+      // confident pass is NOT "uncertain".
+      var dv = String(sig.verdict).toLowerCase();
+      if (dv !== "take" && dv !== "wait" && dv !== "pass" && dv !== "reach") dv = "uncertain";
+      verdict = dv;
+      choice = dv;
+      var detWhy = (sig.reasons || []).join(" · ");
+      // Jev explains; it must not contradict. Append Jev's prose only when
+      // its stated choice agrees with the deterministic verdict — otherwise
+      // the deterministic numbers stand alone.
+      var jevWhy = data.why || "";
+      var jevChoice = data.choice ? String(data.choice).toLowerCase() : null;
+      var why = detWhy;
+      // Jev's choice schema has no "pass"; the API prompt maps deterministic
+      // pass -> Jev "wait" (do not take now). A Jev "wait" against a
+      // deterministic "pass" is agreement, not contradiction. Jev "take"
+      // or "reach" against any non-matching verdict is still dropped.
+      var jevAgrees = jevChoice === dv || (dv === "pass" && jevChoice === "wait");
+      if (jevWhy && jevAgrees && jevWhy.indexOf(detWhy.slice(0, 40)) < 0) {
+        why = detWhy + (detWhy ? " · " : "") + jevWhy;
+      }
+      var model = data.model || PINNED_MODEL;
+      return {
+        score: score,
+        scoreConfidence: isFinite(scoreConf) ? scoreConf : 0,
+        choice: choice,
+        choiceConfidence: isFinite(choiceConf) ? choiceConf : 0,
+        verdict: verdict,
+        why: why,
+        model: model,
+        scoreLabel: data.scoreLabel || (score != null ? scoreWord(score) : undefined),
+        error: data.error || undefined,
+        stale: false,
+        deterministic: true,
+        signals: sig,
+      };
+    }
+    // Fallback: legacy confidence-gate path (no signals computed).
     // Prefer client-side lean/suggest classification from confidences (API unchanged).
     // Soft-fail payloads with error stay uncertain (do not lean / floors).
-    var verdict;
     if (data && data.error) {
       verdict = "uncertain";
     } else {
@@ -394,7 +451,7 @@
     if (verdict !== "suggest" && verdict !== "lean" && verdict !== "uncertain") {
       verdict = "uncertain";
     }
-    var model = data.model || PINNED_MODEL;
+    var model2 = data.model || PINNED_MODEL;
     return {
       score: score,
       scoreConfidence: isFinite(scoreConf) ? scoreConf : 0,
@@ -402,16 +459,19 @@
       choiceConfidence: isFinite(choiceConf) ? choiceConf : 0,
       verdict: verdict,
       why: data.why || "",
-      model: model,
+      model: model2,
       scoreLabel: data.scoreLabel || (score != null ? scoreWord(score) : undefined),
       error: data.error || undefined,
       stale: false,
+      deterministic: false,
     };
   }
 
   /** Short UI label: "Jev" / "Stub" / "Stub · offline" / "Unavailable". */
   function sourceLabel(res) {
     if (!res) return "";
+    // Deterministic verdicts stand even when Jev errored — label honestly.
+    if (res.deterministic && res.error) return "Deterministic \u00b7 Jev unavailable";
     if (res.error) return "Unavailable";
     var m = String(res.model || "");
     if (m === "stub" || res.fallback) {
@@ -463,14 +523,33 @@
           var msg =
             (data && data.error) ||
             "pick-quality HTTP " + res.status;
-          return uncertainResult(msg, "pick-quality");
+          return softFailResult(msg, state);
         }
         if (!data || typeof data !== "object") {
-          return uncertainResult("Empty pick-quality response", "pick-quality");
+          return softFailResult("Empty pick-quality response", state);
         }
         return normalizeApiResult(data, state || {});
       });
     });
+  }
+
+  /**
+   * Soft-fail payload routed through normalizeApiResult, so deterministic
+   * signals (when present) still produce their verdict — only Jev's
+   * explanation is missing. Without signals this is plain uncertain + error.
+   */
+  function softFailResult(error, state) {
+    return normalizeApiResult({
+      score: null,
+      scoreConfidence: 0,
+      choice: null,
+      choiceConfidence: 0,
+      verdict: "uncertain",
+      why: "",
+      model: "pick-quality",
+      error: String(error || "Coach unavailable"),
+      stale: false,
+    }, state || {});
   }
 
   function runEvaluate(state, mySeq) {
@@ -528,6 +607,21 @@
       typeof AbortController !== "undefined" ? new AbortController() : null;
     _abort = controller;
 
+    // Client-side backstop: a hung /api/pick-quality must degrade to
+    // "Jev unavailable", never freeze the coach card. Distinguished from the
+    // supersede-abort above via timedOut, so a replaced evaluation still
+    // resolves stale instead of painting an error.
+    var timedOut = false;
+    var timeoutTimer = null;
+    if (controller && typeof setTimeout === "function") {
+      timeoutTimer = setTimeout(function () {
+        timedOut = true;
+        try {
+          controller.abort();
+        } catch (e) {}
+      }, CLIENT_TIMEOUT_MS);
+    }
+
     return fetchPickQuality(state, controller ? controller.signal : undefined)
       .then(function (result) {
         if (mySeq !== _seq) {
@@ -536,6 +630,9 @@
         // Preview *.pages.dev: key-missing / soft API errors → labeled stub for QA.
         // (feat-* aliases often lack Preview-env TYPESAFE_API_KEY; Production secret
         // applies to the production preview hostname only.)
+        // Deterministic signals stand on their own: the engine's verdict
+        // survives; only Jev's explanation is missing. The stub heuristic is
+        // reserved for states with no signals.
         if (
           result &&
           result.error &&
@@ -543,13 +640,16 @@
           isPreviewPagesHost() &&
           isStubbableSoftFail(result.error)
         ) {
+          if (result.deterministic) return result;
           try {
             return labeledStubResult(state, "preview-softfail");
           } catch (eStub) {
             return result;
           }
         }
-        if (result && !result.stale && !result.error) {
+        // Cache clean results; deterministic verdicts cache even when Jev
+        // errored (the numbers don't depend on Jev).
+        if (result && !result.stale && (!result.error || result.deterministic)) {
           cacheSet(fp, result);
         }
         return result;
@@ -559,6 +659,9 @@
           return { stale: true, verdict: "uncertain" };
         }
         if (err && err.name === "AbortError") {
+          // Timeout backstop fired: degrade gracefully (deterministic verdict
+          // survives via softFailResult); a superseded evaluation stays stale.
+          if (timedOut) return softFailResult("Jev timed out", state);
           return { stale: true, verdict: "uncertain" };
         }
         var isNet =
@@ -567,17 +670,21 @@
             /Failed to fetch|Invalid URL|NetworkError/i.test(
               String(err.message || err)
             ));
-        // Preview Pages: network failure → labeled stub so QA can still see paths.
+        // Preview Pages: network failure → labeled stub so QA can still see paths —
+        // unless deterministic signals stand on their own.
         if (isNet && isHttpHost() && isPreviewPagesHost()) {
+          var netStub = softFailResult("Coach unreachable", state);
+          if (netStub.deterministic) return netStub;
           try {
             return labeledStubResult(state, "preview-network");
           } catch (ePrev) {
-            return uncertainResult("Coach unreachable", "pick-quality");
+            return netStub;
           }
         }
-        // Other http(s) hosts: never paint stub as if live — uncertain + quiet error.
+        // Other http(s) hosts: never paint stub as if live — but deterministic
+        // verdicts still survive; only the explanation degrades.
         if (isNet && isHttpHost()) {
-          return uncertainResult("Coach unreachable", "pick-quality");
+          return softFailResult("Coach unreachable", state);
         }
         // Non-browser / relative-URL Node smoke: allow stub only off http(s).
         if (isNet && !isHttpHost()) {
@@ -590,12 +697,16 @@
             return uncertainResult("Coach unavailable", "stub");
           }
         }
-        return uncertainResult(
+        return softFailResult(
           err && err.message ? err.message : "Coach unavailable",
-          "pick-quality"
+          state
         );
       })
       .then(function (result) {
+        if (timeoutTimer && typeof clearTimeout === "function") {
+          try { clearTimeout(timeoutTimer); } catch (e) {}
+          timeoutTimer = null;
+        }
         if (_abort === controller) _abort = null;
         return result;
       });

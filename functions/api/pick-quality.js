@@ -175,7 +175,7 @@ function buildState(body) {
   if (scarcity && typeof scarcity === "object") {
     board.scarcity_rem_pct = scarcity;
   }
-  return {
+  var out = {
     league: {
       format: "9-category H2H (PTS REB AST STL BLK 3PM FG% FT% TO)",
       teams: teams,
@@ -197,35 +197,79 @@ function buildState(body) {
     roster_needs: rn,
     board_context: board,
   };
+  // Deterministic signals: computed client-side from market data + curated
+  // edges. Jev's job is to EXPLAIN these numbers in natural language, not to
+  // re-derive a verdict via confidence thresholds.
+  if (body.signals && typeof body.signals === "object") {
+    out.deterministic_signals = {
+      verdict: body.signals.verdict || null,
+      true_value_rank: body.signals.V != null ? Number(body.signals.V) : null,
+      market_consensus_rank: body.signals.consensus != null ? Math.round(Number(body.signals.consensus)) : null,
+      value_at_pick: body.signals.valueAtPick != null ? Number(body.signals.valueAtPick) : null,
+      reasons: Array.isArray(body.signals.reasons) ? body.signals.reasons : [],
+      edges: Array.isArray(body.signals.edges) ? body.signals.edges.map(function (e) {
+        return { signal: e.k, impact: e.v, note: e.note };
+      }) : [],
+      target_window: body.signals.target || null,
+    };
+  }
+  return out;
 }
 
-function buildQuestions() {
+function buildQuestions(hasSignals) {
+  var scoreInstructions =
+    "How good is drafting `candidate` at this pick right now, given " +
+    "`roster_needs`, ADP/rank vs `draft.pick_number`, and `board_context`? " +
+    "Use the ordered levels in criteria (lowest to highest). ";
+  var choiceInstructions =
+    "Should the user take this player now, wait for a later pick, or " +
+    "treat drafting them now as a reach? Consider ADP vs pick number, " +
+    "positional/category needs, and who else is available. ";
+  if (hasSignals) {
+    // Deterministic signals are present: Jev explains them, it doesn't vote.
+    // The verdict was computed from market data + curated edges. Ground your
+    // explanation in the deterministic_signals numbers — cite the true-value
+    // rank, the value_at_pick, and the specific edges. Do NOT contradict the
+    // deterministic verdict; explain WHY the numbers say what they say in
+    // natural, conversational language.
+    var grounding =
+      "IMPORTANT — deterministic signals provided: `deterministic_signals` " +
+      "contains a precomputed verdict (take/wait/pass/reach), true_value_rank, " +
+      "value_at_pick, and the specific signal edges (actuals, role, vacated " +
+      "usage, playoff schedule). Your job is to EXPLAIN these numbers, not to " +
+      "re-derive the verdict. Reference the concrete numbers (e.g. 'our #28 " +
+      "vs market #70, +42 value'). Keep confidence calibrated to how clear " +
+      "the numbers are, not to the player's star power.";
+    scoreInstructions += grounding;
+    choiceInstructions += grounding + " HARD RULE — stay consistent with " +
+      "the deterministic verdict: verdict take → choose take; wait → wait; " +
+      "reach → reach; pass → choose wait (do not take now). Never recommend " +
+      "a different action than the deterministic verdict, and never " +
+      "contradict it in your explanation.";
+  } else {
+    scoreInstructions +=
+      "IMPORTANT — calibrated confidence: report how clear the ranking is vs " +
+      "ADP and the remaining board, NOT how elite the player is. Average or " +
+      "Good market picks should still carry moderate-to-high confidence " +
+      "(roughly 0.45–0.85) when the grade is clear relative to ADP/alternatives. " +
+      "Reserve near-zero confidence only when evidence is contradictory or sparse. " +
+      "Do not collapse score confidence toward 0 just because the pick is Average.";
+    choiceInstructions +=
+      "IMPORTANT — calibrated confidence: confidence reflects clarity of the " +
+      "take/wait/reach decision given ADP and board context, not star power. " +
+      "Clear market-rate decisions (including wait on Average picks) should " +
+      "keep moderate confidence; use very low confidence only when take vs " +
+      "wait vs reach is genuinely ambiguous.";
+  }
   return {
     score: {
       type: "score",
-      instructions:
-        "How good is drafting `candidate` at this pick right now, given " +
-        "`roster_needs`, ADP/rank vs `draft.pick_number`, and `board_context`? " +
-        "Use the ordered levels in criteria (lowest to highest). " +
-        "IMPORTANT — calibrated confidence: report how clear the ranking is vs " +
-        "ADP and the remaining board, NOT how elite the player is. Average or " +
-        "Good market picks should still carry moderate-to-high confidence " +
-        "(roughly 0.45–0.85) when the grade is clear relative to ADP/alternatives. " +
-        "Reserve near-zero confidence only when evidence is contradictory or sparse. " +
-        "Do not collapse score confidence toward 0 just because the pick is Average.",
+      instructions: scoreInstructions,
       criteria: SCORE_CRITERIA,
     },
     choice: {
       type: "choice",
-      instructions:
-        "Should the user take this player now, wait for a later pick, or " +
-        "treat drafting them now as a reach? Consider ADP vs pick number, " +
-        "positional/category needs, and who else is available. " +
-        "IMPORTANT — calibrated confidence: confidence reflects clarity of the " +
-        "take/wait/reach decision given ADP and board context, not star power. " +
-        "Clear market-rate decisions (including wait on Average picks) should " +
-        "keep moderate confidence; use very low confidence only when take vs " +
-        "wait vs reach is genuinely ambiguous.",
+      instructions: choiceInstructions,
       criteria: CHOICE_CRITERIA,
     },
   };
@@ -276,10 +320,11 @@ export async function onRequest(context) {
   }
 
   var state = buildState(body);
+  var hasSignals = !!(state.deterministic_signals && state.deterministic_signals.verdict);
   var payload = {
     state: state,
     model: MODEL,
-    questions: buildQuestions(),
+    questions: buildQuestions(hasSignals),
   };
 
   var controller = new AbortController();
