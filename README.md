@@ -20,6 +20,7 @@ Press **Start draft**. Your picks are marked; the 11 CPU teams draft automatical
 
 - **Available players** — search stays primary. Position filters and sort chips (Rank, ADP, last season, MPG, scarcity, Consensus) sit behind a progressive-disclosure panel so the list stays calm; pages of 50 with an honest filtered count.
 - Each row shows the player's **MPG** (2025-26 minutes per game), Yahoo ADP, built-in rank, last-season nine-cat rank, position eligibility, team, a red **INJ** badge if currently injured (tap or hover for details), and a color-coded **playoff badge** (bad/ok/good) for games in your selected playoff window.
+- **Preview only** ([tony-draft-lab-preview](https://tony-draft-lab-preview.pages.dev)): quiet **NEW** (team change) and **↑ role** / **↓ role** chips. Role chips are a heuristic (Yahoo/Fantrax ADP vs last-season rank), not projections — see `docs/movers-outlook.md`. **Not** on prod.
 - Click a player on your turn to draft them. **Undo my last pick** reverses your most recent decision. An aria-live region announces your pick, CPU batches, and draft complete.
 - **Category scarcity** is collapsed by default with a quiet hottest-cats summary; open it for the full green→red depletion gauge. Tap or keyboard a category chip for its top remaining contributors (not hover-only).
 - **Draft board** and **Grades** tabs are available mid-draft (not only after the draft completes). Board: every pick, round by round. Green **+12** = value (picked 12 spots later than ADP); red **-8** = reach (picked 8 spots earlier); no number = at ADP or no ADP data.
@@ -49,7 +50,7 @@ The layout collapses to a single column with compact two-line player rows; filte
 - `index.html` — UI, player pool, and draft flow.
 - `draft-core.js` — dependency-free validation, roster matching, seeded random source, and CPU selection. It is also usable from Node for tests.
 - `player-data.js` — ADP, prior-season ranks, per-game category values (`cv`), and minutes per game (`mpg`) merged into the player pool on load.
-- `movers-outlook.js` — team-change (`mover`/`teamPrev`) + heuristic `roleDelta` overlay (preview); see `docs/movers-outlook.md`.
+- `movers-outlook.js` — phase-1 overlay: real movers + heuristic `roleDelta` (preview only; 71 movers; no proj fields); see `docs/movers-outlook.md`.
 - `playoff-data.js` — Yahoo weekly schedule snapshot (all 30 teams × weeks 18–23, Mar 1 – Apr 11, 2027).
 - `playoff-core.js` — playoff game counts, totals, summaries, and the bad/ok/good quality rule.
 - `data-health.js` — shared browser/Node audit logic.
@@ -93,6 +94,13 @@ The category-scarcity panel shows, for each of the nine categories, the share of
 
 - **ADP rank fix** — built-in pool order re-inserted players buried vs Yahoo ADP (`rank − round(ADP) ≥ 40`); pathological ≥100 gaps cleared. Details in `CHANGELOG.md`.
 - **UX polish** — single mint dark theme; calmer live-draft density; mid-draft board + grades; aria-live turn status; tap-friendly INJ and scarcity intel. Engine and `PLAYERS` data unchanged in the UX PR.
+
+## Recent on preview (2026-09-20)
+
+Live at **[tony-draft-lab-preview.pages.dev](https://tony-draft-lab-preview.pages.dev)** — **not** on prod `tony-draft-lab.pages.dev`:
+
+- **Pick coach** — advisory TypeSafe/Jev (see `docs/pick-coach.md`).
+- **Movers / role outlook (phase 1)** — 71 real `teamPrev`→`teamCurr` movers; quiet NEW + ↑/↓ role chips (roleDelta is ADP-vs-last heuristic). No `projMpg`/`projRank`. See `docs/movers-outlook.md`.
 
 ## Feature notes
 
