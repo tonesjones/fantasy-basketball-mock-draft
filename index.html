@@ -191,6 +191,17 @@ body{background:radial-gradient(ellipse at top right,#19352f66,transparent 55%),
 #md .pick-coach .pc-strengths{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
 #md .pick-coach .pc-strengths[hidden]{display:none}
 #md .pick-coach .pc-chip{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.3px;line-height:1.3;padding:3px 9px;border-radius:999px;border:1px solid #2d7258;color:#85e5bc;background:#143d2e66}
+
+/* Movers / role outlook chips (list row + pick coach) */
+#md .mv-chip,#md .role-chip{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.25px;line-height:1.3;padding:1px 6px;border-radius:999px;border:1px solid var(--hatch-widget-border);color:var(--hatch-widget-muted);background:#121c28}
+#md .role-chip.role-up{color:#85e5bc;border-color:#2d7258;background:#143d2e66}
+#md .role-chip.role-down{color:#e8c48a;border-color:#80652a;background:#3a2e1666}
+#md .pick-coach .pc-chip.mv-chip{color:var(--hatch-widget-muted);border-color:var(--hatch-widget-border);background:#121c28;font-weight:700}
+#md .pick-coach .pc-chip.role-up{color:#85e5bc;border-color:#2d7258;background:#143d2e66}
+#md .pick-coach .pc-chip.role-down{color:#e8c48a;border-color:#80652a;background:#3a2e1666}
+#md .pick-coach .pc-proj-meta{font-size:11px;margin-top:2px;color:var(--hatch-widget-muted)}
+#md .pick-coach .pc-proj-meta[hidden]{display:none}
+
 #md .pick-coach .pc-playoff{margin:0 0 8px;font-size:11px}
 #md .pick-coach .pc-score{display:none} /* demoted: do not hero-render Poor–Excellent */
 #md .pick-coach .pc-score-quiet{font-size:11px;margin:6px 0 0;line-height:1.4}
@@ -242,6 +253,7 @@ body{background:radial-gradient(ellipse at top right,#19352f66,transparent 55%),
 <body>
 <main id="md"><header class="brandbar"><div class="brand"><span class="brandmark" aria-hidden="true">◉</span>Draft Lab</div><span class="season">2026–27 / Mock draft</span></header><div id="mdlive" class="sr-only" aria-live="polite" aria-atomic="true"></div><div id="mdapp"></div></main>
 <script src="player-data.js"></script>
+<script src="movers-outlook.js"></script>
 <script src="draft-core.js"></script>
 <script src="data-health.js"></script>
 <script src="playoff-data.js"></script>
@@ -344,7 +356,7 @@ var PLAYERS=[
 
 ];
 PLAYERS.forEach(function(p,i){p.r=i+1;p.n=p[0];p.p=p[1];p.t=p[2]||"\u2014";});
-PLAYERS.forEach(function(p){var d=(typeof PDATA!=="undefined"&&PDATA[p.n])||null;p.adp=d&&d.adp!=null?d.adp:null;p.adpF=d&&d.adpF!=null?d.adpF:null;p.last=d&&d.last!=null?d.last:null;p.lastTotal=d&&d.lastTotal!=null?d.lastTotal:null;p.mpg=d&&d.mpg!=null?d.mpg:null;p.inj=(typeof INJ!=="undefined"&&INJ[p.n])||null;});
+PLAYERS.forEach(function(p){var d=(typeof PDATA!=="undefined"&&PDATA[p.n])||null;p.adp=d&&d.adp!=null?d.adp:null;p.adpF=d&&d.adpF!=null?d.adpF:null;p.last=d&&d.last!=null?d.last:null;p.lastTotal=d&&d.lastTotal!=null?d.lastTotal:null;p.mpg=d&&d.mpg!=null?d.mpg:null;p.inj=(typeof INJ!=="undefined"&&INJ[p.n])||null;p.teamPrev=d&&d.teamPrev||null;p.teamCurr=(d&&d.teamCurr)||p.t;p.mover=!!(d&&d.mover);p.roleDelta=(d&&d.roleDelta)||"unknown";p.roleNote=(d&&d.roleNote)||null;p.projMpg=d&&d.projMpg!=null?d.projMpg:null;p.projRank=d&&d.projRank!=null?d.projRank:null;});
 function injTitle(inj){return "INJURED — "+inj.injury+". "+inj.detail+" Expected return: "+inj.ret+". Source: "+inj.src+".";}
 function injBadge(p){
   if(!p.inj)return "";
@@ -706,7 +718,7 @@ function wireScarcityToggles(root){
 var TEAMS=12;
 var CORE=window.DraftCore;
 var BASE_SLOTS=["PG","SG","G","SF","PF","F","C","C","Util","Util","BN","BN","BN"];
-var DATA_VERSION="2026-09-20";
+var DATA_VERSION="2026-09-20-movers";
 var STORAGE_KEY="fantasy-basketball-mock-draft.v2";
 var HW=(typeof window!=="undefined"&&window.hatchWidget)?window.hatchWidget:null;
 var DEFAULTS={phase:"setup",draftPos:6,rounds:13,log:[],q:"",f:"All",view:"team",sort:"cons",playoffStart:20,page:0,seed:123456789,rngState:123456789,userTurns:[],filtersOpen:false,scarcityOpen:false,focusPi:null};
@@ -801,8 +813,8 @@ function pickLabel(idx){var r=Math.floor(idx/TEAMS)+1;var w=idx%TEAMS+1;return "
 var HEALTH=window.DataHealth.audit(PLAYERS,typeof PDATA!=="undefined"?PDATA:{},CATS);
 function renderDataHealth(){
   var h='<details class="scarcity"><summary><b>Data health</b> &middot; '+(HEALTH.players-HEALTH.missingAdp.length)+'/'+HEALTH.players+' players with ADP &middot; bundled snapshot</summary>';
-  h+='<p class="muted">Snapshot '+esc(DATA_VERSION)+'. Yahoo and Fantrax ADP, NBA team, and Yahoo position eligibility were refreshed from Hashtag Basketball\'s 2026-27 ADP table (Yahoo and Fantrax columns, updated 17 September 2026). A red INJ badge marks the 10 players listed as injured as of 14 September 2026; tap or activate the INJ badge for the injury, context, expected return, and source. Prior-season ranks and category values are historical and unchanged. Category scarcity and the per-row strength tags both derive from BM-style per-game z-scores, not a current-season projection. This audit checks internal consistency; NBA player-pool completeness remains unverified.</p>';
-  h+='<p>'+HEALTH.missingAdp.length+' missing Yahoo ADP (CPUs use Fantrax ADP when Yahoo is missing, else median of 2025-26 totals rank, per-game rank, and built-in rank); '+HEALTH.missingLast.length+' missing prior-season rank; '+HEALTH.untagged.length+' without category tags; '+HEALTH.placeholderTeams.length+' unknown teams.</p>';
+  h+='<p class="muted">Snapshot '+esc(DATA_VERSION)+'. Yahoo and Fantrax ADP, NBA team, and Yahoo position eligibility were refreshed from Hashtag Basketball\'s 2026-27 ADP table (Yahoo and Fantrax columns, updated 17 September 2026). A red INJ badge marks the 10 players listed as injured as of 14 September 2026; tap or activate the INJ badge for the injury, context, expected return, and source. Prior-season ranks and category values are historical and unchanged. Category scarcity and the per-row strength tags both derive from BM-style per-game z-scores, not a current-season projection. <b>Movers / role</b>: teamPrev/mover sourced from pre-refresh bundled teams (+ documented add-candidate priors); roleDelta/roleNote are ADP-vs-last heuristics — not vacated-usage or Hashtag projections (projMpg/projRank not shipped). See docs/movers-outlook.md. This audit checks internal consistency; NBA player-pool completeness remains unverified.</p>';
+  h+='<p>'+HEALTH.missingAdp.length+' missing Yahoo ADP (CPUs use Fantrax ADP when Yahoo is missing, else median of 2025-26 totals rank, per-game rank, and built-in rank); '+HEALTH.missingLast.length+' missing prior-season rank; '+HEALTH.untagged.length+' without category tags; '+HEALTH.placeholderTeams.length+' unknown teams; '+(HEALTH.movers?HEALTH.movers.length:0)+' movers; '+(HEALTH.roleDeltaUp?HEALTH.roleDeltaUp.length:0)+' role↑ / '+(HEALTH.roleDeltaDown?HEALTH.roleDeltaDown.length:0)+' role↓; '+(HEALTH.withProjMpg?HEALTH.withProjMpg.length:0)+' with projMpg; '+(HEALTH.withProjRank?HEALTH.withProjRank.length:0)+' with projRank.</p>';
   h+='<p class="muted">Built-in rank is the original list order, not a fresh projection. Missing ranks stay blank. The legacy category labels on player rows are informational only; scarcity calculations use the historical `cv` values.</p>';
   if(HEALTH.errors.length||HEALTH.missingData.length||HEALTH.orphanData.length)h+='<p>Data consistency issues: '+(HEALTH.errors.length+HEALTH.missingData.length+HEALTH.orphanData.length)+'. Run node audit-data.js for details.</p>';
   return h+'</details>';
@@ -870,7 +882,7 @@ function pickCoachShellHtml(){
   return '<section id="pick-coach" class="pick-coach" aria-label="Pick coach">'
     +'<p class="pc-empty muted" hidden>Select a player to evaluate.</p>'
     +'<p class="pc-wait muted" hidden>Available on your turn.</p>'
-    +'<p class="pc-loading muted" hidden>Evaluating\u2026</p>'
+    +'<p class="pc-loading muted" hidden>Evaluating…</p>'
     +'<div class="pc-card" hidden>'
     +'<div class="pc-head"><div class="pc-name"></div><div class="pc-meta muted"></div><div class="pc-source muted" hidden></div></div>'
     +'<div class="pc-strengths" hidden></div>'
@@ -934,7 +946,13 @@ function buildPickCoachPayload(pi){
     rosterNeeds:{filledSlots:filled,openSlots:open,alreadyDraftedByUser:drafted,priorityNeeds:priorityNeeds},
     notableAvailable:notable,
     recentlyTaken:recently,
-    scarcityRem:rem
+    scarcityRem:rem,
+    mover:!!pl.mover,
+    roleDelta:pl.roleDelta||null,
+    roleNote:pl.roleNote||null,
+    teamPrev:pl.teamPrev||null,
+    projMpg:pl.projMpg!=null?pl.projMpg:null,
+    projRank:pl.projRank!=null?pl.projRank:null
   };
 }
 function scarcityRemPcts(){
@@ -966,12 +984,41 @@ function pickCoachStrengthTags(pl){
 }
 function renderPickCoachStrengths(pl, remMap){
   var tags=pickCoachStrengthTags(pl);
-  if(!tags.length)return "";
-  return tags.map(function(cat){
+  var mv=moverRoleChipHtml(pl, true);
+  var catHtml=tags.map(function(cat){
     var pct=remMap&&remMap[cat]!=null?remMap[cat]:null;
     var tip=pct!=null?(cat+" · "+pct+"% left"):cat;
     return '<span class="pc-chip" title="'+esc(tip)+'">'+esc(cat)+'</span>';
   }).join("");
+  return (mv||"")+(mv&&catHtml?" ":"")+catHtml;
+}
+
+function moverRoleChipHtml(pl, asPcChip){
+  if(!pl)return "";
+  var parts=[], tipBase=pl.roleNote||(pl.teamPrev? (pl.teamPrev+" → "+(pl.t||pl.teamCurr||"")) : "New team");
+  var tip=esc(tipBase);
+  var cls=asPcChip?"pc-chip ":"";
+  if(pl.mover){
+    parts.push('<span class="'+cls+'mv-chip" title="'+tip+'">NEW</span>');
+  }
+  if(pl.roleDelta==="up"){
+    parts.push('<span class="'+cls+'role-chip role-up" title="'+tip+'">↑ role</span>');
+  }else if(pl.roleDelta==="down"){
+    parts.push('<span class="'+cls+'role-chip role-down" title="'+tip+'">↓ role</span>');
+  }
+  return parts.join("");
+}
+function appendMoverWhy(pl, parts){
+  if(!pl||!parts)return;
+  if(pl.mover){
+    var note=(pl.roleNote||"").trim();
+    if(note.length>60)note=note.slice(0,57)+"…";
+    parts.push(note?("new team · "+note):"new team");
+  }else if(pl.roleDelta==="up"){
+    parts.push("expanded role");
+  }else if(pl.roleDelta==="down"){
+    parts.push("smaller role");
+  }
 }
 function softAdpClause(choice, pickNumber, adp){
   if(adp==null||!isFinite(Number(adp)))return "";
@@ -1075,7 +1122,10 @@ function refreshPickCoach(){
     updateCoachDockPeek(pl.n);
     if(metaEl){
       var adpTxt=pl.adp!=null?String(pl.adp):"—";
-      metaEl.textContent="Pick #"+payload.pickNumber+" · ADP "+adpTxt;
+      var meta="Pick #"+payload.pickNumber+" · ADP "+adpTxt;
+      if(pl.projMpg!=null)meta+=" · proj MPG "+pl.projMpg;
+      if(pl.projRank!=null)meta+=" · proj #"+pl.projRank;
+      metaEl.textContent=meta;
     }
     fillPickCoachBoard(still, pl, payload);
     var srcEl=still.querySelector(".pc-source");
@@ -1274,6 +1324,7 @@ function renderList(){
     i=cands[k];var pl2=PLAYERS[i];
     var rlabel=srt==="cons"?consRank(pl2).toFixed(1):pl2.r;
     var sub='<span>ADP '+disp(pl2.adp)+'</span><span>Last '+disp(pl2.last)+'</span><span>Tot '+disp(pl2.lastTotal)+'</span><span>MPG '+(pl2.mpg==null?'—':pl2.mpg.toFixed(1))+'</span><span>'+posBadges(pl2.p)+'</span>'+playoffBadge(pl2);
+    var mvRow=moverRoleChipHtml(pl2, false);if(mvRow)sub+=mvRow;
     if(pl2.c.length)sub+='<span>'+pl2.c.slice(0,4).join(" · ")+'</span>';
     var focusCls=(focusNow===i)?' pc-focus':'';
     rows.push('<div class="prow'+focusCls+'" data-pi="'+i+'" role="button" tabindex="0" aria-pressed="'+(focusNow===i?'true':'false')+'"><div class="l1"><span class="prank">'+rlabel+'</span><span class="pname">'+esc(pl2.n)+' <span class="teamtag">'+esc(pl2.t)+'</span>'+injBadge(pl2)+'</span><button class="draftbtn" data-pi="'+i+'" aria-label="Draft '+esc(pl2.n)+'"'+(ut?'':' disabled')+'>Draft</button></div><div class="l2">'+sub+'</div></div>');

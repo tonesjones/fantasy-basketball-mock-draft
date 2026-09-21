@@ -49,6 +49,7 @@ The layout collapses to a single column with compact two-line player rows; filte
 - `index.html` — UI, player pool, and draft flow.
 - `draft-core.js` — dependency-free validation, roster matching, seeded random source, and CPU selection. It is also usable from Node for tests.
 - `player-data.js` — ADP, prior-season ranks, per-game category values (`cv`), and minutes per game (`mpg`) merged into the player pool on load.
+- `movers-outlook.js` — team-change (`mover`/`teamPrev`) + heuristic `roleDelta` overlay (preview); see `docs/movers-outlook.md`.
 - `playoff-data.js` — Yahoo weekly schedule snapshot (all 30 teams × weeks 18–23, Mar 1 – Apr 11, 2027).
 - `playoff-core.js` — playoff game counts, totals, summaries, and the bad/ok/good quality rule.
 - `data-health.js` — shared browser/Node audit logic.

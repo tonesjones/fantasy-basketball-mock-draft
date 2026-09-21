@@ -1,0 +1,1774 @@
+{
+  "meta": {
+    "generated": "2026-09-20",
+    "counts": {
+      "movers": 71,
+      "roleUp": 84,
+      "roleDown": 50,
+      "roleFlat": 80,
+      "roleUnknown": 56,
+      "withPrev": 242,
+      "projMpg": 0,
+      "projRank": 0,
+      "players": 270
+    },
+    "thresholds": {
+      "mover_gap": 12,
+      "non_mover_gap": 20
+    }
+  },
+  "players": {
+    "AJ Dybantsa": {
+      "teamCurr": "WAS",
+      "mover": false,
+      "roleDelta": "unknown",
+      "teamPrev": "WAS"
+    },
+    "AJ Green": {
+      "teamCurr": "MIL",
+      "mover": false,
+      "roleDelta": "up",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "Aaron Gordon": {
+      "teamCurr": "DEN",
+      "mover": false,
+      "roleDelta": "up",
+      "teamPrev": "DEN",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "Aaron Holiday": {
+      "teamCurr": "HOU",
+      "mover": false,
+      "roleDelta": "unknown",
+      "teamPrev": "HOU"
+    },
+    "Aaron Nesmith": {
+      "teamCurr": "IND",
+      "mover": false,
+      "roleDelta": "up",
+      "teamPrev": "IND",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "Aaron Wiggins": {
+      "teamCurr": "ATL",
+      "mover": true,
+      "roleDelta": "up",
+      "teamPrev": "OKC",
+      "roleNote": "OKC→ATL · ADP ahead of last rank"
+    },
+    "Ace Bailey": {
+      "teamCurr": "UTA",
+      "mover": false,
+      "roleDelta": "up",
+      "teamPrev": "UTA",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "Aday Mara": {
+      "teamCurr": "OKC",
+      "mover": false,
+      "roleDelta": "unknown"
+    },
+    "Adem Bona": {
+      "teamCurr": "PHI",
+      "mover": false,
+      "roleDelta": "unknown",
+      "teamPrev": "PHI"
+    },
+    "Ajay Mitchell": {
+      "teamCurr": "OKC",
+      "mover": false,
+      "roleDelta": "flat"
+    },
+    "Al Horford": {
+      "teamCurr": "GS",
+      "mover": true,
+      "roleDelta": "up",
+      "teamPrev": "BOS",
+      "roleNote": "BOS→GS · ADP ahead of last rank"
+    },
+    "Alex Caruso": {
+      "teamCurr": "OKC",
+      "mover": false,
+      "roleDelta": "up",
+      "teamPrev": "OKC",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "Alex Sarr": {
+      "teamCurr": "WAS",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "WAS"
+    },
+    "Allen Graves": {
+      "teamCurr": "TOR",
+      "mover": false,
+      "roleDelta": "unknown"
+    },
+    "Alperen Sengun": {
+      "teamCurr": "HOU",
+      "mover": false,
+      "roleDelta": "up",
+      "teamPrev": "HOU",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "Amen Thompson": {
+      "teamCurr": "HOU",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "HOU"
+    },
+    "Andre Drummond": {
+      "teamCurr": "NY",
+      "mover": true,
+      "roleDelta": "up",
+      "teamPrev": "PHI",
+      "roleNote": "PHI→NY · ADP ahead of last rank"
+    },
+    "Andrew Nembhard": {
+      "teamCurr": "IND",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "IND"
+    },
+    "Andrew Wiggins": {
+      "teamCurr": "MIA",
+      "mover": false,
+      "roleDelta": "down",
+      "teamPrev": "MIA",
+      "roleNote": "ADP behind last rank"
+    },
+    "Anfernee Simons": {
+      "teamCurr": "PHI",
+      "mover": true,
+      "roleDelta": "up",
+      "teamPrev": "CHI",
+      "roleNote": "CHI→PHI · ADP ahead of last rank"
+    },
+    "Anthony Black": {
+      "teamCurr": "ORL",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "ORL"
+    },
+    "Anthony Davis": {
+      "teamCurr": "WAS",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "WAS"
+    },
+    "Anthony Edwards": {
+      "teamCurr": "MIN",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "MIN"
+    },
+    "Ausar Thompson": {
+      "teamCurr": "DET",
+      "mover": false,
+      "roleDelta": "up",
+      "teamPrev": "DET",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "Austin Reaves": {
+      "teamCurr": "LAL",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "LAL"
+    },
+    "Ayo Dosunmu": {
+      "teamCurr": "MIN",
+      "mover": true,
+      "roleDelta": "flat",
+      "teamPrev": "CHI",
+      "roleNote": "CHI→MIN · team change; ADP near last rank"
+    },
+    "Bam Adebayo": {
+      "teamCurr": "MIA",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "MIA"
+    },
+    "Bennedict Mathurin": {
+      "teamCurr": "NO",
+      "mover": true,
+      "roleDelta": "flat",
+      "teamPrev": "IND",
+      "roleNote": "IND→NO · team change; ADP near last rank"
+    },
+    "Bilal Coulibaly": {
+      "teamCurr": "WAS",
+      "mover": false,
+      "roleDelta": "down",
+      "teamPrev": "WAS",
+      "roleNote": "ADP behind last rank"
+    },
+    "Bobby Portis": {
+      "teamCurr": "MIA",
+      "mover": true,
+      "roleDelta": "up",
+      "teamPrev": "MIL",
+      "roleNote": "MIL→MIA · ADP ahead of last rank"
+    },
+    "Bogdan Bogdanovic": {
+      "teamCurr": "HOU",
+      "mover": true,
+      "roleDelta": "unknown",
+      "teamPrev": "LAC",
+      "roleNote": "LAC→HOU · team change; role unclear"
+    },
+    "Brandin Podziemski": {
+      "teamCurr": "GS",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "GS"
+    },
+    "Brandon Ingram": {
+      "teamCurr": "LAC",
+      "mover": true,
+      "roleDelta": "flat",
+      "teamPrev": "TOR",
+      "roleNote": "TOR→LAC · team change; ADP near last rank"
+    },
+    "Brandon Miller": {
+      "teamCurr": "CHA",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "CHA"
+    },
+    "Brice Sensabaugh": {
+      "teamCurr": "UTA",
+      "mover": false,
+      "roleDelta": "down",
+      "teamPrev": "UTA",
+      "roleNote": "ADP behind last rank"
+    },
+    "Brook Lopez": {
+      "teamCurr": "LAC",
+      "mover": false,
+      "roleDelta": "up",
+      "teamPrev": "LAC",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "Bub Carrington": {
+      "teamCurr": "WAS",
+      "mover": false,
+      "roleDelta": "unknown",
+      "teamPrev": "WAS"
+    },
+    "Buddy Hield": {
+      "teamCurr": "ATL",
+      "mover": true,
+      "roleDelta": "unknown",
+      "teamPrev": "GS",
+      "roleNote": "GS→ATL · team change; role unclear"
+    },
+    "CJ McCollum": {
+      "teamCurr": "ATL",
+      "mover": true,
+      "roleDelta": "flat",
+      "teamPrev": "WAS",
+      "roleNote": "WAS→ATL · team change; ADP near last rank"
+    },
+    "Cade Cunningham": {
+      "teamCurr": "DET",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "DET"
+    },
+    "Caleb Wilson": {
+      "teamCurr": "CHI",
+      "mover": false,
+      "roleDelta": "unknown"
+    },
+    "Cam Johnson": {
+      "teamCurr": "DEN",
+      "mover": false,
+      "roleDelta": "up",
+      "teamPrev": "DEN",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "Cam Thomas": {
+      "teamCurr": "BKN",
+      "mover": false,
+      "roleDelta": "unknown",
+      "teamPrev": "BKN"
+    },
+    "Cam Whitmore": {
+      "teamCurr": null,
+      "mover": false,
+      "roleDelta": "unknown",
+      "teamPrev": "WAS"
+    },
+    "Cameron Boozer": {
+      "teamCurr": "MEM",
+      "mover": false,
+      "roleDelta": "unknown"
+    },
+    "Caris LeVert": {
+      "teamCurr": "MIL",
+      "mover": true,
+      "roleDelta": "unknown",
+      "teamPrev": "DET",
+      "roleNote": "DET→MIL · team change; role unclear"
+    },
+    "Cason Wallace": {
+      "teamCurr": "OKC",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "OKC"
+    },
+    "Cedric Coward": {
+      "teamCurr": "MEM",
+      "mover": false,
+      "roleDelta": "up",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "Chet Holmgren": {
+      "teamCurr": "OKC",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "OKC"
+    },
+    "Christian Braun": {
+      "teamCurr": "DEN",
+      "mover": false,
+      "roleDelta": "up",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "Clint Capela": {
+      "teamCurr": "HOU",
+      "mover": false,
+      "roleDelta": "unknown",
+      "teamPrev": "HOU"
+    },
+    "Coby White": {
+      "teamCurr": "CHA",
+      "mover": true,
+      "roleDelta": "up",
+      "teamPrev": "CHI",
+      "roleNote": "CHI→CHA · ADP ahead of last rank"
+    },
+    "Collin Gillespie": {
+      "teamCurr": "PHO",
+      "mover": false,
+      "roleDelta": "down",
+      "teamPrev": "PHO",
+      "roleNote": "ADP behind last rank"
+    },
+    "Collin Murray-Boyles": {
+      "teamCurr": "TOR",
+      "mover": false,
+      "roleDelta": "up",
+      "teamPrev": "TOR",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "Collin Sexton": {
+      "teamCurr": "LAL",
+      "mover": true,
+      "roleDelta": "up",
+      "teamPrev": "UTA",
+      "roleNote": "UTA→LAL · ADP ahead of last rank"
+    },
+    "Cooper Flagg": {
+      "teamCurr": "DAL",
+      "mover": false,
+      "roleDelta": "up",
+      "teamPrev": "DAL",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "D'Angelo Russell": {
+      "teamCurr": "DAL",
+      "mover": false,
+      "roleDelta": "unknown",
+      "teamPrev": "DAL"
+    },
+    "Damian Lillard": {
+      "teamCurr": "POR",
+      "mover": true,
+      "roleDelta": "unknown",
+      "teamPrev": "MIL",
+      "roleNote": "MIL→POR · team change; role unclear"
+    },
+    "Daniel Gafford": {
+      "teamCurr": "DAL",
+      "mover": false,
+      "roleDelta": "up",
+      "teamPrev": "DAL",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "Darius Acuff Jr.": {
+      "teamCurr": "SAC",
+      "mover": false,
+      "roleDelta": "unknown"
+    },
+    "Darius Garland": {
+      "teamCurr": "LAC",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "LAC"
+    },
+    "Darryn Peterson": {
+      "teamCurr": "UTA",
+      "mover": false,
+      "roleDelta": "unknown"
+    },
+    "Davion Mitchell": {
+      "teamCurr": "MIA",
+      "mover": false,
+      "roleDelta": "up",
+      "teamPrev": "MIA",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "Day'Ron Sharpe": {
+      "teamCurr": "BKN",
+      "mover": false,
+      "roleDelta": "up",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "De'Aaron Fox": {
+      "teamCurr": "SA",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "SA"
+    },
+    "De'Andre Hunter": {
+      "teamCurr": "SAC",
+      "mover": true,
+      "roleDelta": "unknown",
+      "teamPrev": "CLE",
+      "roleNote": "CLE→SAC · team change; role unclear"
+    },
+    "DeMar DeRozan": {
+      "teamCurr": "DEN",
+      "mover": true,
+      "roleDelta": "down",
+      "teamPrev": "SAC",
+      "roleNote": "SAC→DEN · ADP behind last rank"
+    },
+    "Deandre Ayton": {
+      "teamCurr": "WAS",
+      "mover": true,
+      "roleDelta": "down",
+      "teamPrev": "LAL",
+      "roleNote": "LAL→WAS · ADP behind last rank"
+    },
+    "Dejounte Murray": {
+      "teamCurr": "NO",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "NO"
+    },
+    "Deni Avdija": {
+      "teamCurr": "POR",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "POR"
+    },
+    "Dennis Schroder": {
+      "teamCurr": "CHA",
+      "mover": true,
+      "roleDelta": "up",
+      "teamPrev": "SAC",
+      "roleNote": "SAC→CHA · ADP ahead of last rank"
+    },
+    "Dereck Lively II": {
+      "teamCurr": "DAL",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "DAL"
+    },
+    "Derik Queen": {
+      "teamCurr": "NO",
+      "mover": false,
+      "roleDelta": "up",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "Derrick Jones Jr.": {
+      "teamCurr": "LAC",
+      "mover": false,
+      "roleDelta": "down",
+      "teamPrev": "LAC",
+      "roleNote": "ADP behind last rank"
+    },
+    "Derrick White": {
+      "teamCurr": "BOS",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "BOS"
+    },
+    "Desmond Bane": {
+      "teamCurr": "ORL",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "ORL"
+    },
+    "Devin Booker": {
+      "teamCurr": "PHO",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "PHO"
+    },
+    "Devin Carter": {
+      "teamCurr": "ATL",
+      "mover": true,
+      "roleDelta": "unknown",
+      "teamPrev": "SAC",
+      "roleNote": "SAC→ATL · team change; role unclear"
+    },
+    "Devin Vassell": {
+      "teamCurr": "SA",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "SA"
+    },
+    "Dillon Brooks": {
+      "teamCurr": "PHO",
+      "mover": false,
+      "roleDelta": "up",
+      "teamPrev": "PHO",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "Domantas Sabonis": {
+      "teamCurr": "SAC",
+      "mover": false,
+      "roleDelta": "up",
+      "teamPrev": "SAC",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "Donovan Clingan": {
+      "teamCurr": "POR",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "POR"
+    },
+    "Donovan Mitchell": {
+      "teamCurr": "CLE",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "CLE"
+    },
+    "Donte DiVincenzo": {
+      "teamCurr": "MIN",
+      "mover": false,
+      "roleDelta": "unknown",
+      "teamPrev": "MIN"
+    },
+    "Dorian Finney-Smith": {
+      "teamCurr": "CHA",
+      "mover": true,
+      "roleDelta": "unknown",
+      "teamPrev": "HOU",
+      "roleNote": "HOU→CHA · team change; role unclear"
+    },
+    "Draymond Green": {
+      "teamCurr": "GS",
+      "mover": false,
+      "roleDelta": "up",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "Duncan Robinson": {
+      "teamCurr": "DET",
+      "mover": true,
+      "roleDelta": "up",
+      "teamPrev": "MIA",
+      "roleNote": "MIA→DET · ADP ahead of last rank"
+    },
+    "Dylan Harper": {
+      "teamCurr": "SA",
+      "mover": false,
+      "roleDelta": "up",
+      "teamPrev": "SA",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "Dyson Daniels": {
+      "teamCurr": "ATL",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "ATL"
+    },
+    "Egor Demin": {
+      "teamCurr": "BKN",
+      "mover": false,
+      "roleDelta": "up",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "Evan Mobley": {
+      "teamCurr": "CLE",
+      "mover": false,
+      "roleDelta": "up",
+      "teamPrev": "CLE",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "Franz Wagner": {
+      "teamCurr": "ORL",
+      "mover": false,
+      "roleDelta": "up",
+      "teamPrev": "ORL",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "Fred VanVleet": {
+      "teamCurr": "HOU",
+      "mover": false,
+      "roleDelta": "unknown",
+      "teamPrev": "HOU"
+    },
+    "GG Jackson": {
+      "teamCurr": "MEM",
+      "mover": false,
+      "roleDelta": "up",
+      "teamPrev": "MEM",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "Giannis Antetokounmpo": {
+      "teamCurr": "MIA",
+      "mover": true,
+      "roleDelta": "up",
+      "teamPrev": "MIL",
+      "roleNote": "MIL→MIA · ADP ahead of last rank"
+    },
+    "Goga Bitadze": {
+      "teamCurr": "ORL",
+      "mover": false,
+      "roleDelta": "unknown",
+      "teamPrev": "ORL"
+    },
+    "Gradey Dick": {
+      "teamCurr": "LAC",
+      "mover": true,
+      "roleDelta": "unknown",
+      "teamPrev": "TOR",
+      "roleNote": "TOR→LAC · team change; role unclear"
+    },
+    "Grayson Allen": {
+      "teamCurr": "CHA",
+      "mover": true,
+      "roleDelta": "down",
+      "teamPrev": "PHO",
+      "roleNote": "PHO→CHA · ADP behind last rank"
+    },
+    "Harrison Barnes": {
+      "teamCurr": "SA",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "SA"
+    },
+    "Haywood Highsmith": {
+      "teamCurr": "MIA",
+      "mover": false,
+      "roleDelta": "unknown",
+      "teamPrev": "MIA"
+    },
+    "Herbert Jones": {
+      "teamCurr": "NO",
+      "mover": false,
+      "roleDelta": "down",
+      "teamPrev": "NO",
+      "roleNote": "ADP behind last rank"
+    },
+    "Immanuel Quickley": {
+      "teamCurr": "TOR",
+      "mover": false,
+      "roleDelta": "down",
+      "teamPrev": "TOR",
+      "roleNote": "ADP behind last rank"
+    },
+    "Isaiah Collier": {
+      "teamCurr": "UTA",
+      "mover": false,
+      "roleDelta": "up",
+      "teamPrev": "UTA",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "Isaiah Hartenstein": {
+      "teamCurr": "OKC",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "OKC"
+    },
+    "Isaiah Joe": {
+      "teamCurr": "DET",
+      "mover": true,
+      "roleDelta": "down",
+      "teamPrev": "OKC",
+      "roleNote": "OKC→DET · ADP behind last rank"
+    },
+    "Isaiah Stewart": {
+      "teamCurr": "MEM",
+      "mover": true,
+      "roleDelta": "up",
+      "teamPrev": "DET",
+      "roleNote": "DET→MEM · ADP ahead of last rank"
+    },
+    "Ivica Zubac": {
+      "teamCurr": "IND",
+      "mover": true,
+      "roleDelta": "up",
+      "teamPrev": "LAC",
+      "roleNote": "LAC→IND · ADP ahead of last rank"
+    },
+    "Ja Morant": {
+      "teamCurr": "POR",
+      "mover": true,
+      "roleDelta": "up",
+      "teamPrev": "MEM",
+      "roleNote": "MEM→POR · ADP ahead of last rank"
+    },
+    "Ja'Kobe Walter": {
+      "teamCurr": "TOR",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "TOR"
+    },
+    "Jabari Smith Jr.": {
+      "teamCurr": "HOU",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "HOU"
+    },
+    "Jaden Ivey": {
+      "teamCurr": "DET",
+      "mover": false,
+      "roleDelta": "unknown",
+      "teamPrev": "DET"
+    },
+    "Jaden McDaniels": {
+      "teamCurr": "MIN",
+      "mover": false,
+      "roleDelta": "flat"
+    },
+    "Jaime Jaquez Jr.": {
+      "teamCurr": "MIL",
+      "mover": true,
+      "roleDelta": "up",
+      "teamPrev": "MIA",
+      "roleNote": "MIA→MIL · ADP ahead of last rank"
+    },
+    "Jakob Poeltl": {
+      "teamCurr": "TOR",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "TOR"
+    },
+    "Jalen Brunson": {
+      "teamCurr": "NY",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "NY"
+    },
+    "Jalen Duren": {
+      "teamCurr": "DET",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "DET"
+    },
+    "Jalen Green": {
+      "teamCurr": "PHO",
+      "mover": false,
+      "roleDelta": "up",
+      "teamPrev": "PHO",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "Jalen Johnson": {
+      "teamCurr": "ATL",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "ATL"
+    },
+    "Jalen Smith": {
+      "teamCurr": "CHI",
+      "mover": false,
+      "roleDelta": "down",
+      "teamPrev": "CHI",
+      "roleNote": "ADP behind last rank"
+    },
+    "Jalen Suggs": {
+      "teamCurr": "ORL",
+      "mover": false,
+      "roleDelta": "down",
+      "teamPrev": "ORL",
+      "roleNote": "ADP behind last rank"
+    },
+    "Jalen Williams": {
+      "teamCurr": "OKC",
+      "mover": false,
+      "roleDelta": "up",
+      "teamPrev": "OKC",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "Jamal Murray": {
+      "teamCurr": "DEN",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "DEN"
+    },
+    "Jamal Shead": {
+      "teamCurr": "TOR",
+      "mover": false,
+      "roleDelta": "up",
+      "teamPrev": "TOR",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "James Harden": {
+      "teamCurr": "CLE",
+      "mover": false,
+      "roleDelta": "down",
+      "teamPrev": "CLE",
+      "roleNote": "ADP behind last rank"
+    },
+    "Jared McCain": {
+      "teamCurr": "OKC",
+      "mover": true,
+      "roleDelta": "up",
+      "teamPrev": "PHI",
+      "roleNote": "PHI→OKC · ADP ahead of last rank"
+    },
+    "Jaren Jackson Jr.": {
+      "teamCurr": "UTA",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "UTA"
+    },
+    "Jarred Vanderbilt": {
+      "teamCurr": "LAL",
+      "mover": false,
+      "roleDelta": "unknown",
+      "teamPrev": "LAL"
+    },
+    "Jarrett Allen": {
+      "teamCurr": "CLE",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "CLE"
+    },
+    "Jay Huff": {
+      "teamCurr": "IND",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "IND"
+    },
+    "Jaylen Brown": {
+      "teamCurr": "PHI",
+      "mover": true,
+      "roleDelta": "flat",
+      "teamPrev": "BOS",
+      "roleNote": "BOS→PHI · team change; ADP near last rank"
+    },
+    "Jaylen Wells": {
+      "teamCurr": "MEM",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "MEM"
+    },
+    "Jayson Tatum": {
+      "teamCurr": "BOS",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "BOS"
+    },
+    "Jerami Grant": {
+      "teamCurr": "MEM",
+      "mover": true,
+      "roleDelta": "down",
+      "teamPrev": "POR",
+      "roleNote": "POR→MEM · ADP behind last rank"
+    },
+    "Jeremiah Fears": {
+      "teamCurr": "NO",
+      "mover": false,
+      "roleDelta": "up",
+      "teamPrev": "NO",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "Jeremy Sochan": {
+      "teamCurr": "POR",
+      "mover": true,
+      "roleDelta": "unknown",
+      "teamPrev": "SA",
+      "roleNote": "SA→POR · team change; role unclear"
+    },
+    "Jimmy Butler": {
+      "teamCurr": "GS",
+      "mover": false,
+      "roleDelta": "down",
+      "teamPrev": "GS",
+      "roleNote": "ADP behind last rank"
+    },
+    "Joel Embiid": {
+      "teamCurr": "PHI",
+      "mover": false,
+      "roleDelta": "down",
+      "teamPrev": "PHI",
+      "roleNote": "ADP behind last rank"
+    },
+    "John Collins": {
+      "teamCurr": "DET",
+      "mover": true,
+      "roleDelta": "flat",
+      "teamPrev": "LAC",
+      "roleNote": "LAC→DET · team change; ADP near last rank"
+    },
+    "Jonas Valanciunas": {
+      "teamCurr": "DEN",
+      "mover": false,
+      "roleDelta": "unknown",
+      "teamPrev": "DEN"
+    },
+    "Jonathan Isaac": {
+      "teamCurr": "ORL",
+      "mover": false,
+      "roleDelta": "unknown",
+      "teamPrev": "ORL"
+    },
+    "Jonathan Kuminga": {
+      "teamCurr": "MIN",
+      "mover": true,
+      "roleDelta": "up",
+      "teamPrev": "GS",
+      "roleNote": "GS→MIN · ADP ahead of last rank"
+    },
+    "Jonathan Mogbo": {
+      "teamCurr": "TOR",
+      "mover": false,
+      "roleDelta": "unknown",
+      "teamPrev": "TOR"
+    },
+    "Jordan Clarkson": {
+      "teamCurr": "NY",
+      "mover": false,
+      "roleDelta": "unknown",
+      "teamPrev": "NY"
+    },
+    "Jose Alvarado": {
+      "teamCurr": "NY",
+      "mover": true,
+      "roleDelta": "unknown",
+      "teamPrev": "NO",
+      "roleNote": "NO→NY · team change; role unclear"
+    },
+    "Josh Giddey": {
+      "teamCurr": "CHI",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "CHI"
+    },
+    "Josh Hart": {
+      "teamCurr": "NY",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "NY"
+    },
+    "Jrue Holiday": {
+      "teamCurr": "POR",
+      "mover": true,
+      "roleDelta": "flat",
+      "teamPrev": "BOS",
+      "roleNote": "BOS→POR · team change; ADP near last rank"
+    },
+    "Julian Champagnie": {
+      "teamCurr": "SA",
+      "mover": false,
+      "roleDelta": "flat"
+    },
+    "Julius Randle": {
+      "teamCurr": "BKN",
+      "mover": true,
+      "roleDelta": "up",
+      "teamPrev": "MIN",
+      "roleNote": "MIN→BKN · ADP ahead of last rank"
+    },
+    "Jusuf Nurkic": {
+      "teamCurr": "UTA",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "UTA"
+    },
+    "Karl-Anthony Towns": {
+      "teamCurr": "NY",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "NY"
+    },
+    "Kawhi Leonard": {
+      "teamCurr": "TOR",
+      "mover": true,
+      "roleDelta": "down",
+      "teamPrev": "LAC",
+      "roleNote": "LAC→TOR · ADP behind last rank"
+    },
+    "Keaton Wagler": {
+      "teamCurr": "LAC",
+      "mover": false,
+      "roleDelta": "unknown"
+    },
+    "Keegan Murray": {
+      "teamCurr": "SAC",
+      "mover": false,
+      "roleDelta": "down",
+      "teamPrev": "SAC",
+      "roleNote": "ADP behind last rank"
+    },
+    "Kel'el Ware": {
+      "teamCurr": "MIL",
+      "mover": true,
+      "roleDelta": "down",
+      "teamPrev": "MIA",
+      "roleNote": "MIA→MIL · ADP behind last rank"
+    },
+    "Keldon Johnson": {
+      "teamCurr": "SA",
+      "mover": false,
+      "roleDelta": "down",
+      "teamPrev": "SA",
+      "roleNote": "ADP behind last rank"
+    },
+    "Kelly Oubre Jr.": {
+      "teamCurr": "IND",
+      "mover": true,
+      "roleDelta": "flat",
+      "teamPrev": "PHI",
+      "roleNote": "PHI→IND · team change; ADP near last rank"
+    },
+    "Kenrich Williams": {
+      "teamCurr": "OKC",
+      "mover": false,
+      "roleDelta": "unknown",
+      "teamPrev": "OKC"
+    },
+    "Keon Ellis": {
+      "teamCurr": "BKN",
+      "mover": true,
+      "roleDelta": "flat",
+      "teamPrev": "SAC",
+      "roleNote": "SAC→BKN · team change; ADP near last rank"
+    },
+    "Kevin Durant": {
+      "teamCurr": "HOU",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "HOU"
+    },
+    "Kevin Porter Jr.": {
+      "teamCurr": "MIL",
+      "mover": false,
+      "roleDelta": "down",
+      "roleNote": "ADP behind last rank"
+    },
+    "Kevon Looney": {
+      "teamCurr": "LAL",
+      "mover": true,
+      "roleDelta": "unknown",
+      "teamPrev": "NO",
+      "roleNote": "NO→LAL · team change; role unclear"
+    },
+    "Keyonte George": {
+      "teamCurr": "UTA",
+      "mover": false,
+      "roleDelta": "down",
+      "teamPrev": "UTA",
+      "roleNote": "ADP behind last rank"
+    },
+    "Khaman Maluach": {
+      "teamCurr": "PHO",
+      "mover": false,
+      "roleDelta": "up",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "Khris Middleton": {
+      "teamCurr": "WAS",
+      "mover": false,
+      "roleDelta": "up",
+      "teamPrev": "WAS",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "Kingston Flemings": {
+      "teamCurr": "ATL",
+      "mover": false,
+      "roleDelta": "unknown"
+    },
+    "Klay Thompson": {
+      "teamCurr": "MIA",
+      "mover": true,
+      "roleDelta": "up",
+      "teamPrev": "DAL",
+      "roleNote": "DAL→MIA · ADP ahead of last rank"
+    },
+    "Kon Knueppel": {
+      "teamCurr": "CHA",
+      "mover": false,
+      "roleDelta": "up",
+      "teamPrev": "CHA",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "Kristaps Porzingis": {
+      "teamCurr": "GS",
+      "mover": true,
+      "roleDelta": "down",
+      "teamPrev": "ATL",
+      "roleNote": "ATL→GS · ADP behind last rank"
+    },
+    "Kyle Filipowski": {
+      "teamCurr": "UTA",
+      "mover": false,
+      "roleDelta": "up",
+      "teamPrev": "UTA",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "Kyle Kuzma": {
+      "teamCurr": "MIL",
+      "mover": false,
+      "roleDelta": "up",
+      "teamPrev": "MIL",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "Kyrie Irving": {
+      "teamCurr": "DAL",
+      "mover": false,
+      "roleDelta": "unknown",
+      "teamPrev": "DAL"
+    },
+    "Kyshawn George": {
+      "teamCurr": "WAS",
+      "mover": false,
+      "roleDelta": "down",
+      "teamPrev": "WAS",
+      "roleNote": "ADP behind last rank"
+    },
+    "LaMelo Ball": {
+      "teamCurr": "MIN",
+      "mover": true,
+      "roleDelta": "up",
+      "teamPrev": "CHA",
+      "roleNote": "CHA→MIN · ADP ahead of last rank"
+    },
+    "Lauri Markkanen": {
+      "teamCurr": "UTA",
+      "mover": false,
+      "roleDelta": "down",
+      "teamPrev": "UTA",
+      "roleNote": "ADP behind last rank"
+    },
+    "LeBron James": {
+      "teamCurr": "PHI",
+      "mover": true,
+      "roleDelta": "flat",
+      "teamPrev": "LAL",
+      "roleNote": "LAL→PHI · team change; ADP near last rank"
+    },
+    "Leonard Miller": {
+      "teamCurr": "CHI",
+      "mover": true,
+      "roleDelta": "up",
+      "teamPrev": "MIN",
+      "roleNote": "MIN→CHI · ADP ahead of last rank"
+    },
+    "Luguentz Dort": {
+      "teamCurr": "ATL",
+      "mover": true,
+      "roleDelta": "up",
+      "teamPrev": "OKC",
+      "roleNote": "OKC→ATL · ADP ahead of last rank"
+    },
+    "Luka Doncic": {
+      "teamCurr": "LAL",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "LAL"
+    },
+    "Luke Kennard": {
+      "teamCurr": "PHO",
+      "mover": true,
+      "roleDelta": "up",
+      "teamPrev": "LAL",
+      "roleNote": "LAL→PHO · ADP ahead of last rank"
+    },
+    "Luke Kornet": {
+      "teamCurr": "SA",
+      "mover": true,
+      "roleDelta": "up",
+      "teamPrev": "BOS",
+      "roleNote": "BOS→SA · ADP ahead of last rank"
+    },
+    "Malik Monk": {
+      "teamCurr": "SAC",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "SAC"
+    },
+    "Mark Williams": {
+      "teamCurr": "PHO",
+      "mover": false,
+      "roleDelta": "down",
+      "teamPrev": "PHO",
+      "roleNote": "ADP behind last rank"
+    },
+    "Matas Buzelis": {
+      "teamCurr": "CHI",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "CHI"
+    },
+    "Max Christie": {
+      "teamCurr": "DAL",
+      "mover": false,
+      "roleDelta": "down",
+      "teamPrev": "DAL",
+      "roleNote": "ADP behind last rank"
+    },
+    "Maxime Raynaud": {
+      "teamCurr": "SAC",
+      "mover": false,
+      "roleDelta": "up",
+      "teamPrev": "SAC",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "Michael Porter Jr.": {
+      "teamCurr": "BKN",
+      "mover": false,
+      "roleDelta": "down",
+      "teamPrev": "BKN",
+      "roleNote": "ADP behind last rank"
+    },
+    "Mikal Bridges": {
+      "teamCurr": "NY",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "NY"
+    },
+    "Mike Conley": {
+      "teamCurr": "BOS",
+      "mover": true,
+      "roleDelta": "unknown",
+      "teamPrev": "MIN",
+      "roleNote": "MIN→BOS · team change; role unclear"
+    },
+    "Mikel Brown Jr.": {
+      "teamCurr": "BKN",
+      "mover": false,
+      "roleDelta": "unknown"
+    },
+    "Miles Bridges": {
+      "teamCurr": "PHO",
+      "mover": true,
+      "roleDelta": "flat",
+      "teamPrev": "CHA",
+      "roleNote": "CHA→PHO · team change; ADP near last rank"
+    },
+    "Miles McBride": {
+      "teamCurr": "NY",
+      "mover": false,
+      "roleDelta": "down",
+      "teamPrev": "NY",
+      "roleNote": "ADP behind last rank"
+    },
+    "Mitchell Robinson": {
+      "teamCurr": "BOS",
+      "mover": true,
+      "roleDelta": "up",
+      "teamPrev": "NY",
+      "roleNote": "NY→BOS · ADP ahead of last rank"
+    },
+    "Morez Johnson Jr.": {
+      "teamCurr": "DAL",
+      "mover": false,
+      "roleDelta": "unknown"
+    },
+    "Moses Moody": {
+      "teamCurr": "GS",
+      "mover": false,
+      "roleDelta": "unknown",
+      "teamPrev": "GS"
+    },
+    "Moussa Diabate": {
+      "teamCurr": "CHA",
+      "mover": false,
+      "roleDelta": "up",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "Myles Turner": {
+      "teamCurr": "MIL",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "MIL"
+    },
+    "Naji Marshall": {
+      "teamCurr": "DAL",
+      "mover": false,
+      "roleDelta": "down",
+      "teamPrev": "DAL",
+      "roleNote": "ADP behind last rank"
+    },
+    "Nate Ament": {
+      "teamCurr": "MIL",
+      "mover": false,
+      "roleDelta": "unknown"
+    },
+    "Naz Reid": {
+      "teamCurr": "CHA",
+      "mover": true,
+      "roleDelta": "up",
+      "teamPrev": "MIN",
+      "roleNote": "MIN→CHA · ADP ahead of last rank"
+    },
+    "Neemias Queta": {
+      "teamCurr": "BOS",
+      "mover": false,
+      "roleDelta": "down",
+      "teamPrev": "BOS",
+      "roleNote": "ADP behind last rank"
+    },
+    "Nic Claxton": {
+      "teamCurr": "CHI",
+      "mover": true,
+      "roleDelta": "up",
+      "teamPrev": "BKN",
+      "roleNote": "BKN→CHI · ADP ahead of last rank"
+    },
+    "Nickeil Alexander-Walker": {
+      "teamCurr": "ATL",
+      "mover": false,
+      "roleDelta": "down",
+      "teamPrev": "ATL",
+      "roleNote": "ADP behind last rank"
+    },
+    "Nicolas Batum": {
+      "teamCurr": "LAC",
+      "mover": false,
+      "roleDelta": "unknown",
+      "teamPrev": "LAC"
+    },
+    "Nikola Jokic": {
+      "teamCurr": "DEN",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "DEN"
+    },
+    "Nikola Jovic": {
+      "teamCurr": "MIA",
+      "mover": false,
+      "roleDelta": "unknown",
+      "teamPrev": "MIA"
+    },
+    "Nikola Vucevic": {
+      "teamCurr": "BOS",
+      "mover": false,
+      "roleDelta": "down",
+      "teamPrev": "BOS",
+      "roleNote": "ADP behind last rank"
+    },
+    "Norman Powell": {
+      "teamCurr": "CHI",
+      "mover": true,
+      "roleDelta": "down",
+      "teamPrev": "MIA",
+      "roleNote": "MIA→CHI · ADP behind last rank"
+    },
+    "OG Anunoby": {
+      "teamCurr": "NY",
+      "mover": false,
+      "roleDelta": "down",
+      "teamPrev": "NY",
+      "roleNote": "ADP behind last rank"
+    },
+    "Obi Toppin": {
+      "teamCurr": "IND",
+      "mover": false,
+      "roleDelta": "down",
+      "teamPrev": "IND",
+      "roleNote": "ADP behind last rank"
+    },
+    "Ochai Agbaji": {
+      "teamCurr": "TOR",
+      "mover": false,
+      "roleDelta": "unknown",
+      "teamPrev": "TOR"
+    },
+    "Onyeka Okongwu": {
+      "teamCurr": "ATL",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "ATL"
+    },
+    "P.J. Washington": {
+      "teamCurr": "DAL",
+      "mover": false,
+      "roleDelta": "up",
+      "teamPrev": "DAL",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "Paolo Banchero": {
+      "teamCurr": "ORL",
+      "mover": false,
+      "roleDelta": "up",
+      "teamPrev": "ORL",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "Pascal Siakam": {
+      "teamCurr": "IND",
+      "mover": false,
+      "roleDelta": "up",
+      "teamPrev": "IND",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "Paul George": {
+      "teamCurr": "BOS",
+      "mover": true,
+      "roleDelta": "down",
+      "teamPrev": "PHI",
+      "roleNote": "PHI→BOS · ADP behind last rank"
+    },
+    "Paul Reed": {
+      "teamCurr": "DET",
+      "mover": false,
+      "roleDelta": "up",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "Payton Pritchard": {
+      "teamCurr": "BOS",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "BOS"
+    },
+    "Pelle Larsson": {
+      "teamCurr": "MIA",
+      "mover": false,
+      "roleDelta": "up",
+      "teamPrev": "MIA",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "Peyton Watson": {
+      "teamCurr": "CLE",
+      "mover": true,
+      "roleDelta": "flat",
+      "teamPrev": "DEN",
+      "roleNote": "DEN→CLE · team change; ADP near last rank"
+    },
+    "Quentin Grimes": {
+      "teamCurr": "LAL",
+      "mover": true,
+      "roleDelta": "up",
+      "teamPrev": "PHI",
+      "roleNote": "PHI→LAL · ADP ahead of last rank"
+    },
+    "RJ Barrett": {
+      "teamCurr": "TOR",
+      "mover": false,
+      "roleDelta": "up",
+      "teamPrev": "TOR",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "Reed Sheppard": {
+      "teamCurr": "HOU",
+      "mover": false,
+      "roleDelta": "down",
+      "teamPrev": "HOU",
+      "roleNote": "ADP behind last rank"
+    },
+    "Rob Dillingham": {
+      "teamCurr": "CHI",
+      "mover": true,
+      "roleDelta": "unknown",
+      "teamPrev": "MIN",
+      "roleNote": "MIN→CHI · team change; role unclear"
+    },
+    "Ron Holland": {
+      "teamCurr": "DET",
+      "mover": false,
+      "roleDelta": "up",
+      "teamPrev": "DET",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "Royce O'Neale": {
+      "teamCurr": "CHA",
+      "mover": true,
+      "roleDelta": "down",
+      "teamPrev": "PHO",
+      "roleNote": "PHO→CHA · ADP behind last rank"
+    },
+    "Rudy Gobert": {
+      "teamCurr": "MIN",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "MIN"
+    },
+    "Rui Hachimura": {
+      "teamCurr": "LAC",
+      "mover": true,
+      "roleDelta": "up",
+      "teamPrev": "LAL",
+      "roleNote": "LAL→LAC · ADP ahead of last rank"
+    },
+    "Ryan Kalkbrenner": {
+      "teamCurr": "CHA",
+      "mover": false,
+      "roleDelta": "up",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "Ryan Rollins": {
+      "teamCurr": "MIL",
+      "mover": false,
+      "roleDelta": "down",
+      "teamPrev": "MIL",
+      "roleNote": "ADP behind last rank"
+    },
+    "Saddiq Bey": {
+      "teamCurr": "NO",
+      "mover": false,
+      "roleDelta": "down",
+      "teamPrev": "NO",
+      "roleNote": "ADP behind last rank"
+    },
+    "Sam Hauser": {
+      "teamCurr": "BOS",
+      "mover": false,
+      "roleDelta": "up",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "Sam Merrill": {
+      "teamCurr": "CLE",
+      "mover": false,
+      "roleDelta": "down",
+      "teamPrev": "CLE",
+      "roleNote": "ADP behind last rank"
+    },
+    "Sandro Mamukelashvili": {
+      "teamCurr": "LAL",
+      "mover": true,
+      "roleDelta": "up",
+      "teamPrev": "TOR",
+      "roleNote": "TOR→LAL · ADP ahead of last rank"
+    },
+    "Santi Aldama": {
+      "teamCurr": "DAL",
+      "mover": true,
+      "roleDelta": "down",
+      "teamPrev": "MEM",
+      "roleNote": "MEM→DAL · ADP behind last rank"
+    },
+    "Scoot Henderson": {
+      "teamCurr": "POR",
+      "mover": false,
+      "roleDelta": "up",
+      "teamPrev": "POR",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "Scottie Barnes": {
+      "teamCurr": "TOR",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "TOR"
+    },
+    "Scotty Pippen Jr.": {
+      "teamCurr": "MEM",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "MEM"
+    },
+    "Shaedon Sharpe": {
+      "teamCurr": "POR",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "POR"
+    },
+    "Shai Gilgeous-Alexander": {
+      "teamCurr": "OKC",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "OKC"
+    },
+    "Stephen Curry": {
+      "teamCurr": "GS",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "GS"
+    },
+    "Stephon Castle": {
+      "teamCurr": "SA",
+      "mover": false,
+      "roleDelta": "up",
+      "teamPrev": "SA",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "Steven Adams": {
+      "teamCurr": "HOU",
+      "mover": false,
+      "roleDelta": "up",
+      "teamPrev": "HOU",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "T.J. McConnell": {
+      "teamCurr": "IND",
+      "mover": false,
+      "roleDelta": "up",
+      "teamPrev": "IND",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "Tari Eason": {
+      "teamCurr": "HOU",
+      "mover": false,
+      "roleDelta": "up",
+      "teamPrev": "HOU",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "Taurean Prince": {
+      "teamCurr": "MIL",
+      "mover": false,
+      "roleDelta": "unknown",
+      "teamPrev": "MIL"
+    },
+    "Taylor Hendricks": {
+      "teamCurr": "MEM",
+      "mover": true,
+      "roleDelta": "up",
+      "teamPrev": "UTA",
+      "roleNote": "UTA→MEM · ADP ahead of last rank"
+    },
+    "Thomas Bryant": {
+      "teamCurr": "CLE",
+      "mover": false,
+      "roleDelta": "unknown",
+      "teamPrev": "CLE"
+    },
+    "Tobias Harris": {
+      "teamCurr": "SA",
+      "mover": true,
+      "roleDelta": "down",
+      "teamPrev": "DET",
+      "roleNote": "DET→SA · ADP behind last rank"
+    },
+    "Toumani Camara": {
+      "teamCurr": "POR",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "POR"
+    },
+    "Trae Young": {
+      "teamCurr": "WAS",
+      "mover": false,
+      "roleDelta": "up",
+      "teamPrev": "WAS",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "Tre Jones": {
+      "teamCurr": "CHI",
+      "mover": false,
+      "roleDelta": "down",
+      "teamPrev": "CHI",
+      "roleNote": "ADP behind last rank"
+    },
+    "Trey Murphy III": {
+      "teamCurr": "NO",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "NO"
+    },
+    "Tristan Vukcevic": {
+      "teamCurr": "WAS",
+      "mover": false,
+      "roleDelta": "unknown",
+      "teamPrev": "WAS"
+    },
+    "Tristan da Silva": {
+      "teamCurr": "ORL",
+      "mover": false,
+      "roleDelta": "down",
+      "teamPrev": "ORL",
+      "roleNote": "ADP behind last rank"
+    },
+    "Ty Jerome": {
+      "teamCurr": "MEM",
+      "mover": true,
+      "roleDelta": "down",
+      "teamPrev": "CLE",
+      "roleNote": "CLE→MEM · ADP behind last rank"
+    },
+    "Tyler Herro": {
+      "teamCurr": "MIL",
+      "mover": true,
+      "roleDelta": "down",
+      "teamPrev": "MIA",
+      "roleNote": "MIA→MIL · ADP behind last rank"
+    },
+    "Tyrese Haliburton": {
+      "teamCurr": "IND",
+      "mover": false,
+      "roleDelta": "unknown",
+      "teamPrev": "IND"
+    },
+    "Tyrese Maxey": {
+      "teamCurr": "PHI",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "PHI"
+    },
+    "VJ Edgecombe": {
+      "teamCurr": "PHI",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "PHI"
+    },
+    "Victor Wembanyama": {
+      "teamCurr": "SA",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "SA"
+    },
+    "Walker Kessler": {
+      "teamCurr": "LAL",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "LAL"
+    },
+    "Walter Clayton Jr.": {
+      "teamCurr": "MEM",
+      "mover": true,
+      "roleDelta": "unknown",
+      "teamPrev": "UTA",
+      "roleNote": "UTA→MEM · team change; role unclear"
+    },
+    "Wendell Carter Jr.": {
+      "teamCurr": "ORL",
+      "mover": false,
+      "roleDelta": "flat",
+      "teamPrev": "ORL"
+    },
+    "Yang Hansen": {
+      "teamCurr": "POR",
+      "mover": false,
+      "roleDelta": "unknown",
+      "teamPrev": "POR"
+    },
+    "Yaxel Lendeborg": {
+      "teamCurr": "GS",
+      "mover": false,
+      "roleDelta": "unknown"
+    },
+    "Yves Missi": {
+      "teamCurr": "NO",
+      "mover": false,
+      "roleDelta": "up",
+      "teamPrev": "NO",
+      "roleNote": "ADP ahead of last rank"
+    },
+    "Zach Edey": {
+      "teamCurr": "MEM",
+      "mover": false,
+      "roleDelta": "unknown",
+      "teamPrev": "MEM"
+    },
+    "Zach LaVine": {
+      "teamCurr": "SAC",
+      "mover": false,
+      "roleDelta": "down",
+      "teamPrev": "SAC",
+      "roleNote": "ADP behind last rank"
+    },
+    "Zion Williamson": {
+      "teamCurr": "NO",
+      "mover": false,
+      "roleDelta": "up",
+      "teamPrev": "NO",
+      "roleNote": "ADP ahead of last rank"
+    }
+  }
+}

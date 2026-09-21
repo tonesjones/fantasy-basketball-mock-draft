@@ -1,5 +1,15 @@
 # Changelog
 
+## Movers / role outlook (2026-09-20) — preview only
+- Schema overlay `movers-outlook.js` merges into PDATA: `teamPrev`, `teamCurr`,
+  `mover`, `roleDelta`, `roleNote` (optional `projMpg`/`projRank` unused in v1).
+- **Sourced:** prior teams from pre-Hashtag-refresh PLAYERS + documented
+  add-candidate priors. **Heuristic:** roleDelta from ADP vs last-season rank.
+- UI: list-row NEW / ↑ role / ↓ role chips; pick coach echoes chips + why clause.
+- Data health coverage counts + setup disclosure. Docs: `docs/movers-outlook.md`.
+- Preview target: **tony-draft-lab-preview** only. Prod **tony-draft-lab** not deployed.
+- `cv` / last-season grades unchanged. DATA_VERSION `2026-09-20-movers`.
+
 ## Docs: Pick coach main vs preview vs prod (2026-09-20)
 - Clarify that Pick coach **code is on `main`**, live TypeSafe/Jev is on
   **tony-draft-lab-preview** only, and **tony-draft-lab** prod is not a live
