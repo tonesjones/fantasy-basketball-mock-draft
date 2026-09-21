@@ -141,10 +141,25 @@
   }
 
 
+  /** QA fixtures are limited to the preview project and local development. */
+  function isQaFixtureHost() {
+    try {
+      if (typeof location === "undefined") return false;
+      var protocol = String(location.protocol || "").toLowerCase();
+      if (protocol === "file:") return true;
+      var host = String(location.hostname || "").toLowerCase();
+      return host === "localhost" || host === "127.0.0.1" || host === "::1" ||
+        host === "tony-draft-lab-preview.pages.dev" ||
+        /\.tony-draft-lab-preview\.pages\.dev$/i.test(host);
+    } catch (e) {
+      return false;
+    }
+  }
+
   /** Parse preview QA query: ?coachFixture=1 | ?leanDemo=1 | ?forceConf=suggest|lean|uncertain */
   function readCoachQaMode() {
     try {
-      if (typeof location === "undefined" || !location.search) return null;
+      if (!isQaFixtureHost() || !location.search) return null;
       var search = String(location.search || "");
       if (search.charAt(0) === "?") search = search.slice(1);
       var params = Object.create(null);
@@ -771,6 +786,7 @@
     normalizeApiResult: normalizeApiResult,
     uncertainResult: uncertainResult,
     isPreviewPagesHost: isPreviewPagesHost,
+    isQaFixtureHost: isQaFixtureHost,
     isStubbableSoftFail: isStubbableSoftFail,
     labeledStubResult: labeledStubResult,
     classifyVerdict: classifyVerdict,

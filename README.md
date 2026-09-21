@@ -66,7 +66,7 @@ The layout collapses to a single column with compact two-line player rows; filte
 Advisory-only **Pick coach** side tab (your turn only). Code is on `main`.
 **Live TypeSafe/Jev** runs on preview **[tony-draft-lab-preview.pages.dev](https://tony-draft-lab-preview.pages.dev)** (`TYPESAFE_API_KEY` on that Pages project). It is **not** on prod **[tony-draft-lab.pages.dev](https://tony-draft-lab.pages.dev)** — do not treat prod as a live coach. Branch / `feat-*` aliases need the secret in the CF **Preview** environment (Production secrets alone are not enough).
 
-Confidence bands (TEMPORARY client gates): **suggest** ≥ 0.55; **lean** ≥ 0.35 (outline `Lean take|wait|reach`); below that “Not sure enough…”. SoftFail stays uncertain. QA: `?leanDemo=1`. Details: `docs/pick-coach.md`.
+Confidence bands (TEMPORARY client gates): **suggest** ≥ 0.45; **lean** ≥ 0.25 (outline `Lean take|wait|reach`); below that “Not sure enough…”. SoftFail stays uncertain. QA on preview/local hosts: `?leanDemo=1`. Details: `docs/pick-coach.md`.
 
 - Source labels: **Jev** | **Stub** (preview soft-fail QA) | **Stub · offline** (`file://`) | **Unavailable**
 - Soft-fail / unavailable still shows mover/role why when applicable; preview soft-fails may use labeled stub (never as Jev)
@@ -104,7 +104,7 @@ The category-scarcity panel shows, for each of the nine categories, the share of
 
 Live at **[tony-draft-lab-preview.pages.dev](https://tony-draft-lab-preview.pages.dev)** — **not** on prod `tony-draft-lab.pages.dev`:
 
-- **Pick coach** — advisory TypeSafe/Jev with **lean** band (TEMPORARY 0.35–0.55 outline chips); softFail / unavailable still shows mover/role (and vacated) why; `feat-*` soft-fails may use labeled **Stub** (never as Jev). See `docs/pick-coach.md`.
+- **Pick coach** — advisory TypeSafe/Jev with **lean** band (TEMPORARY 0.25–0.45 outline chips); softFail / unavailable still shows mover/role (and vacated) why; `feat-*` soft-fails may use labeled **Stub** (never as Jev). See `docs/pick-coach.md`.
 - **Movers / role outlook (phase 1)** — 71 real `teamPrev`→`teamCurr` movers; quiet NEW + ↑/↓ role chips (roleDelta is ADP-vs-last heuristic). No `projMpg`/`projRank`. See `docs/movers-outlook.md`.
 - **Vacated usage (phase 2)** — curated `vacatedGainers` for **22** high-ADP movers; one quiet Pick coach line `Vacates usage → …` (also on softFail). Not a BM scrape. See `docs/vacated-usage.md`.
 

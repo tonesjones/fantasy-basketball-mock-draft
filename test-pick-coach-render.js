@@ -13,7 +13,8 @@ var fs = require("fs");
 var vm = require("vm");
 
 var DIR = __dirname;
-var html = fs.readFileSync(DIR + "/index.html", "utf8");
+// Normalize checkout line endings so marker extraction works on Windows too.
+var html = fs.readFileSync(DIR + "/index.html", "utf8").replace(/\r\n/g, "\n");
 
 var sandbox = { console: console };
 sandbox.globalThis = sandbox;

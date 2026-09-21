@@ -62,7 +62,8 @@ softFail):
 SCORE/CHOICE prompts still ask for calibrated confidence; revisit gates,
 max→min, and floors after both confs stabilize.
 
-UI fixture QA (`?leanDemo=1` / `?forceConf=`) **honors `res.verdict`** — does
+UI fixture QA (`?leanDemo=1` / `?forceConf=`) is limited to the preview project
+and local development, and **honors `res.verdict`** — it does
 not reclassify from confs. Source badge may show `Stub/Fixture · leanDemo`.
 
 Always paint a quiet conf line on suggest / lean / uncertain:

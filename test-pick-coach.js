@@ -28,6 +28,16 @@ function loadPickCoach(extra) {
 var PC = loadPickCoach();
 assert.ok(PC, "PickCoach exported");
 
+// QA query fixtures must never be activatable on the production host.
+var previewQa = loadPickCoach({
+  location: { protocol: "https:", hostname: "tony-draft-lab-preview.pages.dev", search: "?leanDemo=1" },
+});
+assert.strictEqual(previewQa.readCoachQaMode().mode, "leanDemo");
+var prodQa = loadPickCoach({
+  location: { protocol: "https:", hostname: "tony-draft-lab.pages.dev", search: "?leanDemo=1" },
+});
+assert.strictEqual(prodQa.readCoachQaMode(), null, "production host must ignore QA fixture queries");
+
 // --- Stub heuristics ---
 var mid = PC.pickCoachEvaluate({ player: "X", pickNumber: 50, adp: 48, rank: 50 });
 assert.strictEqual(mid.verdict, "uncertain", "near-ADP should be uncertain");

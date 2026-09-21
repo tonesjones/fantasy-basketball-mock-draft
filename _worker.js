@@ -20,7 +20,7 @@
  *   npx wrangler pages secret put TYPESAFE_API_KEY --project-name tony-draft-lab
  */
 
-/** API suggest hint only; client TEMPORARY gates (0.55/0.35) reclassify lean. */
+/** API suggest hint only; client TEMPORARY gates (0.45/0.25) reclassify lean. */
 var CONF_GATE = 0.7;
 /** Pin versioned id (aliases like jev-latest may move). */
 var MODEL = "jev-1.13.0";
