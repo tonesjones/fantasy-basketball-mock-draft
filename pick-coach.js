@@ -5,14 +5,17 @@
  * Offline file:// (or no fetch) → stub labeled model:"stub".
  * On *.pages.dev preview hosts: TYPESAFE_API_KEY / network soft-fails fall back
  * to labeled stub (model:"stub", source "Stub") so QA can exercise suggest /
- * "Not sure enough…" — never labeled as Jev.
+ * lean / "Not sure enough…" — never labeled as Jev.
  * Other http(s) hosts: network TypeError → uncertain + quiet error (NOT stub).
  */
 (function (root) {
   "use strict";
 
   var SCORE_WORDS = ["Poor", "Below avg", "Average", "Good", "Excellent"];
+  /** Full suggest when min(scoreConf, choiceConf) ≥ CONF_GATE. */
   var CONF_GATE = 0.7;
+  /** Lean band when min ≥ LEAN_GATE and < CONF_GATE (not softFail). */
+  var LEAN_GATE = 0.5;
   var DEBOUNCE_MS = 200;
   var CACHE_TTL_MS = 45000;
   var API_PATH = "/api/pick-quality";
@@ -27,6 +30,21 @@
   function scoreWord(score) {
     var i = Math.max(0, Math.min(4, Math.round(Number(score) || 0)));
     return SCORE_WORDS[i];
+  }
+
+  /**
+   * Client-side verdict from confidences (API may return raw confs only).
+   * suggest ≥ 0.7; lean ≥ 0.5 and < 0.7; else uncertain.
+   * SoftFail / error paths should not call this — stay uncertain.
+   */
+  function classifyVerdict(scoreConf, choiceConf) {
+    var sc = Number(scoreConf);
+    var cc = Number(choiceConf);
+    if (!(isFinite(sc) && isFinite(cc))) return "uncertain";
+    var minC = Math.min(sc, cc);
+    if (minC >= CONF_GATE) return "suggest";
+    if (minC >= LEAN_GATE) return "lean";
+    return "uncertain";
   }
 
   function isFileProtocol() {
@@ -99,7 +117,7 @@
 
   function cacheSet(key, value) {
     if (!value || value.stale || value.error) return;
-    // Cache successful suggest/uncertain-without-error only.
+    // Cache successful suggest/lean/uncertain-without-error only.
     _cache[key] = { t: Date.now(), v: value };
   }
 
@@ -138,7 +156,7 @@
       choice = "reach";
     }
 
-    // Bias low confidence: only rare large-value cases clear the 0.7 gate.
+    // Bias: rare large-value → suggest (≥0.7); mid gap → lean (≥0.5); else uncertain.
     var scoreConf = delta >= 12 ? 0.78 : Math.abs(delta) >= 6 ? 0.55 : 0.35;
     var choiceConf = delta >= 12 ? 0.76 : Math.abs(delta) >= 6 ? 0.52 : 0.32;
 
@@ -157,8 +175,7 @@
       why = "No ADP — using rank/pick gap. Stub heuristic only.";
     }
 
-    var verdict =
-      scoreConf >= CONF_GATE && choiceConf >= CONF_GATE ? "suggest" : "uncertain";
+    var verdict = classifyVerdict(scoreConf, choiceConf);
 
     return {
       score: score,
@@ -189,19 +206,15 @@
   function normalizeApiResult(data) {
     var scoreConf = Number(data.scoreConfidence);
     var choiceConf = Number(data.choiceConfidence);
-    var verdict = data.verdict;
-    if (
-      verdict === "suggest" &&
-      !(
-        isFinite(scoreConf) &&
-        isFinite(choiceConf) &&
-        scoreConf >= CONF_GATE &&
-        choiceConf >= CONF_GATE
-      )
-    ) {
+    // Prefer client-side lean/suggest classification from confidences (API unchanged).
+    // Soft-fail payloads with error stay uncertain (do not lean).
+    var verdict;
+    if (data && data.error) {
       verdict = "uncertain";
+    } else {
+      verdict = classifyVerdict(scoreConf, choiceConf);
     }
-    if (verdict !== "suggest" && verdict !== "uncertain") {
+    if (verdict !== "suggest" && verdict !== "lean" && verdict !== "uncertain") {
       verdict = "uncertain";
     }
     var score = data.score != null ? Number(data.score) : null;
@@ -456,7 +469,9 @@
     isPreviewPagesHost: isPreviewPagesHost,
     isStubbableSoftFail: isStubbableSoftFail,
     labeledStubResult: labeledStubResult,
+    classifyVerdict: classifyVerdict,
     CONF_GATE: CONF_GATE,
+    LEAN_GATE: LEAN_GATE,
     CACHE_TTL_MS: CACHE_TTL_MS,
     PINNED_MODEL: PINNED_MODEL,
   };

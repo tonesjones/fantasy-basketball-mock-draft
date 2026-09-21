@@ -1,4 +1,4 @@
-/* PickCoach tests: stub bias, 0.7 gate, preview soft-fail → labeled stub,
+/* PickCoach tests: stub bias, 0.7 suggest / 0.5 lean gates, preview soft-fail → labeled stub,
  * non-preview https TypeError → uncertain (not stub), soft-error shape,
  * fingerprint cache, sourceLabel, softAdpClause fixtures. */
 var assert = require("assert");
@@ -41,7 +41,14 @@ assert.strictEqual(PC.scoreWord(value.score), "Excellent");
 
 var reach = PC.pickCoachEvaluate({ player: "Z", pickNumber: 20, adp: 55, rank: 55 });
 assert.strictEqual(reach.choice, "reach");
-assert.strictEqual(reach.verdict, "uncertain", "reach without huge gap stays uncertain");
+assert.strictEqual(reach.verdict, "lean", "mid-gap reach is lean (≥0.5, <0.7)");
+assert.ok(reach.scoreConfidence >= 0.5 && reach.scoreConfidence < 0.7);
+assert.ok(reach.choiceConfidence >= 0.5 && reach.choiceConfidence < 0.7);
+
+// Near-ADP stays below lean floor
+var near = PC.pickCoachEvaluate({ player: "N", pickNumber: 50, adp: 49, rank: 50 });
+assert.strictEqual(near.verdict, "uncertain", "near-ADP below lean floor");
+assert.ok(Math.min(near.scoreConfidence, near.choiceConfidence) < 0.5);
 
 // --- Gate: normalizeApiResult demotes suggest when conf < 0.7 ---
 var demoted = PC.normalizeApiResult({
@@ -64,6 +71,56 @@ var kept = PC.normalizeApiResult({
   model: "jev-1.13.0",
 });
 assert.strictEqual(kept.verdict, "suggest");
+
+// Lean band: both conf ≥ 0.5 and < 0.7 (client-side from confs; API may say uncertain)
+var leanNorm = PC.normalizeApiResult({
+  score: 2,
+  scoreConfidence: 0.62,
+  choice: "take",
+  choiceConfidence: 0.55,
+  verdict: "uncertain",
+  model: "jev-1.13.0",
+  why: "mid",
+});
+assert.strictEqual(leanNorm.verdict, "lean", "mid conf → lean");
+
+var leanEdge = PC.normalizeApiResult({
+  score: 2,
+  scoreConfidence: 0.5,
+  choice: "wait",
+  choiceConfidence: 0.5,
+  verdict: "suggest",
+  model: "jev-1.13.0",
+});
+assert.strictEqual(leanEdge.verdict, "lean", "exactly 0.5 is lean not suggest");
+
+var belowLean = PC.normalizeApiResult({
+  score: 2,
+  scoreConfidence: 0.49,
+  choice: "take",
+  choiceConfidence: 0.9,
+  verdict: "suggest",
+  model: "jev-1.13.0",
+});
+assert.strictEqual(belowLean.verdict, "uncertain", "min conf below 0.5 → uncertain");
+
+assert.strictEqual(PC.classifyVerdict(0.8, 0.75), "suggest");
+assert.strictEqual(PC.classifyVerdict(0.6, 0.55), "lean");
+assert.strictEqual(PC.classifyVerdict(0.4, 0.9), "uncertain");
+assert.strictEqual(PC.LEAN_GATE, 0.5);
+assert.strictEqual(PC.CONF_GATE, 0.7);
+
+// SoftFail payload with error stays uncertain even with mid confs
+var softLean = PC.normalizeApiResult({
+  score: 2,
+  scoreConfidence: 0.6,
+  choice: "take",
+  choiceConfidence: 0.6,
+  verdict: "uncertain",
+  model: "jev-1.13.0",
+  error: "TYPESAFE_API_KEY not configured",
+});
+assert.strictEqual(softLean.verdict, "uncertain", "error forces uncertain (no lean)");
 
 var soft = PC.uncertainResult("TYPESAFE_API_KEY not configured", "jev-1.13.0");
 assert.strictEqual(soft.verdict, "uncertain");
@@ -229,7 +286,7 @@ chain = chain.then(function () {
     assert.strictEqual(r.fallback, "preview-softfail");
     assert.ok(!r.error);
     assert.strictEqual(PC5.sourceLabel(r), "Stub");
-    assert.ok(r.verdict === "suggest" || r.verdict === "uncertain");
+    assert.ok(r.verdict === "suggest" || r.verdict === "lean" || r.verdict === "uncertain");
   });
 });
 

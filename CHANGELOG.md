@@ -1,5 +1,17 @@
 # Changelog
 
+## Pick coach lean band (0.5–0.7) (2026-09-20)
+- Dual **0.7** gate was too strict — almost always “Not sure enough…” except elite
+  (e.g. Wembanyama). Add **lean** when `min(scoreConf, choiceConf) ≥ 0.5` and &lt; 0.7.
+- **suggest** (≥0.7): filled Take/Wait/Reach unchanged.
+- **lean**: outline `.pc-choice-lean-*`, label `Lean take|wait|reach`, subline
+  “Soft lean — mid confidence”, why + conf %; quieter than suggest (no glow).
+- **uncertain** (&lt;0.5): keep “Not sure enough…” + strengths/mover/vacated why.
+- SoftFail / unavailable unchanged (never lean). Client-side `classifyVerdict`
+  from confidences — Function / API shape unchanged.
+- Stub mid-band confs emit lean (preview soft-fail QA). Docs + tests.
+- Preview only (`tony-draft-lab-preview`). Prod **tony-draft-lab** untouched.
+
 ## Docs: vacated-usage + softFail why truth (2026-09-20)
 - Align README / `docs/vacated-usage.md` / movers / pick-coach after PRs #10–#11:
   22 curated vacatedGainers; Pick coach one-liner on suggest **and** softFail;

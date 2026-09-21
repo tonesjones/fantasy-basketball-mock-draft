@@ -24,7 +24,7 @@ Code lives on `main`. Do **not** put `TYPESAFE_API_KEY` on the prod Pages projec
    with `verdict: "uncertain"` + `error` string (draft never breaks). On hosts
    whose hostname includes **`pages.dev`**, the browser then falls back to a
    **labeled stub** (`model: "stub"`, source **Stub**) so QA can still see
-   suggest / “Not sure enough to suggest”. Never labeled as Jev. On other
+   suggest / lean / “Not sure enough to suggest”. Never labeled as Jev. On other
    http(s) hosts the UI shows **Coach unavailable** (not “low confidence”) and
    does **not** swap in the stub.
 3. **http(s) network TypeError** — on `*.pages.dev` → labeled stub (**Stub**);
@@ -37,7 +37,16 @@ UI source marker (`.pc-source`): **Jev** | **Stub** (preview soft-fail) |
 **Stub · offline** | **Unavailable**.
 Tooltip may show the raw `model` id (e.g. `jev-1.13.0` / `stub`).
 
-`verdict` is `"suggest"` only when **both** confidences are ≥ **0.7**.
+**Confidence gates** (client-side from `min(scoreConfidence, choiceConfidence)`;
+API may return raw confs — Function unchanged):
+
+| Band | Gate | UI |
+|------|------|-----|
+| **suggest** | min ≥ **0.7** | Filled Take / Wait / Reach chip |
+| **lean** | min ≥ **0.5** and &lt; 0.7 | Outline `.pc-choice-lean-*` — `Lean take|wait|reach`, subline “Soft lean — mid confidence” |
+| **uncertain** | min &lt; 0.5 | “Not sure enough to suggest” (no choice chip); softFail stays here |
+
+SoftFail / unavailable (`res.error`) → **uncertain** always (never lean).
 
 Client cache: fingerprint `player|pickNumber|logLen`, TTL ~45s. Leaving Pick
 coach or ending the draft calls `PickCoach.cancel()` (aborts in-flight).
@@ -99,16 +108,20 @@ preview `*.pages.dev` and local wrangler origins when Origin is sent (not `*`).
 - CPU turn → `.pc-wait` (“Available on your turn.”)
 - No focus → `.pc-empty`
 - Evaluating → `.pc-loading`
-- Result card → `.pc-card` with strength row + `.pc-suggest` or `.pc-uncertain`
+- Result card → `.pc-card` with strength row + `.pc-suggest` | `.pc-lean` | `.pc-uncertain`
 - Source: `.pc-source` (**Jev** / **Stub** preview soft-fail / **Stub · offline** / **Unavailable**)
 - Strength row: `.pc-strengths` / `.pc-chip` from `PLAYERS[i].c.slice(0,4)` (always when tags exist)
-- Suggest: choice chip Take|Wait|Reach + board why (strengths/scarcity/INJ/soft ADP); quiet Confidence N%; score words demoted
-- Uncertain (low conf): “Not sure enough…” / “Low confidence — your call”
+- Suggest (min conf ≥ 0.7): filled Take|Wait|Reach + board why; quiet Confidence N%; score words demoted
+- Lean (0.5 ≤ min &lt; 0.7): outline `.pc-choice-lean-take|wait|reach`, label `Lean take|wait|reach`,
+  subline “Soft lean — mid confidence”, board why + conf % (quieter than suggest; no glow)
+- Uncertain (min &lt; 0.5): “Not sure enough…” / “Low confidence — your call” — **no** choice chip;
+  still shows strengths + mover/vacated why
 - Soft error (`res.error`): “Coach unavailable” / “Unavailable — not a low-confidence read”
   — **still paints** muted `.pc-uncertain-why` mover/role clause when applicable
   (do not clear why on softFail). Vacated `Vacates usage → …` uses the same rule.
-- Preview soft-fail stub (`model: "stub"`, source **Stub**): may show true
-  uncertain (“Not sure enough…”) or suggest — never source **Jev**.
+  SoftFail never paints lean.
+- Preview soft-fail stub (`model: "stub"`, source **Stub**): may show suggest / lean /
+  uncertain — never source **Jev**. Mid-band stub confs emit **lean**.
 - Choice: `take` | `wait` | `reach`
 - Advisory only — never auto-drafts
 - **Movers / outlook (preview):** may show quiet NEW / ↑ role / ↓ role chips and
@@ -160,6 +173,10 @@ Board context feeds Jev (`notable_available` / `recently_taken` / optional
   "error": "optional soft-fail string"
 }
 ```
+
+`verdict` from normalize / UI is `"suggest" | "lean" | "uncertain"`. The Pages
+Function may still return only `suggest|uncertain`; the client reclassifies lean
+from confidences via `PickCoach.classifyVerdict`.
 
 ## Tests
 

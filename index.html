@@ -209,6 +209,13 @@ body{background:radial-gradient(ellipse at top right,#19352f66,transparent 55%),
 #md .pick-coach .pc-choice-take{color:#85e5bc;background:#143d2e;border-color:#2d7258}
 #md .pick-coach .pc-choice-wait{color:var(--hatch-widget-muted);background:var(--hatch-widget-surface-muted);border-color:var(--hatch-widget-border)}
 #md .pick-coach .pc-choice-reach{color:#ffd479;background:#493a1c;border-color:#80652a}
+/* Lean: outline chip, quieter than filled suggest — no glow */
+#md .pick-coach .pc-choice-lean{font-weight:600;box-shadow:none;text-transform:none;letter-spacing:.15px}
+#md .pick-coach .pc-choice-lean-take{color:rgba(133,229,188,.72);background:rgba(20,61,46,.10);border-color:rgba(45,114,88,.58)}
+#md .pick-coach .pc-choice-lean-wait{color:color-mix(in srgb,var(--hatch-widget-muted) 70%,transparent);background:rgba(255,255,255,.06);border-color:color-mix(in srgb,var(--hatch-widget-border) 60%,transparent)}
+#md .pick-coach .pc-choice-lean-reach{color:rgba(255,212,121,.72);background:rgba(73,58,28,.10);border-color:rgba(128,101,42,.58)}
+#md .pick-coach .pc-lean-sub{margin:4px 0 0;font-size:11px;line-height:1.4}
+#md .pick-coach .pc-lean .pc-why,#md .pick-coach .pc-lean .pc-conf{font-size:12px;margin:8px 0 0;line-height:1.5;opacity:.92}
 #md .pick-coach .pc-why,#md .pick-coach .pc-conf{font-size:12px;margin:8px 0 0;line-height:1.5}
 #md .pick-coach .pc-uncertain-title{font-size:14px;font-weight:600;margin:0 0 4px;color:var(--hatch-widget-text)}
 #md .pick-coach .pc-uncertain-sub{margin:0;font-size:12px}
@@ -889,6 +896,7 @@ function pickCoachShellHtml(){
     +'<div class="pc-strengths" hidden></div>'
     +'<div class="pc-playoff muted" hidden></div>'
     +'<div class="pc-suggest"><div class="pc-choice"></div><p class="pc-why muted"></p><p class="pc-conf muted"></p><p class="pc-score-quiet muted" hidden></p><div class="pc-score" hidden></div></div>'
+    +'<div class="pc-lean" hidden><div class="pc-choice pc-choice-lean"></div><p class="pc-lean-sub muted">Soft lean \u2014 mid confidence</p><p class="pc-why muted"></p><p class="pc-conf muted"></p></div>'
     +'<div class="pc-uncertain"><p class="pc-uncertain-title">Not sure enough to suggest</p><p class="pc-uncertain-sub muted">Low confidence \u2014 your call</p><p class="pc-uncertain-why muted" hidden></p></div>'
     +'</div></section>';
 }
@@ -1192,19 +1200,36 @@ function refreshPickCoach(){
       srcEl.title=res.model?String(res.model):(res.error?String(res.error):"");
     }
     var suggest=still.querySelector(".pc-suggest");
+    var lean=still.querySelector(".pc-lean");
     var uncertain=still.querySelector(".pc-uncertain");
-    // Soft API/network errors must never look like a live low-confidence suggest.
+    // Soft API/network errors must never look like suggest or lean.
     var softFail=!!res.error;
-    var verdict=(!softFail&&res.verdict==="suggest")?"suggest":"uncertain";
+    var scN=res.scoreConfidence!=null?Number(res.scoreConfidence):NaN;
+    var ccN=res.choiceConfidence!=null?Number(res.choiceConfidence):NaN;
+    // Client-side lean classification from confidences (API may stay suggest|uncertain).
+    var verdict;
+    if(softFail){
+      verdict="uncertain";
+    }else if(window.PickCoach&&typeof window.PickCoach.classifyVerdict==="function"){
+      verdict=window.PickCoach.classifyVerdict(scN,ccN);
+    }else{
+      var minC=Math.min(scN,ccN);
+      verdict=(isFinite(minC)&&minC>=0.7)?"suggest":(isFinite(minC)&&minC>=0.5)?"lean":"uncertain";
+    }
     if(suggest)suggest.hidden=verdict!=="suggest";
-    if(uncertain)uncertain.hidden=verdict!=="suggest"?false:true;
+    if(lean)lean.hidden=verdict!=="lean";
+    if(uncertain)uncertain.hidden=verdict!=="uncertain";
+    function pcFmtConf(sc,cc){
+      var conf=isFinite(sc)&&isFinite(cc)?Math.min(sc,cc):isFinite(sc)?sc:cc;
+      return isFinite(conf)?("Confidence "+Math.round(conf*100)+"%"):"";
+    }
+    var choice=res.choice||"";
+    var choiceKind=choice==="take"?"take":choice==="reach"?"reach":"wait";
     if(verdict==="suggest"){
-      var choiceEl=still.querySelector(".pc-choice");
-      var whyEl=still.querySelector(".pc-why");
-      var confEl=still.querySelector(".pc-conf");
-      var quietEl=still.querySelector(".pc-score-quiet");
-      var choice=res.choice||"";
-      var choiceKind=choice==="take"?"take":choice==="reach"?"reach":"wait";
+      var choiceEl=suggest?suggest.querySelector(".pc-choice"):null;
+      var whyEl=suggest?suggest.querySelector(".pc-why"):null;
+      var confEl=suggest?suggest.querySelector(".pc-conf"):null;
+      var quietEl=suggest?suggest.querySelector(".pc-score-quiet"):null;
       if(choiceEl){
         choiceEl.className="pc-choice pc-choice-"+choiceKind;
         choiceEl.textContent=choiceKind==="take"?"Take":choiceKind==="reach"?"Reach":"Wait";
@@ -1212,17 +1237,26 @@ function refreshPickCoach(){
       }
       var boardWhy=buildPickCoachWhy(pl, choiceKind, payload.pickNumber, res.why||"");
       if(whyEl)whyEl.textContent=boardWhy||(res.why||"");
-      if(confEl){
-        var sc=res.scoreConfidence!=null?Number(res.scoreConfidence):null;
-        var cc=res.choiceConfidence!=null?Number(res.choiceConfidence):null;
-        var conf=sc!=null&&cc!=null?Math.min(sc,cc):sc!=null?sc:cc;
-        confEl.textContent=conf!=null&&isFinite(conf)?("Confidence "+Math.round(conf*100)+"%"):"";
-      }
+      if(confEl)confEl.textContent=pcFmtConf(scN,ccN);
       if(quietEl){
         var label=(window.PickCoach.scoreWord&&window.PickCoach.scoreWord(res.score))||res.scoreLabel||"";
         if(label&&res.score!=null){quietEl.textContent=label;quietEl.hidden=false;}
         else{quietEl.textContent="";quietEl.hidden=true;}
       }
+    }else if(verdict==="lean"){
+      var leanChoice=lean?lean.querySelector(".pc-choice"):null;
+      var leanWhy=lean?lean.querySelector(".pc-why"):null;
+      var leanConf=lean?lean.querySelector(".pc-conf"):null;
+      var leanSub=lean?lean.querySelector(".pc-lean-sub"):null;
+      if(leanChoice){
+        leanChoice.className="pc-choice pc-choice-lean pc-choice-lean-"+choiceKind;
+        leanChoice.textContent=choiceKind==="take"?"Lean take":choiceKind==="reach"?"Lean reach":"Lean wait";
+        leanChoice.hidden=false;
+      }
+      if(leanSub)leanSub.textContent="Soft lean — mid confidence";
+      var leanBoardWhy=buildPickCoachWhy(pl, choiceKind, payload.pickNumber, res.why||"");
+      if(leanWhy)leanWhy.textContent=leanBoardWhy||(res.why||"");
+      if(leanConf)leanConf.textContent=pcFmtConf(scN,ccN);
     }else{
       var uTitle=still.querySelector(".pc-uncertain-title");
       var uSub=still.querySelector(".pc-uncertain-sub");
