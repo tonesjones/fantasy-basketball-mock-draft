@@ -87,6 +87,9 @@ Jev. Opening `index.html` via `file://` does **not** need the secret (stub only)
 - Soft error (`res.error`): “Coach unavailable” / “Unavailable — not a low-confidence read”
 - Choice: `take` | `wait` | `reach`
 - Advisory only — never auto-drafts
+- **Movers / outlook (preview):** may show quiet NEW / ↑ role / ↓ role chips and
+  why clauses (`new team · …` / `expanded role` / `smaller role`). Role chips are
+  ADP-vs-last heuristic — see `docs/movers-outlook.md`. Not on prod.
 
 ## Evaluate payload (browser → `/api/pick-quality`)
 
