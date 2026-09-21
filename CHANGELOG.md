@@ -77,6 +77,15 @@
 - Stub mid-band confs emit lean (preview soft-fail QA). Docs + tests.
 - Preview only (`tony-draft-lab-preview`). Prod **tony-draft-lab** untouched.
 
+## UX hierarchy pass (2026-09-20) — preview only
+- Nit: live My team playoff games block is default-collapsed `<details>` (below roster), so desktop turn bar stays the hero.
+- Live draft: Fantasy playoff schedule card removed from chrome; turn bar is sole hero. Schedule + Data health live in closed `<details>` on setup only.
+- Setup above-the-fold: draft position grid → Start Mock Draft; Clear saved draft is a quiet text link.
+- Room nav: true segmented control (weight + underline), not mint-filled chips.
+- Quieter scarcity summary (default closed); ~8px spacing / less nested border soup.
+- Preview / branch alias only — **do not** deploy **tony-draft-lab** prod. Pick coach / LEAN / ADP untouched.
+
+
 ## Docs: vacated-usage + softFail why truth (2026-09-20)
 - Align README / `docs/vacated-usage.md` / movers / pick-coach after PRs #10–#11:
   22 curated vacatedGainers; Pick coach one-liner on suggest **and** softFail;
