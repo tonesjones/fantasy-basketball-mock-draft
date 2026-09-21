@@ -13,6 +13,8 @@ function loadBundledData(){
   vm.runInContext(fs.readFileSync(path.join(__dirname,'player-data.js'),'utf8'),context);
   const moversPath=path.join(__dirname,'movers-outlook.js');
   if(fs.existsSync(moversPath))vm.runInContext(fs.readFileSync(moversPath,'utf8'),context);
+  const vacatedPath=path.join(__dirname,'vacated-usage.js');
+  if(fs.existsSync(vacatedPath))vm.runInContext(fs.readFileSync(vacatedPath,'utf8'),context);
   return {players:context.PLAYERS,data:context.PDATA,tags:context.CATS};
 }
 if(require.main===module){
@@ -22,7 +24,7 @@ if(require.main===module){
   else {
     console.log('Bundled data audit — internal consistency only; does not verify source accuracy or NBA pool completeness.');
     console.log('Players: '+report.players);
-    ['errors','missingData','orphanData','missingAdp','missingLast','missingLastTotal','missingCv','missingMpg','untagged','placeholderTeams','movers','roleDeltaUp','roleDeltaDown','roleDeltaFlat','roleDeltaUnknown','missingTeamPrev','withProjMpg','withProjRank'].forEach(key=>{
+    ['errors','missingData','orphanData','missingAdp','missingLast','missingLastTotal','missingCv','missingMpg','untagged','placeholderTeams','movers','roleDeltaUp','roleDeltaDown','roleDeltaFlat','roleDeltaUnknown','missingTeamPrev','withProjMpg','withProjRank','withVacatedGainers'].forEach(key=>{
       console.log(key+': '+report[key].length+(report[key].length?'\n  '+report[key].join(', '):''));
     });
     console.log('Largest built-in rank / ADP gaps (40+ picks; review signals, not proven errors):');

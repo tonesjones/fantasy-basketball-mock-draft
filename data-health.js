@@ -10,7 +10,7 @@
   function audit(players,data,tags){
     data=data||{};tags=tags||{};
     var out={players:players.length,errors:[],missingData:[],orphanData:[],missingAdp:[],missingAdpF:[],missingLast:[],missingLastTotal:[],missingCv:[],missingMpg:[],untagged:[],placeholderTeams:[],rankDivergence:[],
-      movers:[],roleDeltaUp:[],roleDeltaDown:[],roleDeltaFlat:[],roleDeltaUnknown:[],missingTeamPrev:[],withProjMpg:[],withProjRank:[],missingProjMpg:[],missingProjRank:[]};
+      movers:[],roleDeltaUp:[],roleDeltaDown:[],roleDeltaFlat:[],roleDeltaUnknown:[],missingTeamPrev:[],withProjMpg:[],withProjRank:[],missingProjMpg:[],missingProjRank:[],withVacatedGainers:[]};
     var names=Object.create(null),normalized=Object.create(null);
     players.forEach(function(p,index){
       var name=p.n||p[0],pos=p.p||p[1],team=p.t||p[2],rank=p.r||index+1;
@@ -58,6 +58,14 @@
         out.withProjRank.push(name);
         if(!positive(d.projRank)||!Number.isInteger(d.projRank))out.errors.push('Invalid projRank: '+name);
       }else out.missingProjRank.push(name);
+      if(d&&Array.isArray(d.vacatedGainers)&&d.vacatedGainers.length){
+        out.withVacatedGainers.push(name);
+        if(d.vacatedGainers.length>3)out.errors.push('vacatedGainers >3: '+name);
+        d.vacatedGainers.forEach(function(g,i){
+          if(!g||typeof g.name!=='string'||!g.name.trim())out.errors.push('Invalid vacatedGainers['+i+'] name: '+name);
+          if(g&&g.reason!=null&&typeof g.reason!=='string')out.errors.push('Invalid vacatedGainers['+i+'] reason: '+name);
+        });
+      }
     });
     Object.keys(data).forEach(function(name){if(!names[name])out.orphanData.push(name);});
     out.rankDivergence.sort(function(a,b){return Math.abs(b.gap)-Math.abs(a.gap);});

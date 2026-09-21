@@ -1,5 +1,14 @@
 # Changelog
 
+## Vacated usage phase 2 (2026-09-20) — preview only
+- Curated `vacatedGainers` overlay (`vacated-usage.js`) for **22** high-ADP movers
+  (all ADP &lt; 80 + notable &lt; 100): who on `teamPrev` likely gains touches/minutes.
+- UI: one quiet Pick coach muted line (`Vacates usage → A, B`); optional NEW-chip
+  tooltip. No list-row spam. Mobile dock unchanged; advisory-only.
+- Docs: `docs/vacated-usage.md` (sources + honesty). Data-health coverage count.
+- Preview / branch alias only — **do not** deploy **tony-draft-lab** prod.
+- Mover copy-nits remain separate (PR #9). DATA_VERSION `2026-09-20-vacated`.
+
 ## Docs: movers/outlook phase 1 truth (2026-09-20)
 - README how-to + Recent-on-preview: 71 real movers, quiet NEW/↑↓ role,
   roleDelta labeled as ADP-vs-last heuristic, no projMpg/projRank, preview only.

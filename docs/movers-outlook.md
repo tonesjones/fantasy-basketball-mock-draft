@@ -47,8 +47,9 @@ replace them.
 
 - Hashtag season projections (`projMpg` / `projRank`) — no legal projection
   table snapshot in-repo (ADP attribution pattern exists; projections were not
-  imported). Phase 2 may add vacated-usage / projection snapshots with
-  attribution.
+  imported).
+- **Phase 2 vacated-usage** (preview): curated `vacatedGainers` for ~22
+  high-ADP movers — see `docs/vacated-usage.md`. Not a BM scrape.
 
 ## UI
 
