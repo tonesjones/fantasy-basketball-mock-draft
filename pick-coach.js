@@ -15,15 +15,16 @@
 
   var SCORE_WORDS = ["Poor", "Below avg", "Average", "Good", "Excellent"];
   /**
-   * TEMPORARY gates (2026-09-20): lowered so live Jev mid-conf paints lean/suggest.
-   * Live samples often return scoreConfidence ~0 while choiceConfidence is usable;
-   * classifyVerdict uses max(score,choice) TEMPORARILY (not min). Prior 0.7/0.5
-   * hid almost all mid band. Revisit after prompt calibration. softFail → uncertain.
+   * TEMPORARY gates (2026-09-20 recal): lowered further so bare preview paints
+   * Soft lean/suggest for stars. Live Jev often returns scoreConfidence ~0 and
+   * choiceConfidence ~0.25–0.30 (Wemby/Edwards) — prior LEAN 0.35 still left
+   * max≈0.30 uncertain. classifyVerdict uses max(score,choice) TEMPORARILY
+   * (not min), plus score / elite-ADP floors (upward only). softFail → uncertain.
    * Full suggest when max(scoreConf, choiceConf) ≥ CONF_GATE.
    */
-  var CONF_GATE = 0.55;
-  /** TEMPORARY: lean when min ≥ LEAN_GATE and < CONF_GATE (not softFail). */
-  var LEAN_GATE = 0.35;
+  var CONF_GATE = 0.45;
+  /** TEMPORARY: lean when max ≥ LEAN_GATE and < CONF_GATE (not softFail). */
+  var LEAN_GATE = 0.25;
   var DEBOUNCE_MS = 200;
   var CACHE_TTL_MS = 45000;
   var API_PATH = "/api/pick-quality";
@@ -41,22 +42,48 @@
   }
 
   /**
-   * Client-side verdict from confidences (API may return raw confs only).
-   * TEMPORARY (2026-09-20): band uses max(scoreConf, choiceConf) — live Jev
-   * often returns scoreConfidence ~0 while choiceConfidence is usable
-   * (Wemby/Edwards). suggest ≥ 0.55; lean ≥ 0.35 and < 0.55; else uncertain.
+   * Client-side verdict from confidences (+ optional ctx floors).
+   * TEMPORARY (2026-09-20 recal): band uses max(scoreConf, choiceConf) — live
+   * Jev often returns scoreConfidence ~0 while choiceConfidence is usable
+   * (Wemby/Edwards). suggest ≥ 0.45; lean ≥ 0.25 and < 0.45; else uncertain.
+   * Then TEMP floors (upward only, never softFail):
+   *   - score ≥ 4 → at least suggest; score ≥ 3 → at least lean
+   *   - yahoo ADP or rank ≤ 5 AND pickNumber ≤ (adp||rank)+3 → at least lean
    * SoftFail / error paths should not call this — stay uncertain.
    * Revisit after prompt calibration lands (prefer min again when both confs fire).
    */
-  function classifyVerdict(scoreConf, choiceConf) {
+  function verdictRank(v) {
+    return v === "suggest" ? 2 : v === "lean" ? 1 : 0;
+  }
+  function raiseVerdict(cur, floor) {
+    return verdictRank(floor) > verdictRank(cur) ? floor : cur;
+  }
+  function classifyVerdict(scoreConf, choiceConf, ctx) {
     var sc = Number(scoreConf);
     var cc = Number(choiceConf);
     if (!(isFinite(sc) && isFinite(cc))) return "uncertain";
     // TEMP product rule: max — one conf ~0 must not collapse a usable peer.
     var bandC = Math.max(sc, cc);
-    if (bandC >= CONF_GATE) return "suggest";
-    if (bandC >= LEAN_GATE) return "lean";
-    return "uncertain";
+    var verdict = "uncertain";
+    if (bandC >= CONF_GATE) verdict = "suggest";
+    else if (bandC >= LEAN_GATE) verdict = "lean";
+
+    ctx = ctx || {};
+    // TEMP score floor (not softFail): raise effective band upward only.
+    var score = ctx.score != null && ctx.score !== "" ? Number(ctx.score) : NaN;
+    if (isFinite(score)) {
+      if (score >= 4) verdict = raiseVerdict(verdict, "suggest");
+      else if (score >= 3) verdict = raiseVerdict(verdict, "lean");
+    }
+    // TEMP elite ADP floor: top-5 market + pick still near ADP → at least lean.
+    var adp = ctx.adp != null && ctx.adp !== "" ? Number(ctx.adp) : NaN;
+    var rank = ctx.rank != null && ctx.rank !== "" ? Number(ctx.rank) : NaN;
+    var pick = ctx.pickNumber != null && ctx.pickNumber !== "" ? Number(ctx.pickNumber) : NaN;
+    var market = isFinite(adp) ? adp : isFinite(rank) ? rank : NaN;
+    if (isFinite(market) && market <= 5 && isFinite(pick) && pick <= market + 3) {
+      verdict = raiseVerdict(verdict, "lean");
+    }
+    return verdict;
   }
 
   function isFileProtocol() {
@@ -186,10 +213,10 @@
       why = "Fixture suggest — high confidence stub (not Jev).";
     } else if (band === "lean") {
       // Mid-conf Edwards-like: paints outline Lean take/wait/reach + Soft lean.
-      // min 0.48 clearly in lean band under LEAN_GATE=0.35 / CONF_GATE=0.55
+      // 0.38/0.36 clearly in lean band under LEAN_GATE=0.25 / CONF_GATE=0.45
       // (even if UI briefly reclassifies; honor res.verdict is the paint source).
-      scoreConf = 0.50;
-      choiceConf = 0.48;
+      scoreConf = 0.38;
+      choiceConf = 0.36;
       if (!qa || qa.mode === "leanDemo" || qa.mode === "forceConf") {
         choice = "take";
         score = 2;
@@ -204,10 +231,12 @@
       why = "Fixture uncertain — low confidence stub (not Jev).";
     }
 
-    var verdict = classifyVerdict(
-      scoreConf,
-      choiceConf
-    );
+    var verdict = classifyVerdict(scoreConf, choiceConf, {
+      score: score,
+      adp: state && state.adp,
+      rank: state && state.rank,
+      pickNumber: state && state.pickNumber,
+    });
     // forceConf/leanDemo must honor requested band even if classify drifts
     if (qa && (qa.mode === "forceConf" || qa.mode === "leanDemo") && qa.band) {
       verdict = qa.band;
@@ -291,9 +320,9 @@
       choice = "reach";
     }
 
-    // Bias under TEMPORARY gates: large-value → suggest (≥0.55); mid → lean (≥0.35); else uncertain.
-    var scoreConf = delta >= 12 ? 0.72 : Math.abs(delta) >= 6 ? 0.48 : 0.28;
-    var choiceConf = delta >= 12 ? 0.70 : Math.abs(delta) >= 6 ? 0.45 : 0.26;
+    // Bias under TEMPORARY gates: large-value → suggest (≥0.45); mid → lean (≥0.25); else uncertain.
+    var scoreConf = delta >= 12 ? 0.72 : Math.abs(delta) >= 6 ? 0.38 : 0.18;
+    var choiceConf = delta >= 12 ? 0.70 : Math.abs(delta) >= 6 ? 0.36 : 0.16;
 
     var why;
     if (adp != null) {
@@ -310,7 +339,12 @@
       why = "No ADP — using rank/pick gap. Stub heuristic only.";
     }
 
-    var verdict = classifyVerdict(scoreConf, choiceConf);
+    var verdict = classifyVerdict(scoreConf, choiceConf, {
+      score: score,
+      adp: adp,
+      rank: rank,
+      pickNumber: pick,
+    });
 
     return {
       score: score,
@@ -338,21 +372,28 @@
     };
   }
 
-  function normalizeApiResult(data) {
+  function normalizeApiResult(data, state) {
     var scoreConf = Number(data.scoreConfidence);
     var choiceConf = Number(data.choiceConfidence);
+    var score = data.score != null ? Number(data.score) : null;
+    var s = state || {};
+    var ctx = {
+      score: score,
+      adp: s.adp != null ? s.adp : data.adp,
+      rank: s.rank != null ? s.rank : data.rank,
+      pickNumber: s.pickNumber != null ? s.pickNumber : data.pickNumber,
+    };
     // Prefer client-side lean/suggest classification from confidences (API unchanged).
-    // Soft-fail payloads with error stay uncertain (do not lean).
+    // Soft-fail payloads with error stay uncertain (do not lean / floors).
     var verdict;
     if (data && data.error) {
       verdict = "uncertain";
     } else {
-      verdict = classifyVerdict(scoreConf, choiceConf);
+      verdict = classifyVerdict(scoreConf, choiceConf, ctx);
     }
     if (verdict !== "suggest" && verdict !== "lean" && verdict !== "uncertain") {
       verdict = "uncertain";
     }
-    var score = data.score != null ? Number(data.score) : null;
     var model = data.model || PINNED_MODEL;
     return {
       score: score,
@@ -427,7 +468,7 @@
         if (!data || typeof data !== "object") {
           return uncertainResult("Empty pick-quality response", "pick-quality");
         }
-        return normalizeApiResult(data);
+        return normalizeApiResult(data, state || {});
       });
     });
   }

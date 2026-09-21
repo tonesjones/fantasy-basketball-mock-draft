@@ -1208,7 +1208,7 @@ function refreshPickCoach(){
     var ccN=res.choiceConfidence!=null?Number(res.choiceConfidence):NaN;
     // Fixture / leanDemo / forceConf: honor res.verdict — NEVER reclassify via confs
     // (confs can classify differently than the forced Soft lean / suggest paint).
-    // Live: PickCoach.classifyVerdict uses TEMP max(scoreConf,choiceConf) banding.
+    // Live: PickCoach.classifyVerdict uses TEMP max(scoreConf,choiceConf) + score/ADP floors.
     var verdict;
     if(softFail){
       verdict="uncertain";
@@ -1216,11 +1216,24 @@ function refreshPickCoach(){
       // honor-res.verdict for fixtures (leanDemo / forceConf / coachFixture)
       verdict=(res.verdict==="suggest"||res.verdict==="lean"||res.verdict==="uncertain")?res.verdict:"uncertain";
     }else if(window.PickCoach&&typeof window.PickCoach.classifyVerdict==="function"){
-      verdict=window.PickCoach.classifyVerdict(scN,ccN);
+      verdict=window.PickCoach.classifyVerdict(scN,ccN,{
+        score:res.score,
+        adp:payload.adp!=null?payload.adp:(pl&&pl.adp),
+        rank:payload.rank!=null?payload.rank:(pl&&pl.r),
+        pickNumber:payload.pickNumber
+      });
     }else{
-      // TEMP fallback: max banding (match PickCoach.classifyVerdict)
+      // TEMP fallback: max banding 0.45/0.25 (match PickCoach.classifyVerdict)
       var maxC=(isFinite(scN)&&isFinite(ccN))?Math.max(scN,ccN):(isFinite(scN)?scN:ccN);
-      verdict=(isFinite(maxC)&&maxC>=0.55)?"suggest":(isFinite(maxC)&&maxC>=0.35)?"lean":"uncertain";
+      verdict=(isFinite(maxC)&&maxC>=0.45)?"suggest":(isFinite(maxC)&&maxC>=0.25)?"lean":"uncertain";
+      var scFloor=res.score!=null?Number(res.score):NaN;
+      if(isFinite(scFloor)&&scFloor>=4)verdict="suggest";
+      else if(isFinite(scFloor)&&scFloor>=3&&verdict==="uncertain")verdict="lean";
+      var mAdp=payload.adp!=null?Number(payload.adp):(pl&&pl.adp!=null?Number(pl.adp):NaN);
+      var mRank=payload.rank!=null?Number(payload.rank):(pl&&pl.r!=null?Number(pl.r):NaN);
+      var mkt=isFinite(mAdp)?mAdp:(isFinite(mRank)?mRank:NaN);
+      var pk=Number(payload.pickNumber);
+      if(isFinite(mkt)&&mkt<=5&&isFinite(pk)&&pk<=mkt+3&&verdict==="uncertain")verdict="lean";
     }
     if(suggest)suggest.hidden=verdict!=="suggest";
     if(lean)lean.hidden=verdict!=="lean";

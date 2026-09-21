@@ -1,5 +1,27 @@
 # Changelog
 
+## Pick coach TEMP recal: gates 0.45/0.25 + score/ADP floors (2026-09-20)
+- **Why max() wasn't enough:** live Jev for Wemby/Edwards often returns
+  score≈Average (≈2.4), `scoreConfidence≈0`, `choiceConfidence≈0.25–0.30` →
+  `max≈0.30` still &lt; prior **LEAN_GATE 0.35** → bare preview painted
+  **uncertain**. `?forceConf=suggest` worked (fixture honor path).
+- **TEMPORARY product rules (preview):**
+  1. Gates: **CONF_GATE=0.45** suggest; **LEAN_GATE=0.25** lean; still
+     **max(scoreConf, choiceConf)** banding.
+  2. **Score floor** (not softFail): `score ≥ 3` → at least lean; `score ≥ 4`
+     → at least suggest. Applied after max(conf) by raising verdict upward only.
+  3. **Elite ADP floor** (not softFail): yahoo ADP or rank ≤ 5 **and**
+     `pickNumber ≤ (adp||rank)+3` → at least lean (stops Wemby@1 uncertain when
+     Jev returns Average + low conf).
+  4. Fixture honor-`res.verdict`; `?leanDemo=1` / `forceConf` unchanged.
+- Fixture lean confs **0.38 / 0.36** (clear lean under 0.45/0.25; leanDemo still honors band).
+- SoftFail / `res.error` still forces uncertain (floors do not apply).
+- Docs + tests. Preview **tony-draft-lab-preview** only — prod **tony-draft-lab**
+  untouched. `production_branch` stays `feat/pick-coach-lean`. Hierarchy #14
+  not touched.
+
+
+
 ## Pick coach honor fixture verdict + TEMP max conf banding (2026-09-20)
 - **UI fix:** `refreshPickCoach` honors `res.verdict` when `res.fixture` /
   `fallback==="fixture"` (leanDemo / forceConf / coachFixture). SoftFail still

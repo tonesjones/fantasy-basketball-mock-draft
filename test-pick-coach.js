@@ -1,4 +1,4 @@
-/* PickCoach tests: stub bias, TEMPORARY 0.55/0.35 gates + max(conf) banding, fixtures, preview soft-fail → labeled stub,
+/* PickCoach tests: stub bias, TEMPORARY 0.45/0.25 gates + max(conf) banding + score/ADP floors, fixtures, preview soft-fail → labeled stub,
  * non-preview https TypeError → uncertain (not stub), soft-error shape,
  * fingerprint cache, sourceLabel, softAdpClause fixtures. */
 var assert = require("assert");
@@ -31,24 +31,24 @@ assert.ok(PC, "PickCoach exported");
 // --- Stub heuristics ---
 var mid = PC.pickCoachEvaluate({ player: "X", pickNumber: 50, adp: 48, rank: 50 });
 assert.strictEqual(mid.verdict, "uncertain", "near-ADP should be uncertain");
-assert.ok(mid.scoreConfidence < 0.55);
+assert.ok(mid.scoreConfidence < 0.45);
 
 var value = PC.pickCoachEvaluate({ player: "Y", pickNumber: 80, adp: 40, rank: 40 });
 assert.strictEqual(value.verdict, "suggest", "large ADP fall should suggest");
 assert.strictEqual(value.choice, "take");
-assert.ok(value.scoreConfidence >= 0.55 && value.choiceConfidence >= 0.55);
+assert.ok(value.scoreConfidence >= 0.45 && value.choiceConfidence >= 0.45);
 assert.strictEqual(PC.scoreWord(value.score), "Excellent");
 
 var reach = PC.pickCoachEvaluate({ player: "Z", pickNumber: 20, adp: 55, rank: 55 });
 assert.strictEqual(reach.choice, "reach");
-assert.strictEqual(reach.verdict, "lean", "mid-gap reach is lean (≥0.35, <0.55)");
-assert.ok(reach.scoreConfidence >= 0.35 && reach.scoreConfidence < 0.55);
-assert.ok(reach.choiceConfidence >= 0.35 && reach.choiceConfidence < 0.55);
+assert.strictEqual(reach.verdict, "lean", "mid-gap reach is lean (≥0.25, <0.45)");
+assert.ok(reach.scoreConfidence >= 0.25 && reach.scoreConfidence < 0.45);
+assert.ok(reach.choiceConfidence >= 0.25 && reach.choiceConfidence < 0.45);
 
 // Near-ADP stays below lean floor
 var near = PC.pickCoachEvaluate({ player: "N", pickNumber: 50, adp: 49, rank: 50 });
 assert.strictEqual(near.verdict, "uncertain", "near-ADP below lean floor");
-assert.ok(Math.min(near.scoreConfidence, near.choiceConfidence) < 0.35);
+assert.ok(Math.max(near.scoreConfidence, near.choiceConfidence) < 0.25);
 
 // --- Gate: normalizeApiResult uses TEMP max banding ---
 var demoted = PC.normalizeApiResult({
@@ -62,7 +62,7 @@ var demoted = PC.normalizeApiResult({
 });
 assert.strictEqual(demoted.verdict, "suggest", "TEMP max: high scoreConf wins over low choiceConf");
 var bothLow = PC.normalizeApiResult({
-  score: 3,
+  score: 2,
   scoreConfidence: 0.2,
   choice: "take",
   choiceConfidence: 0.15,
@@ -70,7 +70,53 @@ var bothLow = PC.normalizeApiResult({
   model: "jev-1.13.0",
   why: "x",
 });
-assert.strictEqual(bothLow.verdict, "uncertain", "max below lean gate → uncertain");
+assert.strictEqual(bothLow.verdict, "uncertain", "max below lean gate + score<3 → uncertain");
+var scoreFloorLean = PC.normalizeApiResult({
+  score: 3,
+  scoreConfidence: 0.1,
+  choice: "take",
+  choiceConfidence: 0.1,
+  verdict: "uncertain",
+  model: "jev-1.13.0",
+  why: "x",
+});
+assert.strictEqual(scoreFloorLean.verdict, "lean", "TEMP score≥3 floor → at least lean");
+var scoreFloorSuggest = PC.normalizeApiResult({
+  score: 4,
+  scoreConfidence: 0.05,
+  choice: "take",
+  choiceConfidence: 0.05,
+  verdict: "uncertain",
+  model: "jev-1.13.0",
+  why: "x",
+});
+assert.strictEqual(scoreFloorSuggest.verdict, "suggest", "TEMP score≥4 floor → at least suggest");
+var eliteAdp = PC.normalizeApiResult(
+  {
+    score: 2.4,
+    scoreConfidence: 0.0,
+    choice: "take",
+    choiceConfidence: 0.22,
+    verdict: "uncertain",
+    model: "jev-1.13.0",
+    why: "wemby-like",
+  },
+  { pickNumber: 1, adp: 1.8, rank: 1 }
+);
+assert.strictEqual(eliteAdp.verdict, "lean", "TEMP elite ADP≤5 + pick≤adp+3 → at least lean");
+var eliteTooLate = PC.normalizeApiResult(
+  {
+    score: 2,
+    scoreConfidence: 0.05,
+    choice: "wait",
+    choiceConfidence: 0.05,
+    verdict: "uncertain",
+    model: "jev-1.13.0",
+    why: "late",
+  },
+  { pickNumber: 10, adp: 2, rank: 2 }
+);
+assert.strictEqual(eliteTooLate.verdict, "uncertain", "elite ADP but pick past adp+3 → no floor");
 
 var kept = PC.normalizeApiResult({
   score: 3,
@@ -82,12 +128,12 @@ var kept = PC.normalizeApiResult({
 });
 assert.strictEqual(kept.verdict, "suggest");
 
-// Lean band: both conf ≥ 0.35 and < 0.55 (client-side from confs; API may say uncertain)
+// Lean band: max conf ≥ 0.25 and < 0.45 (client-side from confs; API may say uncertain)
 var leanNorm = PC.normalizeApiResult({
   score: 2,
-  scoreConfidence: 0.48,
+  scoreConfidence: 0.38,
   choice: "take",
-  choiceConfidence: 0.42,
+  choiceConfidence: 0.32,
   verdict: "uncertain",
   model: "jev-1.13.0",
   why: "mid",
@@ -96,23 +142,23 @@ assert.strictEqual(leanNorm.verdict, "lean", "mid conf → lean");
 
 var leanEdge = PC.normalizeApiResult({
   score: 2,
-  scoreConfidence: 0.35,
+  scoreConfidence: 0.25,
   choice: "wait",
-  choiceConfidence: 0.35,
+  choiceConfidence: 0.25,
   verdict: "suggest",
   model: "jev-1.13.0",
 });
-assert.strictEqual(leanEdge.verdict, "lean", "exactly 0.35 is lean not suggest");
+assert.strictEqual(leanEdge.verdict, "lean", "exactly 0.25 is lean not suggest");
 
 var suggestEdge = PC.normalizeApiResult({
-  score: 3,
-  scoreConfidence: 0.55,
+  score: 2,
+  scoreConfidence: 0.45,
   choice: "take",
-  choiceConfidence: 0.55,
+  choiceConfidence: 0.45,
   verdict: "uncertain",
   model: "jev-1.13.0",
 });
-assert.strictEqual(suggestEdge.verdict, "suggest", "exactly 0.55 is suggest");
+assert.strictEqual(suggestEdge.verdict, "suggest", "exactly 0.45 is suggest");
 
 var belowLean = PC.normalizeApiResult({
   score: 2,
@@ -122,8 +168,18 @@ var belowLean = PC.normalizeApiResult({
   verdict: "suggest",
   model: "jev-1.13.0",
 });
-assert.strictEqual(belowLean.verdict, "uncertain", "max conf below 0.35 → uncertain");
+assert.strictEqual(belowLean.verdict, "uncertain", "max conf below 0.25 → uncertain");
 var maxLeanLive = PC.normalizeApiResult({
+  score: 2,
+  scoreConfidence: 0.0,
+  choice: "take",
+  choiceConfidence: 0.30,
+  verdict: "uncertain",
+  model: "jev-1.13.0",
+});
+assert.strictEqual(maxLeanLive.verdict, "lean", "TEMP max: sc=0 cc=0.30 → lean (was uncertain under 0.35)");
+// score floor upgrades Average/Good elites even when confs tiny
+var maxLeanLiveScore = PC.normalizeApiResult({
   score: 3,
   scoreConfidence: 0.0,
   choice: "take",
@@ -131,18 +187,28 @@ var maxLeanLive = PC.normalizeApiResult({
   verdict: "uncertain",
   model: "jev-1.13.0",
 });
-assert.strictEqual(maxLeanLive.verdict, "lean", "TEMP max: sc=0 cc=0.42 → lean");
+assert.strictEqual(maxLeanLiveScore.verdict, "lean", "TEMP max+score≥3: sc=0 cc=0.42 → lean");
 
 assert.strictEqual(PC.classifyVerdict(0.8, 0.75), "suggest");
-assert.strictEqual(PC.classifyVerdict(0.48, 0.42), "lean");
-assert.strictEqual(PC.classifyVerdict(0.6, 0.55), "suggest");
+assert.strictEqual(PC.classifyVerdict(0.38, 0.32), "lean");
+assert.strictEqual(PC.classifyVerdict(0.5, 0.45), "suggest");
 // TEMP max banding: usable peer wins when other conf is low/zero (Wemby-like)
-assert.strictEqual(PC.classifyVerdict(0.0, 0.48), "lean", "max: sc=0 cc=0.48 → lean");
-assert.strictEqual(PC.classifyVerdict(0.0, 0.60), "suggest", "max: sc=0 cc=0.60 → suggest");
+assert.strictEqual(PC.classifyVerdict(0.0, 0.30), "lean", "max: sc=0 cc=0.30 → lean");
+assert.strictEqual(PC.classifyVerdict(0.0, 0.50), "suggest", "max: sc=0 cc=0.50 → suggest");
 assert.strictEqual(PC.classifyVerdict(0.2, 0.9), "suggest", "max: 0.2/0.9 → suggest");
 assert.strictEqual(PC.classifyVerdict(0.1, 0.2), "uncertain", "max still below lean gate");
-assert.strictEqual(PC.LEAN_GATE, 0.35);
-assert.strictEqual(PC.CONF_GATE, 0.55);
+assert.strictEqual(
+  PC.classifyVerdict(0.0, 0.22, { score: 2.4, adp: 1.8, rank: 1, pickNumber: 1 }),
+  "lean",
+  "Wemby-like: max 0.22 + elite ADP floor → lean"
+);
+assert.strictEqual(
+  PC.classifyVerdict(0.0, 0.28, { score: 2.5, adp: 14.7, rank: 15, pickNumber: 5 }),
+  "lean",
+  "Edwards-like: max 0.28 ≥ LEAN 0.25 → lean"
+);
+assert.strictEqual(PC.LEAN_GATE, 0.25);
+assert.strictEqual(PC.CONF_GATE, 0.45);
 
 // SoftFail payload with error stays uncertain even with mid confs
 var softLean = PC.normalizeApiResult({
@@ -168,10 +234,9 @@ var fixLean = PC.fixtureResult({ player: "Edwards", pickNumber: 5, adp: 8 }, { m
 assert.strictEqual(fixLean.verdict, "lean");
 assert.strictEqual(fixLean.model, "stub");
 assert.strictEqual(fixLean.fallback, "fixture");
-assert.ok(fixLean.scoreConfidence >= 0.35 && fixLean.scoreConfidence < 0.55);
-assert.ok(fixLean.choiceConfidence >= 0.48);
-assert.strictEqual(fixLean.scoreConfidence, 0.5);
-assert.strictEqual(fixLean.choiceConfidence, 0.48);
+// leanDemo confs are fixed mid paint values; band comes from honor-res.verdict
+assert.strictEqual(fixLean.scoreConfidence, 0.38);
+assert.strictEqual(fixLean.choiceConfidence, 0.36);
 
 var fixSuggest = PC.fixtureResult({ player: "Jokic", pickNumber: 1, adp: 1 }, { mode: "forceConf", band: "suggest" });
 assert.strictEqual(fixSuggest.verdict, "suggest");

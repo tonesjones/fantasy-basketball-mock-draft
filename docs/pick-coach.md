@@ -42,15 +42,25 @@ hint unchanged at 0.7):
 
 | Band | Gate | UI |
 |------|------|-----|
-| **suggest** | **max** ≥ **0.55** | Filled Take / Wait / Reach chip |
-| **lean** | **max** ≥ **0.35** and &lt; 0.55 | Outline `.pc-choice-lean-*` — `Lean take|wait|reach`, subline “Soft lean — mid confidence” |
-| **uncertain** | **max** &lt; 0.35 | “Not sure enough to suggest” (no choice chip); softFail stays here |
+| **suggest** | **max** ≥ **0.45** | Filled Take / Wait / Reach chip |
+| **lean** | **max** ≥ **0.25** and &lt; 0.45 | Outline `.pc-choice-lean-*` — `Lean take|wait|reach`, subline “Soft lean — mid confidence” |
+| **uncertain** | **max** &lt; 0.25 | “Not sure enough to suggest” (no choice chip); softFail stays here |
 
-**TEMPORARY (2026-09-20):** gates lowered from 0.7 / 0.5 **and** banding uses
-`max(scoreConfidence, choiceConfidence)` (was min). Live Jev often returns
-near-zero `scoreConfidence` with usable `choiceConfidence` (Wemby/Edwards) —
-min collapsed everything to uncertain. SCORE/CHOICE prompts ask for calibrated
-confidence; revisit gates **and** max→min after both confs stabilize.
+**TEMPORARY calibration (2026-09-20 recal):** gates **0.45 / 0.25** (was 0.55 /
+0.35 after the first TEMP drop from 0.7 / 0.5). Banding still uses
+`max(scoreConfidence, choiceConfidence)` (was min). **Why max alone wasn't
+enough:** live curls often show Wemby score≈2.4 Average, `sc≈0`, `cc≈0.25–0.30`
+→ `max≈0.30` &lt; prior LEAN 0.35 → still uncertain on bare preview; Jev also
+underscores elites. Extra TEMP floors (upward only, after max classify; **not**
+softFail):
+
+1. **Score floor:** `Number(score) ≥ 3` → at least **lean**; `≥ 4` → at least
+   **suggest**.
+2. **Elite ADP floor:** yahoo ADP or rank ≤ **5** and
+   `pickNumber ≤ (adp||rank)+3` → at least **lean** (Wemby@1 / similar).
+
+SCORE/CHOICE prompts still ask for calibrated confidence; revisit gates,
+max→min, and floors after both confs stabilize.
 
 UI fixture QA (`?leanDemo=1` / `?forceConf=`) **honors `res.verdict`** — does
 not reclassify from confs. Source badge may show `Stub/Fixture · leanDemo`.
@@ -59,7 +69,8 @@ Always paint a quiet conf line on suggest / lean / uncertain:
 `Confidence N% · suggest|lean|uncertain` (`N = round(max*100)` TEMP). Soft-fail
 unavailable may omit the conf % line (error stays quiet).
 
-SoftFail / unavailable (`res.error`) → **uncertain** always (never lean).
+SoftFail / unavailable (`res.error`) → **uncertain** always (never lean; floors
+do not apply).
 
 ### Preview QA fixtures (never Jev)
 
@@ -135,10 +146,10 @@ preview `*.pages.dev` and local wrangler origins when Origin is sent (not `*`).
 - Result card → `.pc-card` with strength row + `.pc-suggest` | `.pc-lean` | `.pc-uncertain`
 - Source: `.pc-source` (**Jev** / **Stub** preview soft-fail / **Stub · offline** / **Unavailable**)
 - Strength row: `.pc-strengths` / `.pc-chip` from `PLAYERS[i].c.slice(0,4)` (always when tags exist)
-- Suggest (min conf ≥ 0.55 TEMPORARY): filled Take|Wait|Reach + board why; quiet `Confidence N% · suggest`; score words demoted
-- Lean (0.35 ≤ min &lt; 0.55 TEMPORARY): outline `.pc-choice-lean-take|wait|reach`, label `Lean take|wait|reach`,
+- Suggest (**max** ≥ **0.45** TEMPORARY, or score ≥ 4 floor): filled Take|Wait|Reach + board why; quiet `Confidence N% · suggest`; score words demoted
+- Lean (**0.25** ≤ **max** &lt; **0.45** TEMPORARY, or score ≥ 3 / elite-ADP floors): outline `.pc-choice-lean-take|wait|reach`, label `Lean take|wait|reach`,
   subline “Soft lean — mid confidence”, board why + `Confidence N% · lean` (quieter than suggest; no glow)
-- Uncertain (min &lt; 0.35): “Not sure enough…” / “Low confidence — your call” — **no** choice chip; + `Confidence N% · uncertain`;
+- Uncertain (**max** &lt; **0.25**, no floor): “Not sure enough…” / “Low confidence — your call” — **no** choice chip; + `Confidence N% · uncertain`;
   still shows strengths + mover/vacated why
 - Soft error (`res.error`): “Coach unavailable” / “Unavailable — not a low-confidence read”
   — **still paints** muted `.pc-uncertain-why` mover/role clause when applicable
