@@ -85,7 +85,6 @@
 - Quieter scarcity summary (default closed); ~8px spacing / less nested border soup.
 - Preview / branch alias only — **do not** deploy **tony-draft-lab** prod. Pick coach / LEAN / ADP untouched.
 
-
 ## Docs: vacated-usage + softFail why truth (2026-09-20)
 - Align README / `docs/vacated-usage.md` / movers / pick-coach after PRs #10–#11:
   22 curated vacatedGainers; Pick coach one-liner on suggest **and** softFail;
