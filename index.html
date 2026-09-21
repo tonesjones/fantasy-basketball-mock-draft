@@ -248,6 +248,38 @@ body{background:radial-gradient(ellipse at top right,#19352f66,transparent 55%),
   #md .pc-dock-handle{display:none}
 }
 
+
+/* Hierarchy pass: one surface rhythm, ~8px tokens, segmented Room nav */
+#md{--space:8px}
+#md .brandbar{padding-bottom:16px;margin-bottom:16px}
+#md .turnbar{margin:0 0 var(--space);padding:14px 16px}
+#md .viewtabs.tabs{display:inline-flex;flex-wrap:wrap;align-items:stretch;gap:0;margin:0 0 var(--space);padding:3px;border:1px solid var(--hatch-widget-border);border-radius:10px;background:#0d1724}
+#md .viewtabs .muted{margin:0 8px 0 6px;align-self:center}
+#md .viewtabs .segtab{appearance:none;background:transparent;border:0;border-radius:7px;padding:8px 14px;font-size:13px;font-weight:500;color:var(--hatch-widget-muted);cursor:pointer;line-height:1.2;box-shadow:none}
+#md .viewtabs .segtab:not(:disabled):hover{border-color:transparent;box-shadow:none;color:var(--hatch-widget-text);background:#1a293b66}
+#md .viewtabs .segtab.sel{font-weight:700;color:var(--hatch-widget-text);background:var(--hatch-widget-surface-muted);box-shadow:inset 0 -2px 0 var(--hatch-widget-accent)}
+#md .viewtabs .segtab.sel:not(:disabled):hover{border-color:transparent;box-shadow:inset 0 -2px 0 var(--hatch-widget-accent);background:var(--hatch-widget-surface-muted)}
+#md details.scarcity{margin:var(--space) 0;padding:8px 12px;border-radius:10px;background:transparent}
+#md details.scarcity:not([open]){padding:6px 10px;border-color:transparent;border-bottom:1px solid var(--hatch-widget-border);border-radius:0;background:transparent}
+#md details.scarcity>summary{padding:2px 0;font-size:12px}
+#md .setup-pos{margin:8px 0 12px}
+#md .bigbtn{margin-top:8px}
+#md .setup-actions{margin-top:4px}
+#md .textlink{background:none;border:0;padding:0;margin:0;min-height:0;color:var(--hatch-widget-muted);font:inherit;font-size:12px;font-weight:500;text-decoration:underline;text-underline-offset:2px;cursor:pointer;box-shadow:none}
+#md .textlink:not(:disabled):hover{color:var(--hatch-widget-accent);border-color:transparent;box-shadow:none;background:transparent}
+#md .setup-details{margin:12px 0 0;padding:8px 12px;border:1px solid var(--hatch-widget-border);border-radius:10px;background:transparent}
+#md .setup-details>summary{list-style:none;cursor:pointer;padding:4px 0;font-size:13px;color:var(--hatch-widget-muted)}
+#md .setup-details>summary::-webkit-details-marker{display:none}
+#md .setup-details>summary::before{content:"▸ ";color:var(--hatch-widget-accent)}
+#md .setup-details[open]>summary::before{content:"▾ "}
+#md .setup-details>summary b{color:var(--hatch-widget-text)}
+#md .setup-details .catgrid{margin-top:8px;gap:8px}
+#md .setup-details .catchip{border:0;background:var(--hatch-widget-surface-muted);padding:8px}
+#md .cols{gap:12px}
+#md .avail,#md .side{padding:14px;border-radius:12px}
+#md h3{margin:12px 0 8px}
+#md.coach-dock-active .turnbar,#md.coach-dock-active .viewtabs,#md.coach-dock-active details.scarcity{margin-bottom:var(--space)}
+
 </style>
 </head>
 <body>
@@ -682,7 +714,7 @@ function renderScarcity(){
   });
   var quiet=pcts.slice().sort(function(a,b){return a.pct-b.pct;}).slice(0,3).map(function(x){return x.cat+" "+x.pct+"%";}).join(" · ");
   var h='<details class="scarcity" id="mdscarcity"'+(state.scarcityOpen?' open':'')+'>';
-  h+='<summary><b>Category scarcity</b> <span class="muted">'+(quiet||"share of draftable value still available")+' · tap a category for top contributors</span></summary>';
+  h+='<summary><b>Category scarcity</b> <span class="muted">'+(quiet||"share of draftable value still available")+'</span></summary>';
   h+='<div class="catgrid">';
   pcts.forEach(function(row){
     var cat=row.cat,ci=row.ci,pct=row.pct;
@@ -813,7 +845,7 @@ function pickLabel(idx){var r=Math.floor(idx/TEAMS)+1;var w=idx%TEAMS+1;return "
 
 var HEALTH=window.DataHealth.audit(PLAYERS,typeof PDATA!=="undefined"?PDATA:{},CATS);
 function renderDataHealth(){
-  var h='<details class="scarcity"><summary><b>Data health</b> &middot; '+(HEALTH.players-HEALTH.missingAdp.length)+'/'+HEALTH.players+' players with ADP &middot; bundled snapshot</summary>';
+  var h='<details class="setup-details"><summary><b>Data health</b> &middot; '+(HEALTH.players-HEALTH.missingAdp.length)+'/'+HEALTH.players+' players with ADP &middot; bundled snapshot</summary>';
   h+='<p class="muted">Snapshot '+esc(DATA_VERSION)+'. Yahoo and Fantrax ADP, NBA team, and Yahoo position eligibility were refreshed from Hashtag Basketball\'s 2026-27 ADP table (Yahoo and Fantrax columns, updated 17 September 2026). A red INJ badge marks the 10 players listed as injured as of 14 September 2026; tap or activate the INJ badge for the injury, context, expected return, and source. Prior-season ranks and category values are historical and unchanged. Category scarcity and the per-row strength tags both derive from BM-style per-game z-scores, not a current-season projection. <b>Movers / role</b>: teamPrev/mover sourced from pre-refresh bundled teams (+ documented add-candidate priors); roleDelta/roleNote are ADP-vs-last heuristics — not Hashtag projections (projMpg/projRank not shipped). <b>Vacated usage</b> (curated, high-ADP movers only): quiet Pick coach line naming who on teamPrev likely gains touches/minutes — not a BM scrape; see docs/vacated-usage.md and docs/movers-outlook.md. This audit checks internal consistency; NBA player-pool completeness remains unverified.</p>';
   h+='<p>'+HEALTH.missingAdp.length+' missing Yahoo ADP (CPUs use Fantrax ADP when Yahoo is missing, else median of 2025-26 totals rank, per-game rank, and built-in rank); '+HEALTH.missingLast.length+' missing prior-season rank; '+HEALTH.untagged.length+' without category tags; '+HEALTH.placeholderTeams.length+' unknown teams; '+(HEALTH.movers?HEALTH.movers.length:0)+' movers; '+(HEALTH.roleDeltaUp?HEALTH.roleDeltaUp.length:0)+' role↑ / '+(HEALTH.roleDeltaDown?HEALTH.roleDeltaDown.length:0)+' role↓; '+(HEALTH.withProjMpg?HEALTH.withProjMpg.length:0)+' with projMpg; '+(HEALTH.withProjRank?HEALTH.withProjRank.length:0)+' with projRank; '+(HEALTH.withVacatedGainers?HEALTH.withVacatedGainers.length:0)+' with vacatedGainers.</p>';
   h+='<p class="muted">Built-in rank is the original list order, not a fresh projection. Missing ranks stay blank. The legacy category labels on player rows are informational only; scarcity calculations use the historical `cv` values.</p>';
@@ -827,7 +859,7 @@ function viewTabsHtml(){
   var views=[["team","My team"],["board","Draft board"],["grades","Grades"],["coach","Pick coach"]];
   var h='<div class="viewtabs tabs" role="tablist" aria-label="Draft room views"><span class="muted">Room</span>';
   views.forEach(function(v){
-    h+='<button class="fchip'+(state.view===v[0]?' sel':'')+'" data-view="'+v[0]+'" role="tab" aria-selected="'+(state.view===v[0]?'true':'false')+'">'+v[1]+'</button>';
+    h+='<button class="segtab'+(state.view===v[0]?' sel':'')+'" data-view="'+v[0]+'" role="tab" aria-selected="'+(state.view===v[0]?'true':'false')+'">'+v[1]+'</button>';
   });
   return h+'</div>';
 }
@@ -1250,15 +1282,17 @@ function refreshPickCoach(){
 }
 
 function renderSetup(){
-
+  clearPlayoffHost();
   var h='<div class="season">Your draft room</div><h2>Build your next contender.</h2>';
   h+='<div class="muted">12 teams, snake draft. 270-player pool from early 2026-27 preseason rankings. You draft your slot; the other 11 teams auto-pick.</div>';
-  h+=renderDataHealth();
   h+='<h3>Your draft position</h3><div class="setup-pos">';
   for(var i=1;i<=12;i++)h+='<button class="posbtn'+(state.draftPos===i?' sel':'')+'" data-pos="'+i+'">'+i+'</button>';
   h+='</div><h3>Rounds</h3><select id="mdrounds">';
   [10,11,12,13,14,15].forEach(function(r){h+='<option value="'+r+'"'+(state.rounds===r?' selected':'')+'>'+r+' rounds</option>';});
-  h+='</select><br><button class="bigbtn" id="mdstart">Start Mock Draft</button><button class="ghostbtn" id="mdclear" style="margin-left:8px">Clear saved draft</button><div class="muted" style="margin-top:8px">Drafts save automatically in this browser. Data version: '+DATA_VERSION+'.</div>';
+  h+='</select><div class="setup-actions"><button class="bigbtn" id="mdstart">Start Mock Draft</button></div>';
+  h+='<div class="muted" style="margin-top:8px">Drafts save automatically in this browser. Data version: '+DATA_VERSION+'. · <button type="button" class="textlink" id="mdclear">Clear saved draft</button></div>';
+  h+=playoffSettingsHtml();
+  h+=renderDataHealth();
   el("mdapp").innerHTML=h;
   el("mdapp").querySelectorAll(".posbtn").forEach(function(b){b.addEventListener("click",function(){setState({draftPos:parseInt(b.getAttribute("data-pos"),10)});});});
   el("mdrounds").addEventListener("change",function(e){setState({rounds:parseInt(e.target.value,10)});});
@@ -1266,6 +1300,7 @@ function renderSetup(){
     var chosenPlayoff=state.playoffStart,chosenPos=state.draftPos,chosenRounds=parseInt(el("mdrounds").value,10);state=freshState();state.draftPos=chosenPos;state.rounds=chosenRounds;state.playoffStart=chosenPlayoff;state.phase="draft";save();advance();
   });
   el("mdclear").addEventListener("click",function(){restartDraft();});
+  wirePlayoffSettings(el("mdapp"));
 }
 function nextUserPickIdx(){
   var tot=totalPicks();
@@ -1315,7 +1350,6 @@ function renderDraft(){
   if(state.userTurns.length)h+='<button class="ghostbtn" id="mdundo">Undo my last pick</button>';
   if(state.phase!=="done"&&!isUserTurn())h+='<button class="ghostbtn" id="mdsim">Sim to my pick</button>';
   h+='<button class="ghostbtn" id="mdnew">Restart</button></div>';
-  h+=renderDataHealth();
   h+=renderScarcity();
   h+=viewTabsHtml();
   var glance=state.view==="board"||state.view==="grades"||state.view==="coach";
@@ -1542,17 +1576,27 @@ function playoffRoster(mine){
  h+='<td>'+(v?window.PlayoffCore.total(v):'\u2014')+'</td></tr>';});h+='</tbody></table></div>';}
  return h;
 }
-function renderPlayoffSettings(){
- var d=window.PlayoffData,h='<section class="scarcity"><h3>Fantasy playoff schedule</h3><div class="muted" style="margin-bottom:8px">Three-week window</div><div class="filters">';
- [18,19,20,21].forEach(function(w){h+='<button class="fchip'+(state.playoffStart===w?' sel':'')+'" data-pw="'+w+'">W'+w+'\u2013'+(w+2)+(w===20?' \u00b7 Yahoo default':'')+'</button>';});
- h+='</div><div class="catgrid" style="margin-top:12px">';
- d.weeks.slice(state.playoffStart-18,state.playoffStart-15).forEach(function(w,i){h+='<div class="catchip"><b>W'+(i+1)+' \u00b7 Yahoo '+w.week+'</b><div class="muted">'+w.start+' \u2013 '+w.end+'</div></div>';});
- h+='</div><p class="muted playoffnote">2 games in a week = bad \u00b7 3 = ok \u00b7 4\u20135 = good. Scheduled NBA team games, based on the displayed team. Team assignments may be outdated; injuries, rest, byes and lineup limits are not deducted. Confirm your league dates. Snapshot '+d.checked+'. <a href="'+d.source+'" target="_blank" rel="noopener">Schedule source</a> \u00b7 <a href="'+d.defaultSource+'" target="_blank" rel="noopener">Yahoo dates</a></p></section>';
- var host=el('mdplayoffhost');if(!host){host=document.createElement('div');host.id='mdplayoffhost';el('mdapp').parentNode.insertBefore(host,el('mdapp'));}host.innerHTML=h;
- host.querySelectorAll('[data-pw]').forEach(function(b){b.addEventListener('click',function(){setState({playoffStart:Number(b.getAttribute('data-pw')),page:0});});});
+function clearPlayoffHost(){
+  var host=el("mdplayoffhost");
+  if(host){host.innerHTML="";host.style.display="none";}
+}
+function playoffSettingsHtml(){
+  var d=window.PlayoffData;
+  var label="W"+state.playoffStart+"\u2013"+(state.playoffStart+2)+(state.playoffStart===20?" \u00b7 Yahoo default":"");
+  var h='<details class="setup-details" id="mdplayoff"><summary><b>Fantasy playoff schedule</b> <span class="muted">'+label+'</span></summary>';
+  h+='<div class="muted" style="margin:8px 0">Three-week window</div><div class="filters">';
+  [18,19,20,21].forEach(function(w){h+='<button class="fchip'+(state.playoffStart===w?' sel':'')+'" data-pw="'+w+'">W'+w+'\u2013'+(w+2)+(w===20?' \u00b7 Yahoo default':'')+'</button>';});
+  h+='</div><div class="catgrid">';
+  d.weeks.slice(state.playoffStart-18,state.playoffStart-15).forEach(function(w,i){h+='<div class="catchip"><b>W'+(i+1)+' \u00b7 Yahoo '+w.week+'</b><div class="muted">'+w.start+' \u2013 '+w.end+'</div></div>';});
+  h+='</div><p class="muted playoffnote">2 games in a week = bad \u00b7 3 = ok \u00b7 4\u20135 = good. Scheduled NBA team games, based on the displayed team. Team assignments may be outdated; injuries, rest, byes and lineup limits are not deducted. Confirm your league dates. Snapshot '+d.checked+'. <a href="'+d.source+'" target="_blank" rel="noopener">Schedule source</a> \u00b7 <a href="'+d.defaultSource+'" target="_blank" rel="noopener">Yahoo dates</a></p></details>';
+  return h;
+}
+function wirePlayoffSettings(root){
+  if(!root)return;
+  root.querySelectorAll("[data-pw]").forEach(function(b){b.addEventListener("click",function(){setState({playoffStart:Number(b.getAttribute("data-pw")),page:0});});});
 }
 function render(){
-  renderPlayoffSettings();
+  clearPlayoffHost();
   if(state.phase==="setup")renderSetup();
   else if(state.phase==="done")renderDone();
   else renderDraft();
