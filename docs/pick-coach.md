@@ -106,7 +106,7 @@ preview `*.pages.dev` and local wrangler origins when Origin is sent (not `*`).
 - Uncertain (low conf): “Not sure enough…” / “Low confidence — your call”
 - Soft error (`res.error`): “Coach unavailable” / “Unavailable — not a low-confidence read”
   — **still paints** muted `.pc-uncertain-why` mover/role clause when applicable
-  (do not clear why on softFail).
+  (do not clear why on softFail). Vacated `Vacates usage → …` uses the same rule.
 - Preview soft-fail stub (`model: "stub"`, source **Stub**): may show true
   uncertain (“Not sure enough…”) or suggest — never source **Jev**.
 - Choice: `take` | `wait` | `reach`

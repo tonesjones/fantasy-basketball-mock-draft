@@ -1,7 +1,8 @@
 ## Pick coach soft-fail UX (mover why + preview stub) (2026-09-20)
 - Uncertain card **always** paints muted `.pc-uncertain-why` mover/role clause
   when mover / ↑ / ↓ apply — including softFail **Coach unavailable** (title/sub
-  still distinguish unavailable vs low-confidence).
+  still distinguish unavailable vs low-confidence). Vacated-usage branch also
+  paints `Vacates usage → …` on the same uncertain/softFail path (not suggest-only).
 - On `*.pages.dev` hosts, `/api/pick-quality` soft-fails (`TYPESAFE_API_KEY` /
   network) fall back to labeled stub (`model: "stub"`, source **Stub**) so QA
   can exercise suggest / “Not sure enough…”. Never labeled as Jev.
@@ -11,6 +12,16 @@
 - Preview only (`tony-draft-lab-preview`). Prod **tony-draft-lab** untouched.
 
 # Changelog
+
+## Vacated usage phase 2 (2026-09-20) — preview only
+- Curated `vacatedGainers` overlay (`vacated-usage.js`) for **22** high-ADP movers
+  (all ADP &lt; 80 + notable &lt; 100): who on `teamPrev` likely gains touches/minutes.
+- UI: one quiet Pick coach muted line (`Vacates usage → A, B`); optional NEW-chip
+  tooltip. Line paints on suggest **and** uncertain/softFail/unavailable (same
+  pattern as mover why). No list-row spam. Mobile dock unchanged; advisory-only.
+- Docs: `docs/vacated-usage.md` (sources + honesty). Data-health coverage count.
+- Preview / branch alias only — **do not** deploy **tony-draft-lab** prod.
+- Mover copy-nits remain separate (PR #9). DATA_VERSION `2026-09-20-vacated`.
 
 ## Docs: movers/outlook phase 1 truth (2026-09-20)
 - README how-to + Recent-on-preview: 71 real movers, quiet NEW/↑↓ role,
