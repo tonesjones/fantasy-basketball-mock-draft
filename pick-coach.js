@@ -16,9 +16,10 @@
   var SCORE_WORDS = ["Poor", "Below avg", "Average", "Good", "Excellent"];
   /**
    * TEMPORARY gates (2026-09-20): lowered so live Jev mid-conf paints lean/suggest.
-   * Live samples often return scoreConfidence ~0–0.65; prior 0.7/0.5 hid almost all
-   * mid band. Revisit after prompt calibration lands. softFail → uncertain always.
-   * Full suggest when min(scoreConf, choiceConf) ≥ CONF_GATE.
+   * Live samples often return scoreConfidence ~0 while choiceConfidence is usable;
+   * classifyVerdict uses max(score,choice) TEMPORARILY (not min). Prior 0.7/0.5
+   * hid almost all mid band. Revisit after prompt calibration. softFail → uncertain.
+   * Full suggest when max(scoreConf, choiceConf) ≥ CONF_GATE.
    */
   var CONF_GATE = 0.55;
   /** TEMPORARY: lean when min ≥ LEAN_GATE and < CONF_GATE (not softFail). */
@@ -41,16 +42,20 @@
 
   /**
    * Client-side verdict from confidences (API may return raw confs only).
-   * TEMPORARY: suggest ≥ 0.55; lean ≥ 0.35 and < 0.55; else uncertain.
+   * TEMPORARY (2026-09-20): band uses max(scoreConf, choiceConf) — live Jev
+   * often returns scoreConfidence ~0 while choiceConfidence is usable
+   * (Wemby/Edwards). suggest ≥ 0.55; lean ≥ 0.35 and < 0.55; else uncertain.
    * SoftFail / error paths should not call this — stay uncertain.
+   * Revisit after prompt calibration lands (prefer min again when both confs fire).
    */
   function classifyVerdict(scoreConf, choiceConf) {
     var sc = Number(scoreConf);
     var cc = Number(choiceConf);
     if (!(isFinite(sc) && isFinite(cc))) return "uncertain";
-    var minC = Math.min(sc, cc);
-    if (minC >= CONF_GATE) return "suggest";
-    if (minC >= LEAN_GATE) return "lean";
+    // TEMP product rule: max — one conf ~0 must not collapse a usable peer.
+    var bandC = Math.max(sc, cc);
+    if (bandC >= CONF_GATE) return "suggest";
+    if (bandC >= LEAN_GATE) return "lean";
     return "uncertain";
   }
 
@@ -181,8 +186,10 @@
       why = "Fixture suggest — high confidence stub (not Jev).";
     } else if (band === "lean") {
       // Mid-conf Edwards-like: paints outline Lean take/wait/reach + Soft lean.
-      scoreConf = 0.48;
-      choiceConf = 0.42;
+      // min 0.48 clearly in lean band under LEAN_GATE=0.35 / CONF_GATE=0.55
+      // (even if UI briefly reclassifies; honor res.verdict is the paint source).
+      scoreConf = 0.50;
+      choiceConf = 0.48;
       if (!qa || qa.mode === "leanDemo" || qa.mode === "forceConf") {
         choice = "take";
         score = 2;
@@ -369,6 +376,11 @@
     if (m === "stub" || res.fallback) {
       // Preview soft-fail / fixture stub is QA-only — never look like Jev.
       if (res.fallback === "fixture" || res.fixture) {
+        var qa = readCoachQaMode();
+        if (qa && qa.mode === "leanDemo") return "Stub/Fixture · leanDemo";
+        if (qa && qa.mode === "forceConf" && qa.band)
+          return "Stub/Fixture · forceConf=" + qa.band;
+        if (qa && qa.mode === "coachFixture") return "Stub/Fixture · coachFixture";
         return "Stub/Fixture";
       }
       if (

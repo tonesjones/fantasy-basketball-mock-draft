@@ -1206,21 +1206,28 @@ function refreshPickCoach(){
     var softFail=!!res.error;
     var scN=res.scoreConfidence!=null?Number(res.scoreConfidence):NaN;
     var ccN=res.choiceConfidence!=null?Number(res.choiceConfidence):NaN;
-    // Client-side lean classification from confidences (API may stay suggest|uncertain).
+    // Fixture / leanDemo / forceConf: honor res.verdict — NEVER reclassify via confs
+    // (confs can classify differently than the forced Soft lean / suggest paint).
+    // Live: PickCoach.classifyVerdict uses TEMP max(scoreConf,choiceConf) banding.
     var verdict;
     if(softFail){
       verdict="uncertain";
+    }else if(res.fixture||res.fallback==="fixture"){
+      // honor-res.verdict for fixtures (leanDemo / forceConf / coachFixture)
+      verdict=(res.verdict==="suggest"||res.verdict==="lean"||res.verdict==="uncertain")?res.verdict:"uncertain";
     }else if(window.PickCoach&&typeof window.PickCoach.classifyVerdict==="function"){
       verdict=window.PickCoach.classifyVerdict(scN,ccN);
     }else{
-      var minC=Math.min(scN,ccN);
-      verdict=(isFinite(minC)&&minC>=0.55)?"suggest":(isFinite(minC)&&minC>=0.35)?"lean":"uncertain";
+      // TEMP fallback: max banding (match PickCoach.classifyVerdict)
+      var maxC=(isFinite(scN)&&isFinite(ccN))?Math.max(scN,ccN):(isFinite(scN)?scN:ccN);
+      verdict=(isFinite(maxC)&&maxC>=0.55)?"suggest":(isFinite(maxC)&&maxC>=0.35)?"lean":"uncertain";
     }
     if(suggest)suggest.hidden=verdict!=="suggest";
     if(lean)lean.hidden=verdict!=="lean";
     if(uncertain)uncertain.hidden=verdict!=="uncertain";
     function pcFmtConf(sc,cc,band){
-      var conf=isFinite(sc)&&isFinite(cc)?Math.min(sc,cc):isFinite(sc)?sc:cc;
+      // TEMP: show max conf to match max() banding (live Jev often sc~0).
+      var conf=isFinite(sc)&&isFinite(cc)?Math.max(sc,cc):isFinite(sc)?sc:cc;
       if(!isFinite(conf))return "";
       var b=band||"uncertain";
       return "Confidence "+Math.round(conf*100)+"% \u00b7 "+b;

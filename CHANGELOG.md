@@ -1,5 +1,21 @@
 # Changelog
 
+## Pick coach honor fixture verdict + TEMP max conf banding (2026-09-20)
+- **UI fix:** `refreshPickCoach` honors `res.verdict` when `res.fixture` /
+  `fallback==="fixture"` (leanDemo / forceConf / coachFixture). SoftFail still
+  forces uncertain. Fixes Soft lean paint when confs would reclassify.
+- **TEMPORARY live banding:** `classifyVerdict` uses **max(scoreConf, choiceConf)**
+  (was min). Live Jev often returns scoreConfidence ~0 with usable choiceConf
+  (Wemby/Edwards) — max lets bare preview show Soft lean / suggest without
+  fixture query. softFail → uncertain. Documented temporary; revisit when both
+  confs calibrate.
+- Fixture lean confs **0.50 / 0.48** (clear lean band under 0.55/0.35 gates).
+- Quiet source badge: `Stub/Fixture · leanDemo` / `forceConf=…` when QA query on.
+- Preview **tony-draft-lab-preview** only — prod **tony-draft-lab** untouched.
+  `production_branch` stays `feat/pick-coach-lean`.
+
+
+
 ## Pick coach TEMPORARY gates 0.55/0.35 + fixture lean demo (2026-09-20)
 - **TEMPORARY** client gates: **suggest** ≥ **0.55**, **lean** ≥ **0.35** (&lt;0.55),
   else uncertain; softFail → uncertain. Prior 0.7/0.5 hid mid-conf live Jev

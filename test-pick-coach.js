@@ -1,4 +1,4 @@
-/* PickCoach tests: stub bias, TEMPORARY 0.55 suggest / 0.35 lean gates, fixtures, preview soft-fail → labeled stub,
+/* PickCoach tests: stub bias, TEMPORARY 0.55/0.35 gates + max(conf) banding, fixtures, preview soft-fail → labeled stub,
  * non-preview https TypeError → uncertain (not stub), soft-error shape,
  * fingerprint cache, sourceLabel, softAdpClause fixtures. */
 var assert = require("assert");
@@ -50,7 +50,7 @@ var near = PC.pickCoachEvaluate({ player: "N", pickNumber: 50, adp: 49, rank: 50
 assert.strictEqual(near.verdict, "uncertain", "near-ADP below lean floor");
 assert.ok(Math.min(near.scoreConfidence, near.choiceConfidence) < 0.35);
 
-// --- Gate: normalizeApiResult demotes suggest when conf < CONF_GATE ---
+// --- Gate: normalizeApiResult uses TEMP max banding ---
 var demoted = PC.normalizeApiResult({
   score: 3,
   scoreConfidence: 0.9,
@@ -60,7 +60,17 @@ var demoted = PC.normalizeApiResult({
   model: "jev-1.13.0",
   why: "x",
 });
-assert.strictEqual(demoted.verdict, "uncertain", "gate demotes when choice conf below lean");
+assert.strictEqual(demoted.verdict, "suggest", "TEMP max: high scoreConf wins over low choiceConf");
+var bothLow = PC.normalizeApiResult({
+  score: 3,
+  scoreConfidence: 0.2,
+  choice: "take",
+  choiceConfidence: 0.15,
+  verdict: "suggest",
+  model: "jev-1.13.0",
+  why: "x",
+});
+assert.strictEqual(bothLow.verdict, "uncertain", "max below lean gate → uncertain");
 
 var kept = PC.normalizeApiResult({
   score: 3,
@@ -106,18 +116,31 @@ assert.strictEqual(suggestEdge.verdict, "suggest", "exactly 0.55 is suggest");
 
 var belowLean = PC.normalizeApiResult({
   score: 2,
-  scoreConfidence: 0.34,
+  scoreConfidence: 0.10,
   choice: "take",
-  choiceConfidence: 0.9,
+  choiceConfidence: 0.20,
   verdict: "suggest",
   model: "jev-1.13.0",
 });
-assert.strictEqual(belowLean.verdict, "uncertain", "min conf below 0.35 → uncertain");
+assert.strictEqual(belowLean.verdict, "uncertain", "max conf below 0.35 → uncertain");
+var maxLeanLive = PC.normalizeApiResult({
+  score: 3,
+  scoreConfidence: 0.0,
+  choice: "take",
+  choiceConfidence: 0.42,
+  verdict: "uncertain",
+  model: "jev-1.13.0",
+});
+assert.strictEqual(maxLeanLive.verdict, "lean", "TEMP max: sc=0 cc=0.42 → lean");
 
 assert.strictEqual(PC.classifyVerdict(0.8, 0.75), "suggest");
 assert.strictEqual(PC.classifyVerdict(0.48, 0.42), "lean");
 assert.strictEqual(PC.classifyVerdict(0.6, 0.55), "suggest");
-assert.strictEqual(PC.classifyVerdict(0.2, 0.9), "uncertain");
+// TEMP max banding: usable peer wins when other conf is low/zero (Wemby-like)
+assert.strictEqual(PC.classifyVerdict(0.0, 0.48), "lean", "max: sc=0 cc=0.48 → lean");
+assert.strictEqual(PC.classifyVerdict(0.0, 0.60), "suggest", "max: sc=0 cc=0.60 → suggest");
+assert.strictEqual(PC.classifyVerdict(0.2, 0.9), "suggest", "max: 0.2/0.9 → suggest");
+assert.strictEqual(PC.classifyVerdict(0.1, 0.2), "uncertain", "max still below lean gate");
 assert.strictEqual(PC.LEAN_GATE, 0.35);
 assert.strictEqual(PC.CONF_GATE, 0.55);
 
@@ -146,11 +169,13 @@ assert.strictEqual(fixLean.verdict, "lean");
 assert.strictEqual(fixLean.model, "stub");
 assert.strictEqual(fixLean.fallback, "fixture");
 assert.ok(fixLean.scoreConfidence >= 0.35 && fixLean.scoreConfidence < 0.55);
-assert.strictEqual(PC.sourceLabel(fixLean), "Stub/Fixture");
+assert.ok(fixLean.choiceConfidence >= 0.48);
+assert.strictEqual(fixLean.scoreConfidence, 0.5);
+assert.strictEqual(fixLean.choiceConfidence, 0.48);
 
 var fixSuggest = PC.fixtureResult({ player: "Jokic", pickNumber: 1, adp: 1 }, { mode: "forceConf", band: "suggest" });
 assert.strictEqual(fixSuggest.verdict, "suggest");
-assert.strictEqual(PC.sourceLabel(fixSuggest), "Stub/Fixture");
+assert.ok(/^Stub\/Fixture/.test(PC.sourceLabel(fixSuggest)));
 
 var fixUnc = PC.fixtureResult({ player: "X", pickNumber: 50, adp: 50 }, { mode: "forceConf", band: "uncertain" });
 assert.strictEqual(fixUnc.verdict, "uncertain");

@@ -37,23 +37,26 @@ UI source marker (`.pc-source`): **Jev** | **Stub** (preview soft-fail) |
 **Stub · offline** | **Unavailable**.
 Tooltip may show the raw `model` id (e.g. `jev-1.13.0` / `stub`).
 
-**Confidence gates** (client-side from `min(scoreConfidence, choiceConfidence)`;
-API may return raw confs — Function verdict hint unchanged at 0.7):
+**Confidence gates** (client-side; API may return raw confs — Function verdict
+hint unchanged at 0.7):
 
 | Band | Gate | UI |
 |------|------|-----|
-| **suggest** | min ≥ **0.55** | Filled Take / Wait / Reach chip |
-| **lean** | min ≥ **0.35** and &lt; 0.55 | Outline `.pc-choice-lean-*` — `Lean take|wait|reach`, subline “Soft lean — mid confidence” |
-| **uncertain** | min &lt; 0.35 | “Not sure enough to suggest” (no choice chip); softFail stays here |
+| **suggest** | **max** ≥ **0.55** | Filled Take / Wait / Reach chip |
+| **lean** | **max** ≥ **0.35** and &lt; 0.55 | Outline `.pc-choice-lean-*` — `Lean take|wait|reach`, subline “Soft lean — mid confidence” |
+| **uncertain** | **max** &lt; 0.35 | “Not sure enough to suggest” (no choice chip); softFail stays here |
 
-**TEMPORARY (2026-09-20):** gates lowered from 0.7 / 0.5 because live Jev often
-returns near-zero `scoreConfidence` on Average/Good picks, so `min(score,choice)`
-collapsed everything to uncertain. SCORE/CHOICE prompts now ask for calibrated
-confidence (clarity vs ADP/board, not star power). Revisit gates after live
-confs stabilize.
+**TEMPORARY (2026-09-20):** gates lowered from 0.7 / 0.5 **and** banding uses
+`max(scoreConfidence, choiceConfidence)` (was min). Live Jev often returns
+near-zero `scoreConfidence` with usable `choiceConfidence` (Wemby/Edwards) —
+min collapsed everything to uncertain. SCORE/CHOICE prompts ask for calibrated
+confidence; revisit gates **and** max→min after both confs stabilize.
+
+UI fixture QA (`?leanDemo=1` / `?forceConf=`) **honors `res.verdict`** — does
+not reclassify from confs. Source badge may show `Stub/Fixture · leanDemo`.
 
 Always paint a quiet conf line on suggest / lean / uncertain:
-`Confidence N% · suggest|lean|uncertain` (`N = round(min*100)`). Soft-fail
+`Confidence N% · suggest|lean|uncertain` (`N = round(max*100)` TEMP). Soft-fail
 unavailable may omit the conf % line (error stays quiet).
 
 SoftFail / unavailable (`res.error`) → **uncertain** always (never lean).
