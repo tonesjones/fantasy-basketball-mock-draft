@@ -1,5 +1,11 @@
 # Changelog
 
+## Docs: movers/outlook phase 1 truth (2026-09-20)
+- README how-to + Recent-on-preview: 71 real movers, quiet NEW/↑↓ role,
+  roleDelta labeled as ADP-vs-last heuristic, no projMpg/projRank, preview only.
+- `docs/movers-outlook.md` deploy topology (main code / preview host / not prod).
+- `docs/pick-coach.md` cross-link for mover chips/why. No app changes.
+
 ## Movers / role outlook (2026-09-20) — preview only
 - Schema overlay `movers-outlook.js` merges into PDATA: `teamPrev`, `teamCurr`,
   `mover`, `roleDelta`, `roleNote` (optional `projMpg`/`projRank` unused in v1).
