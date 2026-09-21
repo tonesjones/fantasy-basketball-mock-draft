@@ -62,12 +62,13 @@ The layout collapses to a single column with compact two-line player rows; filte
 ## Pick coach
 
 Advisory-only **Pick coach** side tab (your turn only). Code is on `main`.
-**Live TypeSafe/Jev** runs on preview **[tony-draft-lab-preview.pages.dev](https://tony-draft-lab-preview.pages.dev)** (`TYPESAFE_API_KEY` on that Pages project). It is **not** on prod **[tony-draft-lab.pages.dev](https://tony-draft-lab.pages.dev)** — do not treat prod as a live coach.
+**Live TypeSafe/Jev** runs on preview **[tony-draft-lab-preview.pages.dev](https://tony-draft-lab-preview.pages.dev)** (`TYPESAFE_API_KEY` on that Pages project). It is **not** on prod **[tony-draft-lab.pages.dev](https://tony-draft-lab.pages.dev)** — do not treat prod as a live coach. Branch / `feat-*` aliases need the secret in the CF **Preview** environment (Production secrets alone are not enough).
 
-- Source labels: **Jev** | **Stub · offline** (`file://`) | **Unavailable** (soft fail / no secret on host)
+- Source labels: **Jev** | **Stub** (preview soft-fail QA) | **Stub · offline** (`file://`) | **Unavailable**
+- Soft-fail / unavailable still shows mover/role why when applicable; preview soft-fails may use labeled stub (never as Jev)
 - Never auto-drafts; never runs for CPU picks
 
-See **`docs/pick-coach.md`** for secret setup, pinned model (`jev-1.13.0`), CORS, payload, and UX contract.
+See **`docs/pick-coach.md`** for secret setup (Production vs Preview), pinned model (`jev-1.13.0`), CORS, payload, and UX contract.
 
 ## Run it
 

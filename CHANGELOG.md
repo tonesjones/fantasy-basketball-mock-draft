@@ -1,3 +1,15 @@
+## Pick coach soft-fail UX (mover why + preview stub) (2026-09-20)
+- Uncertain card **always** paints muted `.pc-uncertain-why` mover/role clause
+  when mover / ↑ / ↓ apply — including softFail **Coach unavailable** (title/sub
+  still distinguish unavailable vs low-confidence).
+- On `*.pages.dev` hosts, `/api/pick-quality` soft-fails (`TYPESAFE_API_KEY` /
+  network) fall back to labeled stub (`model: "stub"`, source **Stub**) so QA
+  can exercise suggest / “Not sure enough…”. Never labeled as Jev.
+- Docs: CF Pages **Production** secret applies to production preview hostname;
+  **feat-*** aliases need the secret in the **Preview** environment + redeploy.
+  Same-origin `/api` on branch aliases; CORS allowlist unchanged.
+- Preview only (`tony-draft-lab-preview`). Prod **tony-draft-lab** untouched.
+
 # Changelog
 
 ## Docs: movers/outlook phase 1 truth (2026-09-20)

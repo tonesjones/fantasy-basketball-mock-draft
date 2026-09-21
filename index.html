@@ -1163,6 +1163,7 @@ function refreshPickCoach(){
       var src=(window.PickCoach.sourceLabel&&window.PickCoach.sourceLabel(res))||"";
       if(!src){
         if(res.error)src="Unavailable";
+        else if(res.fallback==="preview-softfail"||res.fallback==="preview-network")src="Stub";
         else if(res.model==="stub"||res.fallback)src="Stub · offline";
         else if(res.model)src=/^jev/i.test(String(res.model))?"Jev":String(res.model);
       }
@@ -1209,19 +1210,15 @@ function refreshPickCoach(){
       if(softFail){
         if(uTitle)uTitle.textContent="Coach unavailable";
         if(uSub)uSub.textContent="Unavailable — not a low-confidence read · your call";
-        if(uWhy){
-          // Quiet error: keep diagnostic out of the hero line; optional muted note.
-          uWhy.textContent="";
-          uWhy.hidden=true;
-        }
       }else{
         if(uTitle)uTitle.textContent="Not sure enough to suggest";
         if(uSub)uSub.textContent="Low confidence — your call";
-        var moverWhy=moverWhyClause(pl);
-        if(uWhy){
-          uWhy.textContent=moverWhy;
-          uWhy.hidden=!moverWhy;
-        }
+      }
+      // Always paint mover / role why on uncertain (incl. softFail / unavailable).
+      var moverWhy=moverWhyClause(pl);
+      if(uWhy){
+        uWhy.textContent=moverWhy;
+        uWhy.hidden=!moverWhy;
       }
     }
     pcShow(still,"pc-card");

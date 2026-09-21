@@ -1,9 +1,12 @@
 /* Pick Coach — advisory-only helper.
  *
  * Prefers POST /api/pick-quality (Cloudflare Pages Function → TypeSafe/Jev).
- * Fail-soft: API soft-errors return uncertain + error (no silent stub).
+ * Fail-soft: API soft-errors return uncertain + error (draft never breaks).
  * Offline file:// (or no fetch) → stub labeled model:"stub".
- * On http(s) hosts, network TypeError → uncertain + quiet error (NOT stub).
+ * On *.pages.dev preview hosts: TYPESAFE_API_KEY / network soft-fails fall back
+ * to labeled stub (model:"stub", source "Stub") so QA can exercise suggest /
+ * "Not sure enough…" — never labeled as Jev.
+ * Other http(s) hosts: network TypeError → uncertain + quiet error (NOT stub).
  */
 (function (root) {
   "use strict";
@@ -41,6 +44,35 @@
     } catch (e) {
       return false;
     }
+  }
+
+  /** Preview Pages hosts (incl. feat-* aliases): hostname includes pages.dev. */
+  function isPreviewPagesHost() {
+    try {
+      if (typeof location === "undefined") return false;
+      var host = String(location.hostname || "");
+      return /pages\.dev$/i.test(host) || host.indexOf("pages.dev") >= 0;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /** Soft-fails where preview may use labeled stub for QA (key missing / net). */
+  function isStubbableSoftFail(error) {
+    var msg = String(error || "");
+    return /TYPESAFE_API_KEY|not configured|Coach unreachable|Failed to fetch|NetworkError|timeout|ETIMEDOUT|pick-quality HTTP|Empty pick-quality/i.test(
+      msg
+    );
+  }
+
+  function labeledStubResult(state, fallback) {
+    var stub = pickCoachEvaluate(state || {});
+    stub.stale = false;
+    stub.fallback = fallback || "preview-softfail";
+    stub.model = "stub";
+    // Never carry soft-fail error onto stub — would force Unavailable UI.
+    delete stub.error;
+    return stub;
   }
 
   /** Fingerprint: player + pick# + logLen (board identity for cache). */
@@ -188,13 +220,23 @@
     };
   }
 
-  /** Short UI label: "Jev" / "Stub · offline" / "Unavailable". */
+  /** Short UI label: "Jev" / "Stub" / "Stub · offline" / "Unavailable". */
   function sourceLabel(res) {
     if (!res) return "";
     if (res.error) return "Unavailable";
     var m = String(res.model || "");
-    if (m === "stub" || res.fallback === "file" || res.fallback === "no-fetch") {
-      return "Stub · offline";
+    if (m === "stub" || res.fallback) {
+      // Preview soft-fail stub is QA-only — never look like Jev.
+      if (
+        res.fallback === "preview-softfail" ||
+        res.fallback === "preview-network"
+      ) {
+        return "Stub";
+      }
+      if (res.fallback === "file" || res.fallback === "no-fetch" || m === "stub") {
+        return "Stub · offline";
+      }
+      return "Stub";
     }
     if (/^jev/i.test(m) || m === "pick-quality") {
       // Prefer friendly "Jev"; keep version in title tooltip via model field.
@@ -285,6 +327,22 @@
         if (mySeq !== _seq) {
           return { stale: true, verdict: "uncertain" };
         }
+        // Preview *.pages.dev: key-missing / soft API errors → labeled stub for QA.
+        // (feat-* aliases often lack Preview-env TYPESAFE_API_KEY; Production secret
+        // applies to the production preview hostname only.)
+        if (
+          result &&
+          result.error &&
+          !result.stale &&
+          isPreviewPagesHost() &&
+          isStubbableSoftFail(result.error)
+        ) {
+          try {
+            return labeledStubResult(state, "preview-softfail");
+          } catch (eStub) {
+            return result;
+          }
+        }
         if (result && !result.stale && !result.error) {
           cacheSet(fp, result);
         }
@@ -303,7 +361,15 @@
             /Failed to fetch|Invalid URL|NetworkError/i.test(
               String(err.message || err)
             ));
-        // On http(s) hosts: never paint stub as if live — uncertain + quiet error.
+        // Preview Pages: network failure → labeled stub so QA can still see paths.
+        if (isNet && isHttpHost() && isPreviewPagesHost()) {
+          try {
+            return labeledStubResult(state, "preview-network");
+          } catch (ePrev) {
+            return uncertainResult("Coach unreachable", "pick-quality");
+          }
+        }
+        // Other http(s) hosts: never paint stub as if live — uncertain + quiet error.
         if (isNet && isHttpHost()) {
           return uncertainResult("Coach unreachable", "pick-quality");
         }
@@ -387,6 +453,9 @@
     sourceLabel: sourceLabel,
     normalizeApiResult: normalizeApiResult,
     uncertainResult: uncertainResult,
+    isPreviewPagesHost: isPreviewPagesHost,
+    isStubbableSoftFail: isStubbableSoftFail,
+    labeledStubResult: labeledStubResult,
     CONF_GATE: CONF_GATE,
     CACHE_TTL_MS: CACHE_TTL_MS,
     PINNED_MODEL: PINNED_MODEL,
