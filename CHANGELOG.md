@@ -1,6 +1,7 @@
 # Changelog
 
 ## UX hierarchy pass (2026-09-20) — preview only
+- Nit: live My team playoff games block is default-collapsed `<details>` (below roster), so desktop turn bar stays the hero.
 - Live draft: Fantasy playoff schedule card removed from chrome; turn bar is sole hero. Schedule + Data health live in closed `<details>` on setup only.
 - Setup above-the-fold: draft position grid → Start Mock Draft; Clear saved draft is a quiet text link.
 - Room nav: true segmented control (weight + underline), not mint-filled chips.

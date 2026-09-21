@@ -275,6 +275,8 @@ body{background:radial-gradient(ellipse at top right,#19352f66,transparent 55%),
 #md .setup-details>summary b{color:var(--hatch-widget-text)}
 #md .setup-details .catgrid{margin-top:8px;gap:8px}
 #md .setup-details .catchip{border:0;background:var(--hatch-widget-surface-muted);padding:8px}
+#md .side .setup-details{margin:10px 0 0;padding:6px 0;border:0;border-top:1px solid var(--hatch-widget-border);border-radius:0}
+#md .side .setup-details>summary{font-size:12px}
 #md .cols{gap:12px}
 #md .avail,#md .side{padding:14px;border-radius:12px}
 #md h3{margin:12px 0 8px}
@@ -1468,7 +1470,7 @@ function renderSide(){
   }else{
     var mine=[];state.log.forEach(function(pi,idx){if(teamForPick(idx)===userTeam())mine.push({pi:pi,idx:idx});});
     var ros=myRoster();
-    var h2=playoffRoster(mine)+'<h3>Roster</h3><div class="rlist">';
+    var h2='<h3>Roster</h3><div class="rlist">';
     ros.slots.forEach(function(e){
       h2+='<div class="rrow"><span class="rpick">'+e.slot+'</span><span class="pname">'+(e.player?esc(e.player.player.n)+' <span class="teamtag">'+esc(e.player.player.t)+'</span>'+injBadge(e.player.player):'<span class="muted">empty</span>')+'</span>'+(e.player?'<span class="ppos">'+posBadges(e.player.player.p)+'</span>':'')+'</div>';});
     h2+='</div>';
@@ -1477,7 +1479,8 @@ function renderSide(){
     if(!mine.length)h2+='<div class="rrow"><span class="muted">No picks yet.</span></div>';
     mine.forEach(function(m){var pl=PLAYERS[m.pi];
       h2+='<div class="rrow"><span class="rpick">'+pickLabel(m.idx)+'</span><span class="pname">'+esc(pl.n)+' <span class="teamtag">'+esc(pl.t)+'</span>'+injBadge(pl)+vBadge(m.pi,m.idx)+'</span><span class="ppos">'+posBadges(pl.p)+'</span></div>';});
-    s.innerHTML=h2+'</div>';
+    h2+='</div>'+playoffRoster(mine);
+    s.innerHTML=h2;
   }
   wireInjToggles(s);
 }
@@ -1566,7 +1569,9 @@ function playoffBadge(pl){
 }
 function playoffRoster(mine){
  var sum=window.PlayoffCore.summary(window.PlayoffData,mine.map(function(m){return PLAYERS[m.pi];}),state.playoffStart);
- var h='<h3>Playoff games \u00b7 your roster</h3><div class="catgrid">';
+ var quiet=sum.games.map(function(n,i){return 'W'+(i+1)+' '+n;}).join(' \u00b7 ');
+ var h='<details class="setup-details" id="mdplayoffroster"><summary><b>Playoff games \u00b7 your roster</b> <span class="muted">'+quiet+'</span></summary>';
+ h+='<div class="catgrid">';
  sum.games.forEach(function(n,i){h+='<div class="catchip"><span class="catname">'+(sum.unknown?'KNOWN ':'')+'WEEK '+(i+1)+'</span><span class="catnum">'+n+'</span></div>';});
  h+='</div><p class="muted">'+sum.players+' players, including bench. '+sum.unknown+' unknown team schedules. These are scheduled opportunities, not guaranteed starts.</p>';
  if(mine.length){h+='<div class="boardwrap"><table class="playofftable"><thead><tr><th>Player / team</th><th>W1</th><th>W2</th><th>W3</th><th>Total</th></tr></thead><tbody>';
@@ -1574,7 +1579,7 @@ function playoffRoster(mine){
  h+='<tr'+(r?' class="'+r+'"':'')+'><td>'+esc(p.n)+' <span class="teamtag">'+esc(p.t)+'</span></td>';
  [0,1,2].forEach(function(i){h+='<td>'+(v?v[i]:'\u2014')+'</td>';});
  h+='<td>'+(v?window.PlayoffCore.total(v):'\u2014')+'</td></tr>';});h+='</tbody></table></div>';}
- return h;
+ return h+'</details>';
 }
 function clearPlayoffHost(){
   var host=el("mdplayoffhost");
