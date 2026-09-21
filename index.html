@@ -993,11 +993,48 @@ function renderPickCoachStrengths(pl, remMap){
   return (mv||"")+(mv&&catHtml?" ":"")+catHtml;
 }
 
+function moverTeamLabel(pl){
+  if(!pl)return "";
+  var prev=String(pl.teamPrev||"").trim();
+  var curr=String(pl.t||pl.teamCurr||"").trim();
+  return prev&&curr&&prev!==curr?prev+"→"+curr:"";
+}
+function humanRoleNote(pl){
+  if(!pl)return "";
+  var note=String(pl.roleNote||"").trim();
+  if(!note||note.length>60)return "";
+  var team=moverTeamLabel(pl);
+  if(team&&note.indexOf(team+" · ")==0)note=note.slice(team.length+3).trim();
+  // These are generated ADP/team heuristics, not human-facing role copy.
+  if(/^(?:ADP (?:ahead of|behind) last rank|team change(?:; ADP near last rank)?|role unclear)$/i.test(note))return "";
+  return note;
+}
+function moverRolePhrase(pl){
+  if(!pl)return "";
+  var note=humanRoleNote(pl);
+  if(note)return note;
+  if(pl.roleDelta==="up")return "expanded role";
+  if(pl.roleDelta==="down")return "smaller role";
+  return "";
+}
+function moverRoleTooltip(pl){
+  var team=moverTeamLabel(pl), phrase=moverRolePhrase(pl);
+  if(team&&phrase)return team+" · "+phrase;
+  if(phrase)return phrase;
+  if(team)return team;
+  return pl&&pl.mover?"new team":"";
+}
+function moverWhyClause(pl){
+  if(!pl)return "";
+  var phrase=moverRolePhrase(pl);
+  if(pl.mover)return phrase?("new team · "+phrase):"new team";
+  return phrase;
+}
 function moverRoleChipHtml(pl, asPcChip){
   if(!pl)return "";
-  var parts=[], tipBase=pl.roleNote||(pl.teamPrev? (pl.teamPrev+" → "+(pl.t||pl.teamCurr||"")) : "New team");
-  var tip=esc(tipBase);
+  var tip=esc(moverRoleTooltip(pl));
   var cls=asPcChip?"pc-chip ":"";
+  var parts=[];
   if(pl.mover){
     parts.push('<span class="'+cls+'mv-chip" title="'+tip+'">NEW</span>');
   }
@@ -1009,16 +1046,8 @@ function moverRoleChipHtml(pl, asPcChip){
   return parts.join("");
 }
 function appendMoverWhy(pl, parts){
-  if(!pl||!parts)return;
-  if(pl.mover){
-    var note=(pl.roleNote||"").trim();
-    if(note.length>60)note=note.slice(0,57)+"…";
-    parts.push(note?("new team · "+note):"new team");
-  }else if(pl.roleDelta==="up"){
-    parts.push("expanded role");
-  }else if(pl.roleDelta==="down"){
-    parts.push("smaller role");
-  }
+  var clause=moverWhyClause(pl);
+  if(clause&&parts)parts.push(clause);
 }
 function softAdpClause(choice, pickNumber, adp){
   if(adp==null||!isFinite(Number(adp)))return "";
@@ -1068,6 +1097,7 @@ function buildPickCoachWhy(pl, choice, pickNumber, jevWhy){
     if(choice==="reach"&&parts.length)parts.push("but "+adpBit);
     else parts.push(adpBit);
   }
+  appendMoverWhy(pl, parts);
   var boardWhy=parts.join(" · ");
   var jw=(jevWhy||"").trim();
   if(jw){
@@ -1187,10 +1217,10 @@ function refreshPickCoach(){
       }else{
         if(uTitle)uTitle.textContent="Not sure enough to suggest";
         if(uSub)uSub.textContent="Low confidence — your call";
-        var tagsOnly=pickCoachStrengthTags(pl);
+        var moverWhy=moverWhyClause(pl);
         if(uWhy){
-          if(tagsOnly.length){uWhy.textContent=tagsOnly.join(" · ");uWhy.hidden=false;}
-          else{uWhy.textContent="";uWhy.hidden=true;}
+          uWhy.textContent=moverWhy;
+          uWhy.hidden=!moverWhy;
         }
       }
     }
