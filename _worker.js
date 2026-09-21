@@ -1,26 +1,35 @@
 /**
- * Cloudflare Pages Function: POST /api/pick-quality
+ * Cloudflare Pages _worker.js (advanced mode).
  *
- * Calls TypeSafe System One (pinned jev-1.13.0) with Score + Choice questions
- * matching scripts/pick_quality_jev.py (spike / PR #3) semantics.
+ * Single worker for the whole site:
+ *   - /api/pick-quality  -> Jev (TypeSafe System One, pinned jev-1.13.0)
+ *   - everything else     -> static assets (env.ASSETS), with SPA fallback
+ *                            to /index.html for HTML navigations.
  *
- * Fail-soft: missing key / timeout / API error → HTTP 200 with
+ * Why _worker.js instead of functions/: wrangler's `pages deploy` compiles
+ * functions/ locally and the resulting worker intermittently fails to route
+ * (empty 405 on /api/pick-quality despite uses_functions=true). Advanced
+ * mode removes that compilation step entirely - this file IS the worker, on
+ * both `wrangler pages deploy` and git-integration deploys.
+ *
+ * Fail-soft: missing key / timeout / API error -> HTTP 200 with
  * verdict "uncertain" + error string (never break the draft).
  * Never logs TYPESAFE_API_KEY.
  *
  * Secret (Pages project): TYPESAFE_API_KEY
- *   npx wrangler pages secret put TYPESAFE_API_KEY --project-name tony-draft-lab-preview
+ *   npx wrangler pages secret put TYPESAFE_API_KEY --project-name tony-draft-lab
  */
 
-const CONF_GATE = 0.7;
+/** API suggest hint only; client TEMPORARY gates (0.45/0.25) reclassify lean. */
+var CONF_GATE = 0.7;
 /** Pin versioned id (aliases like jev-latest may move). */
-const MODEL = "jev-1.13.0";
-const TYPESAFE_URL = "https://api.typesafe.ai/v1/systemone";
-const FETCH_TIMEOUT_MS = 25000;
+var MODEL = "jev-1.13.0";
+var TYPESAFE_URL = "https://api.typesafe.ai/v1/systemone";
+var FETCH_TIMEOUT_MS = 25000;
 
-const SCORE_WORDS = ["Poor", "Below avg", "Average", "Good", "Excellent"];
+var SCORE_WORDS = ["Poor", "Below avg", "Average", "Good", "Excellent"];
 
-const SCORE_CRITERIA = [
+var SCORE_CRITERIA = [
   "Poor — clear reach or wrong positional fit given roster needs",
   "Below average — better options likely available at similar ADP",
   "Average — fair market pick; neither strong value nor costly reach",
@@ -28,14 +37,14 @@ const SCORE_CRITERIA = [
   "Excellent — high-confidence value or must-draft fit right now",
 ];
 
-const CHOICE_CRITERIA = {
+var CHOICE_CRITERIA = {
   take: "Draft this player now; waiting risks losing them without a better replacement",
   wait: "Prefer to wait; similar or better value should remain for a later pick",
   reach: "Picking now would be an early reach relative to ADP and available alternatives",
 };
 
-/** Allowed browser origins for preview + local wrangler (not *). */
-const ALLOWED_ORIGINS = [
+/** Allowed browser origins for preview + prod + local wrangler (not *). */
+var ALLOWED_ORIGINS = [
   "https://tony-draft-lab-preview.pages.dev",
   "https://tony-draft-lab.pages.dev",
   "http://localhost:8788",
@@ -47,7 +56,6 @@ const ALLOWED_ORIGINS = [
 function isAllowedOrigin(origin) {
   if (!origin) return false;
   if (ALLOWED_ORIGINS.indexOf(origin) >= 0) return true;
-  // Preview deploy aliases: https://<hash>.tony-draft-lab-preview.pages.dev
   try {
     var u = new URL(origin);
     if (u.protocol !== "https:" && u.protocol !== "http:") return false;
@@ -174,7 +182,7 @@ function buildState(body) {
   if (scarcity && typeof scarcity === "object") {
     board.scarcity_rem_pct = scarcity;
   }
-  return {
+  var out = {
     league: {
       format: "9-category H2H (PTS REB AST STL BLK 3PM FG% FT% TO)",
       teams: teams,
@@ -196,24 +204,73 @@ function buildState(body) {
     roster_needs: rn,
     board_context: board,
   };
+  // Deterministic signals: computed client-side from market data + curated
+  // edges. Jev's job is to EXPLAIN these numbers in natural language, not to
+  // re-derive a verdict via confidence thresholds.
+  if (body.signals && typeof body.signals === "object") {
+    out.deterministic_signals = {
+      verdict: body.signals.verdict || null,
+      true_value_rank: body.signals.V != null ? Number(body.signals.V) : null,
+      market_consensus_rank: body.signals.consensus != null ? Math.round(Number(body.signals.consensus)) : null,
+      value_at_pick: body.signals.valueAtPick != null ? Number(body.signals.valueAtPick) : null,
+      reasons: Array.isArray(body.signals.reasons) ? body.signals.reasons : [],
+      edges: Array.isArray(body.signals.edges) ? body.signals.edges.map(function (e) {
+        return { signal: e.k, impact: e.v, note: e.note };
+      }) : [],
+      target_window: body.signals.target || null,
+    };
+  }
+  return out;
 }
 
-function buildQuestions() {
+function buildQuestions(hasSignals) {
+  var scoreInstructions =
+    "How good is drafting `candidate` at this pick right now, given " +
+    "`roster_needs`, ADP/rank vs `draft.pick_number`, and `board_context`? " +
+    "Use the ordered levels in criteria (lowest to highest). ";
+  var choiceInstructions =
+    "Should the user take this player now, wait for a later pick, or " +
+    "treat drafting them now as a reach? Consider ADP vs pick number, " +
+    "positional/category needs, and who else is available. ";
+  if (hasSignals) {
+    var grounding =
+      "IMPORTANT — deterministic signals provided: `deterministic_signals` " +
+      "contains a precomputed verdict (take/wait/pass/reach), true_value_rank, " +
+      "value_at_pick, and the specific signal edges (actuals, role, vacated " +
+      "usage, playoff schedule). Your job is to EXPLAIN these numbers, not to " +
+      "re-derive the verdict. Reference the concrete numbers (e.g. 'our #28 " +
+      "vs market #70, +42 value'). Keep confidence calibrated to how clear " +
+      "the numbers are, not to the player's star power.";
+    scoreInstructions += grounding;
+    choiceInstructions += grounding + " HARD RULE — stay consistent with " +
+      "the deterministic verdict: verdict take → choose take; wait → wait; " +
+      "reach → reach; pass → choose wait (do not take now). Never recommend " +
+      "a different action than the deterministic verdict, and never " +
+      "contradict it in your explanation.";
+  } else {
+    scoreInstructions +=
+      "IMPORTANT — calibrated confidence: report how clear the ranking is vs " +
+      "ADP and the remaining board, NOT how elite the player is. Average or " +
+      "Good market picks should still carry moderate-to-high confidence " +
+      "(roughly 0.45–0.85) when the grade is clear relative to ADP/alternatives. " +
+      "Reserve near-zero confidence only when evidence is contradictory or sparse. " +
+      "Do not collapse score confidence toward 0 just because the pick is Average.";
+    choiceInstructions +=
+      "IMPORTANT — calibrated confidence: confidence reflects clarity of the " +
+      "take/wait/reach decision given ADP and board context, not star power. " +
+      "Clear market-rate decisions (including wait on Average picks) should " +
+      "keep moderate confidence; use very low confidence only when take vs " +
+      "wait vs reach is genuinely ambiguous.";
+  }
   return {
     score: {
       type: "score",
-      instructions:
-        "How good is drafting `candidate` at this pick right now, given " +
-        "`roster_needs`, ADP/rank vs `draft.pick_number`, and `board_context`? " +
-        "Use the ordered levels in criteria (lowest to highest).",
+      instructions: scoreInstructions,
       criteria: SCORE_CRITERIA,
     },
     choice: {
       type: "choice",
-      instructions:
-        "Should the user take this player now, wait for a later pick, or " +
-        "treat drafting them now as a reach? Consider ADP vs pick number, " +
-        "positional/category needs, and who else is available.",
+      instructions: choiceInstructions,
       criteria: CHOICE_CRITERIA,
     },
   };
@@ -235,10 +292,7 @@ function buildWhy(scoreAns, choiceAns, score, choice) {
   return parts.join("; ") + ".";
 }
 
-export async function onRequest(context) {
-  var request = context.request;
-  var env = context.env || {};
-
+async function handlePickQuality(request, env) {
   if (request.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders(request) });
   }
@@ -264,10 +318,11 @@ export async function onRequest(context) {
   }
 
   var state = buildState(body);
+  var hasSignals = !!(state.deterministic_signals && state.deterministic_signals.verdict);
   var payload = {
     state: state,
     model: MODEL,
-    questions: buildQuestions(),
+    questions: buildQuestions(hasSignals),
   };
 
   var controller = new AbortController();
@@ -304,7 +359,6 @@ export async function onRequest(context) {
     } catch (_) {
       errText = "";
     }
-    // Do not echo secrets; truncate body for diagnostics only.
     var snippet = (errText || "").slice(0, 200).replace(/\s+/g, " ");
     return uncertain(
       "TypeSafe HTTP " + upstream.status + (snippet ? ": " + snippet : ""),
@@ -357,3 +411,20 @@ export async function onRequest(context) {
     scoreLabel: label,
   }, 200, request);
 }
+
+export default {
+  async fetch(request, env, ctx) {
+    var url = new URL(request.url);
+    if (url.pathname === "/api/pick-quality" || url.pathname === "/api/pick-quality/") {
+      return handlePickQuality(request, env);
+    }
+    var res = await env.ASSETS.fetch(request);
+    if (res.status === 404) {
+      var accept = request.headers.get("Accept") || "";
+      if (accept.indexOf("text/html") >= 0) {
+        return env.ASSETS.fetch(new Request(new URL("/index.html", url), request));
+      }
+    }
+    return res;
+  },
+};

@@ -1,5 +1,82 @@
 # Changelog
 
+## _worker.js replaces functions/ (2026-09-20)
+- `wrangler pages deploy` compiled `functions/` locally but the resulting
+  worker intermittently failed to route (empty 405 on `POST /api/pick-quality`
+  despite `uses_functions=true`). Advanced mode removes that step: `_worker.js`
+  IS the worker — identical on `wrangler pages deploy` and git integration.
+  `functions/api/pick-quality.js` deleted; Jev logic now lives in `_worker.js`
+  (`/api/pick-quality` → TypeSafe, everything else → `env.ASSETS` + SPA
+  fallback). Logic byte-equivalent; verified locally (OPTIONS 204, GET 405
+  JSON, POST-no-key 200 uncertain, static passthrough, SPA fallback).
+
+## Pick coach TEMP recal: gates 0.45/0.25 + score/ADP floors (2026-09-20)
+- **Why max() wasn't enough:** live Jev for Wemby/Edwards often returns
+  score≈Average (≈2.4), `scoreConfidence≈0`, `choiceConfidence≈0.25–0.30` →
+  `max≈0.30` still &lt; prior **LEAN_GATE 0.35** → bare preview painted
+  **uncertain**. `?forceConf=suggest` worked (fixture honor path).
+- **TEMPORARY product rules (preview):**
+  1. Gates: **CONF_GATE=0.45** suggest; **LEAN_GATE=0.25** lean; still
+     **max(scoreConf, choiceConf)** banding.
+  2. **Score floor** (not softFail): `score ≥ 3` → at least lean; `score ≥ 4`
+     → at least suggest. Applied after max(conf) by raising verdict upward only.
+  3. **Elite ADP floor** (not softFail): yahoo ADP or rank ≤ 5 **and**
+     `pickNumber ≤ (adp||rank)+3` → at least lean (stops Wemby@1 uncertain when
+     Jev returns Average + low conf).
+  4. Fixture honor-`res.verdict`; `?leanDemo=1` / `forceConf` unchanged.
+- Fixture lean confs **0.38 / 0.36** (clear lean under 0.45/0.25; leanDemo still honors band).
+- SoftFail / `res.error` still forces uncertain (floors do not apply).
+- Docs + tests. Preview **tony-draft-lab-preview** only — prod **tony-draft-lab**
+  untouched. `production_branch` stays `feat/pick-coach-lean`. Hierarchy #14
+  not touched.
+
+
+
+## Pick coach honor fixture verdict + TEMP max conf banding (2026-09-20)
+- **UI fix:** `refreshPickCoach` honors `res.verdict` when `res.fixture` /
+  `fallback==="fixture"` (leanDemo / forceConf / coachFixture). SoftFail still
+  forces uncertain. Fixes Soft lean paint when confs would reclassify.
+- **TEMPORARY live banding:** `classifyVerdict` uses **max(scoreConf, choiceConf)**
+  (was min). Live Jev often returns scoreConfidence ~0 with usable choiceConf
+  (Wemby/Edwards) — max lets bare preview show Soft lean / suggest without
+  fixture query. softFail → uncertain. Documented temporary; revisit when both
+  confs calibrate.
+- Fixture lean confs **0.50 / 0.48** (clear lean band under 0.55/0.35 gates).
+- Quiet source badge: `Stub/Fixture · leanDemo` / `forceConf=…` when QA query on.
+- Preview **tony-draft-lab-preview** only — prod **tony-draft-lab** untouched.
+  `production_branch` stays `feat/pick-coach-lean`.
+
+
+
+## Pick coach TEMPORARY gates 0.55/0.35 + fixture lean demo (2026-09-20)
+- **TEMPORARY** client gates: **suggest** ≥ **0.55**, **lean** ≥ **0.35** (&lt;0.55),
+  else uncertain; softFail → uncertain. Prior 0.7/0.5 hid mid-conf live Jev
+  (near-zero scoreConfidence → all uncertain). Documented temporary in code +
+  `docs/pick-coach.md`.
+- Always show quiet conf line: `Confidence N% · suggest|lean|uncertain`
+  (`N=round(min*100)`). Soft-fail unavailable may omit conf %.
+- `_worker.js`: SCORE/CHOICE instructions ask calibrated
+  confidence (clarity vs ADP/board — do not collapse ~0 on Average/Good). Model
+  stays **jev-1.13.0**. `buildState` already accepts top-level
+  `notableAvailable` / `recentlyTaken` / `scarcityRem`.
+- QA: `?leanDemo=1` / `?coachFixture=1` / `?forceConf=` force Stub/Fixture paths
+  (never Jev). UX lean paint URL: `/?leanDemo=1`.
+- Tests updated. Preview **tony-draft-lab-preview** only — prod **tony-draft-lab**
+  untouched. Hierarchy #14 parked.
+
+
+## Pick coach lean band (0.5–0.7) (2026-09-20)
+- Dual **0.7** gate was too strict — almost always “Not sure enough…” except elite
+  (e.g. Wembanyama). Add **lean** when `min(scoreConf, choiceConf) ≥ 0.5` and &lt; 0.7.
+- **suggest** (≥0.7): filled Take/Wait/Reach unchanged.
+- **lean**: outline `.pc-choice-lean-*`, label `Lean take|wait|reach`, subline
+  “Soft lean — mid confidence”, why + conf %; quieter than suggest (no glow).
+- **uncertain** (&lt;0.5): keep “Not sure enough…” + strengths/mover/vacated why.
+- SoftFail / unavailable unchanged (never lean). Client-side `classifyVerdict`
+  from confidences — Function / API shape unchanged.
+- Stub mid-band confs emit lean (preview soft-fail QA). Docs + tests.
+- Preview only (`tony-draft-lab-preview`). Prod **tony-draft-lab** untouched.
+
 ## UX hierarchy pass (2026-09-20) — preview only
 - Nit: live My team playoff games block is default-collapsed `<details>` (below roster), so desktop turn bar stays the hero.
 - Live draft: Fantasy playoff schedule card removed from chrome; turn bar is sole hero. Schedule + Data health live in closed `<details>` on setup only.
@@ -113,7 +190,7 @@ remote.
 - **UX** — on ≤900px when Pick coach + your turn, `.cols.coach-dock` splits list (~60%) and `#pick-coach` dock (~40%) so focusing a `.prow` updates coach without page yo-yo scroll (`coach-dock-mobile`).
 
 ## Pick coach real TypeSafe/Jev hook (2026-09-20)
-- **API** — Cloudflare Pages Function `functions/api/pick-quality.js`:
+- **API** — `_worker.js` (Pages advanced mode, replaces `functions/`):
   `POST /api/pick-quality` → TypeSafe `POST https://api.typesafe.ai/v1/systemone`
   with Bearer `TYPESAFE_API_KEY`, model `jev-latest`, Score (0–4) + Choice
   take|wait|reach (spike `pick_quality_jev.py` semantics). Suggest only if both

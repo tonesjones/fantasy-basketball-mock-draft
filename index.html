@@ -209,6 +209,19 @@ body{background:radial-gradient(ellipse at top right,#19352f66,transparent 55%),
 #md .pick-coach .pc-choice-take{color:#85e5bc;background:#143d2e;border-color:#2d7258}
 #md .pick-coach .pc-choice-wait{color:var(--hatch-widget-muted);background:var(--hatch-widget-surface-muted);border-color:var(--hatch-widget-border)}
 #md .pick-coach .pc-choice-reach{color:#ffd479;background:#493a1c;border-color:#80652a}
+#md .pick-coach .pc-choice-pass{color:#f0a8a8;background:#3a1d1d;border-color:#7a3535}
+#md .pick-coach .pc-pass[hidden]{display:none}
+#md .pick-coach .pc-pass-sub{margin:4px 0 0;font-size:11px;line-height:1.4}
+#md .pick-coach .pc-pass .pc-why,#md .pick-coach .pc-pass .pc-conf{font-size:12px;margin:8px 0 0;line-height:1.5}
+#md .pick-coach .pc-target{font-size:11px;margin:0 0 8px;color:var(--hatch-widget-muted)}
+#md .pick-coach .pc-target[hidden]{display:none}
+/* Lean: outline chip, quieter than filled suggest — no glow */
+#md .pick-coach .pc-choice-lean{font-weight:600;box-shadow:none;text-transform:none;letter-spacing:.15px}
+#md .pick-coach .pc-choice-lean-take{color:rgba(133,229,188,.72);background:rgba(20,61,46,.10);border-color:rgba(45,114,88,.58)}
+#md .pick-coach .pc-choice-lean-wait{color:color-mix(in srgb,var(--hatch-widget-muted) 70%,transparent);background:rgba(255,255,255,.06);border-color:color-mix(in srgb,var(--hatch-widget-border) 60%,transparent)}
+#md .pick-coach .pc-choice-lean-reach{color:rgba(255,212,121,.72);background:rgba(73,58,28,.10);border-color:rgba(128,101,42,.58)}
+#md .pick-coach .pc-lean-sub{margin:4px 0 0;font-size:11px;line-height:1.4}
+#md .pick-coach .pc-lean .pc-why,#md .pick-coach .pc-lean .pc-conf{font-size:12px;margin:8px 0 0;line-height:1.5;opacity:.92}
 #md .pick-coach .pc-why,#md .pick-coach .pc-conf{font-size:12px;margin:8px 0 0;line-height:1.5}
 #md .pick-coach .pc-uncertain-title{font-size:14px;font-weight:600;margin:0 0 4px;color:var(--hatch-widget-text)}
 #md .pick-coach .pc-uncertain-sub{margin:0;font-size:12px}
@@ -293,6 +306,7 @@ body{background:radial-gradient(ellipse at top right,#19352f66,transparent 55%),
 <script src="data-health.js"></script>
 <script src="playoff-data.js"></script>
 <script src="playoff-core.js"></script>
+<script src="pick-signals.js"></script>
 <script src="pick-coach.js"></script>
 <script>
 (function(){
@@ -922,8 +936,11 @@ function pickCoachShellHtml(){
     +'<div class="pc-head"><div class="pc-name"></div><div class="pc-meta muted"></div><div class="pc-source muted" hidden></div></div>'
     +'<div class="pc-strengths" hidden></div>'
     +'<div class="pc-playoff muted" hidden></div>'
+    +'<div class="pc-target muted" hidden></div>'
     +'<div class="pc-suggest"><div class="pc-choice"></div><p class="pc-why muted"></p><p class="pc-conf muted"></p><p class="pc-score-quiet muted" hidden></p><div class="pc-score" hidden></div></div>'
-    +'<div class="pc-uncertain"><p class="pc-uncertain-title">Not sure enough to suggest</p><p class="pc-uncertain-sub muted">Low confidence \u2014 your call</p><p class="pc-uncertain-why muted" hidden></p></div>'
+    +'<div class="pc-lean" hidden><div class="pc-choice pc-choice-lean"></div><p class="pc-lean-sub muted">Soft lean \u2014 mid confidence</p><p class="pc-why muted"></p><p class="pc-conf muted"></p></div>'
+    +'<div class="pc-pass" hidden><div class="pc-choice pc-choice-pass">Pass</div><p class="pc-pass-sub muted">Below value at this pick</p><p class="pc-why muted"></p><p class="pc-conf muted" hidden></p></div>'
+    +'<div class="pc-uncertain"><p class="pc-uncertain-title">Not sure enough to suggest</p><p class="pc-uncertain-sub muted">Low confidence \u2014 your call</p><p class="pc-uncertain-why muted" hidden></p><p class="pc-conf muted" hidden></p></div>'
     +'</div></section>';
 }
 function pcShow(root, which){
@@ -987,8 +1004,39 @@ function buildPickCoachPayload(pi){
     roleNote:pl.roleNote||null,
     teamPrev:pl.teamPrev||null,
     projMpg:pl.projMpg!=null?pl.projMpg:null,
-    projRank:pl.projRank!=null?pl.projRank:null
+    projRank:pl.projRank!=null?pl.projRank:null,
+    signals:buildPickSignals(pl, pickNumber, nxt2 + 1, open, taken)
+    // nxt2 is the zero-based draft index of the user's next pick;
+    // buildPickSignals/PS.evaluate expect a one-based pick number.
   };
+}
+/* Deterministic pick signals for the coach. Computed locally from market data
+ * + curated edges — Jev explains these, it doesn't vote via confidence. */
+function buildPickSignals(pl, pickNumber, nextPick, openSlots, taken) {
+  try {
+    if (typeof window.PickSignals === "undefined") return null;
+    var PS = window.PickSignals;
+    var available = [];
+    for (var i = 0; i < PLAYERS.length; i++) {
+      if (!taken[i]) available.push(PLAYERS[i]);
+    }
+    // netVac is cached per page load (depends only on static data).
+    if (!window._netVacCache && typeof MOVES !== "undefined" && typeof VACATED_USAGE !== "undefined") {
+      window._netVacCache = PS.netVacated(PLAYERS, MOVES, VACATED_USAGE);
+    }
+    var ctx = {
+      moves: (typeof MOVES !== "undefined") ? MOVES : {},
+      netVac: window._netVacCache || {},
+      playoffStart: (typeof state !== "undefined" && state.playoffStart) || 20
+    };
+    return PS.evaluate(pl, {
+      pick: pickNumber,
+      nextPick: nextPick > 0 ? nextPick : pickNumber + 23,
+      available: available,
+      openSlots: openSlots,
+      ctx: ctx
+    });
+  } catch (e) { return null; }
 }
 function scarcityRemPcts(){
   var base=scarcityBase(),taken={},i,c;
@@ -1104,6 +1152,7 @@ function appendVacatedWhy(pl, parts){
 }
 function softAdpClause(choice, pickNumber, adp){
   if(adp==null||!isFinite(Number(adp)))return "";
+  if(choice==="pass")return ""; // deterministic reasons already carry the value statement
   var delta=pickNumber-Number(adp);
   if(choice==="take"){
     if(delta>=3)return "value vs ADP";
@@ -1226,37 +1275,130 @@ function refreshPickCoach(){
       srcEl.title=res.model?String(res.model):(res.error?String(res.error):"");
     }
     var suggest=still.querySelector(".pc-suggest");
+    var lean=still.querySelector(".pc-lean");
+    var passEl=still.querySelector(".pc-pass");
     var uncertain=still.querySelector(".pc-uncertain");
-    // Soft API/network errors must never look like a live low-confidence suggest.
+    // Soft API/network errors must never look like suggest or lean —
+    // UNLESS deterministic signals computed a verdict locally. The engine's
+    // numbers stand on their own; only Jev's explanation degrades.
     var softFail=!!res.error;
-    var verdict=(!softFail&&res.verdict==="suggest")?"suggest":"uncertain";
+    var scN=res.scoreConfidence!=null?Number(res.scoreConfidence):NaN;
+    var ccN=res.choiceConfidence!=null?Number(res.choiceConfidence):NaN;
+    var isDet=!!(res.deterministic&&res.signals&&res.signals.verdict);
+    var detVerdict=isDet?String(res.signals.verdict).toLowerCase():null;
+    // Deterministic: verdict already computed from signals — honor it directly,
+    // never reclassify via confidence gates. Jev explains; it doesn't vote.
+    // Fixture / leanDemo / forceConf: honor res.verdict — NEVER reclassify via confs
+    // (confs can classify differently than the forced Soft lean / suggest paint).
+    // Live: PickCoach.classifyVerdict uses TEMP max(scoreConf,choiceConf) + score/ADP floors.
+    var verdict;
+    if(isDet){
+      // Native take|wait|pass|reach → display bands. take/reach are actions
+      // (suggest band), wait is a hold (lean band), pass is its own band —
+      // a confident pass is NOT "uncertain".
+      verdict=detVerdict==="take"?"suggest":detVerdict==="wait"?"lean":detVerdict==="pass"?"pass":detVerdict==="reach"?"suggest":"uncertain";
+    }else if(softFail){
+      verdict="uncertain";
+    }else if(res.fixture||res.fallback==="fixture"){
+      // honor-res.verdict for fixtures (leanDemo / forceConf / coachFixture)
+      verdict=(res.verdict==="suggest"||res.verdict==="lean"||res.verdict==="uncertain")?res.verdict:"uncertain";
+    }else if(window.PickCoach&&typeof window.PickCoach.classifyVerdict==="function"){
+      verdict=window.PickCoach.classifyVerdict(scN,ccN,{
+        score:res.score,
+        adp:payload.adp!=null?payload.adp:(pl&&pl.adp),
+        rank:payload.rank!=null?payload.rank:(pl&&pl.r),
+        pickNumber:payload.pickNumber
+      });
+    }else{
+      // TEMP fallback: max banding 0.45/0.25 (match PickCoach.classifyVerdict)
+      var maxC=(isFinite(scN)&&isFinite(ccN))?Math.max(scN,ccN):(isFinite(scN)?scN:ccN);
+      verdict=(isFinite(maxC)&&maxC>=0.45)?"suggest":(isFinite(maxC)&&maxC>=0.25)?"lean":"uncertain";
+      var scFloor=res.score!=null?Number(res.score):NaN;
+      if(isFinite(scFloor)&&scFloor>=4)verdict="suggest";
+      else if(isFinite(scFloor)&&scFloor>=3&&verdict==="uncertain")verdict="lean";
+      var mAdp=payload.adp!=null?Number(payload.adp):(pl&&pl.adp!=null?Number(pl.adp):NaN);
+      var mRank=payload.rank!=null?Number(payload.rank):(pl&&pl.r!=null?Number(pl.r):NaN);
+      var mkt=isFinite(mAdp)?mAdp:(isFinite(mRank)?mRank:NaN);
+      var pk=Number(payload.pickNumber);
+      if(isFinite(mkt)&&mkt<=5&&isFinite(pk)&&pk<=mkt+3&&verdict==="uncertain")verdict="lean";
+    }
     if(suggest)suggest.hidden=verdict!=="suggest";
-    if(uncertain)uncertain.hidden=verdict!=="suggest"?false:true;
+    if(lean)lean.hidden=verdict!=="lean";
+    if(passEl)passEl.hidden=verdict!=="pass";
+    if(uncertain)uncertain.hidden=verdict!=="uncertain";
+    function pcFmtConf(sc,cc,band){
+      // TEMP: show max conf to match max() banding (live Jev often sc~0).
+      var conf=isFinite(sc)&&isFinite(cc)?Math.max(sc,cc):isFinite(sc)?sc:cc;
+      if(!isFinite(conf))return "";
+      var b=band||"uncertain";
+      return "Confidence "+Math.round(conf*100)+"% \u00b7 "+b;
+    }
+    var choice=res.choice||"";
+    var choiceKind=choice==="take"?"take":choice==="reach"?"reach":choice==="pass"?"pass":"wait";
+    // Deterministic target window: computed from the engine, but the V-8 / V /
+    // ADP+4 heuristic is not yet validated as a survival estimate — keep the
+    // UI element hidden until it is. (The verdict never came from a
+    // confidence gate, so hide the conf line for deterministic results too;
+    // it would imply the confidence drove the call.)
+    var tgtEl=still.querySelector(".pc-target");
+    if(tgtEl){
+      tgtEl.textContent="";tgtEl.hidden=true;
+    }
     if(verdict==="suggest"){
-      var choiceEl=still.querySelector(".pc-choice");
-      var whyEl=still.querySelector(".pc-why");
-      var confEl=still.querySelector(".pc-conf");
-      var quietEl=still.querySelector(".pc-score-quiet");
-      var choice=res.choice||"";
-      var choiceKind=choice==="take"?"take":choice==="reach"?"reach":"wait";
+      var choiceEl=suggest?suggest.querySelector(".pc-choice"):null;
+      var whyEl=suggest?suggest.querySelector(".pc-why"):null;
+      var confEl=suggest?suggest.querySelector(".pc-conf"):null;
+      var quietEl=suggest?suggest.querySelector(".pc-score-quiet"):null;
       if(choiceEl){
         choiceEl.className="pc-choice pc-choice-"+choiceKind;
         choiceEl.textContent=choiceKind==="take"?"Take":choiceKind==="reach"?"Reach":"Wait";
         choiceEl.hidden=false;
       }
-      var boardWhy=buildPickCoachWhy(pl, choiceKind, payload.pickNumber, res.why||"");
+      // Deterministic: the engine's reasons (+ agreeing Jev prose) render
+      // verbatim. The legacy board-vocab blender would misfire its overlap
+      // filter on the deterministic text (e.g. "ADP" in the reasons) and eat
+      // the explanation.
+      var boardWhy=isDet?(res.why||""):buildPickCoachWhy(pl, choiceKind, payload.pickNumber, res.why||"");
       if(whyEl)whyEl.textContent=boardWhy||(res.why||"");
       if(confEl){
-        var sc=res.scoreConfidence!=null?Number(res.scoreConfidence):null;
-        var cc=res.choiceConfidence!=null?Number(res.choiceConfidence):null;
-        var conf=sc!=null&&cc!=null?Math.min(sc,cc):sc!=null?sc:cc;
-        confEl.textContent=conf!=null&&isFinite(conf)?("Confidence "+Math.round(conf*100)+"%"):"";
+        if(isDet){confEl.textContent="";confEl.hidden=true;}
+        else{confEl.textContent=pcFmtConf(scN,ccN,verdict);confEl.hidden=!confEl.textContent;}
       }
       if(quietEl){
         var label=(window.PickCoach.scoreWord&&window.PickCoach.scoreWord(res.score))||res.scoreLabel||"";
         if(label&&res.score!=null){quietEl.textContent=label;quietEl.hidden=false;}
         else{quietEl.textContent="";quietEl.hidden=true;}
       }
+    }else if(verdict==="lean"){
+      var leanChoice=lean?lean.querySelector(".pc-choice"):null;
+      var leanWhy=lean?lean.querySelector(".pc-why"):null;
+      var leanConf=lean?lean.querySelector(".pc-conf"):null;
+      var leanSub=lean?lean.querySelector(".pc-lean-sub"):null;
+      var detWait=isDet&&detVerdict==="wait";
+      if(leanChoice){
+        if(detWait){
+          // Deterministic WAIT is a computed instruction, not a soft lean.
+          leanChoice.className="pc-choice pc-choice-wait";
+          leanChoice.textContent="Wait";
+        }else{
+          leanChoice.className="pc-choice pc-choice-lean pc-choice-lean-"+choiceKind;
+          leanChoice.textContent=choiceKind==="take"?"Lean take":choiceKind==="reach"?"Lean reach":"Lean wait";
+        }
+        leanChoice.hidden=false;
+      }
+      if(leanSub)leanSub.textContent=detWait?"Acceptable here — but a better option won't survive":"Soft lean — mid confidence";
+      var leanBoardWhy=isDet?(res.why||""):buildPickCoachWhy(pl, choiceKind, payload.pickNumber, res.why||"");
+      if(leanWhy)leanWhy.textContent=leanBoardWhy||(res.why||"");
+      if(leanConf){
+        if(isDet){leanConf.textContent="";leanConf.hidden=true;}
+        else{leanConf.textContent=pcFmtConf(scN,ccN,verdict);leanConf.hidden=!leanConf.textContent;}
+      }
+    }else if(verdict==="pass"){
+      var passWhy=passEl?passEl.querySelector(".pc-why"):null;
+      var passConf=passEl?passEl.querySelector(".pc-conf"):null;
+      var passBoardWhy=isDet?(res.why||""):buildPickCoachWhy(pl, "pass", payload.pickNumber, res.why||"");
+      if(passWhy)passWhy.textContent=passBoardWhy||(res.why||"");
+      if(passConf){passConf.textContent="";passConf.hidden=true;}
     }else{
       var uTitle=still.querySelector(".pc-uncertain-title");
       var uSub=still.querySelector(".pc-uncertain-sub");
@@ -1277,6 +1419,15 @@ function refreshPickCoach(){
       if(uWhy){
         uWhy.textContent=uBits.join(" · ");
         uWhy.hidden=!uBits.length;
+      }
+      var uConf=still.querySelector(".pc-uncertain .pc-conf");
+      if(uConf){
+        // Soft-fail may keep error quiet — skip conf % line when unavailable.
+        if(softFail){uConf.textContent="";uConf.hidden=true;}
+        else{
+          uConf.textContent=pcFmtConf(scN,ccN,verdict);
+          uConf.hidden=!uConf.textContent;
+        }
       }
     }
     pcShow(still,"pc-card");
