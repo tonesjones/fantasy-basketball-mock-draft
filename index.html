@@ -994,13 +994,51 @@ function renderPickCoachStrengths(pl, remMap){
   return (mv||"")+(mv&&catHtml?" ":"")+catHtml;
 }
 
+function moverTeamLabel(pl){
+  if(!pl)return "";
+  var prev=String(pl.teamPrev||"").trim();
+  var curr=String(pl.t||pl.teamCurr||"").trim();
+  return prev&&curr&&prev!==curr?prev+"→"+curr:"";
+}
+function humanRoleNote(pl){
+  if(!pl)return "";
+  var note=String(pl.roleNote||"").trim();
+  if(!note||note.length>60)return "";
+  var team=moverTeamLabel(pl);
+  if(team&&note.indexOf(team+" · ")==0)note=note.slice(team.length+3).trim();
+  // These are generated ADP/team heuristics, not human-facing role copy.
+  if(/^(?:ADP (?:ahead of|behind) last rank|team change(?:; ADP near last rank)?|role unclear)$/i.test(note))return "";
+  return note;
+}
+function moverRolePhrase(pl){
+  if(!pl)return "";
+  var note=humanRoleNote(pl);
+  if(note)return note;
+  if(pl.roleDelta==="up")return "expanded role";
+  if(pl.roleDelta==="down")return "smaller role";
+  return "";
+}
+function moverRoleTooltip(pl){
+  var team=moverTeamLabel(pl), phrase=moverRolePhrase(pl);
+  if(team&&phrase)return team+" · "+phrase;
+  if(phrase)return phrase;
+  if(team)return team;
+  return pl&&pl.mover?"new team":"";
+}
+function moverWhyClause(pl){
+  if(!pl)return "";
+  var phrase=moverRolePhrase(pl);
+  if(pl.mover)return phrase?("new team · "+phrase):"new team";
+  return phrase;
+}
 function moverRoleChipHtml(pl, asPcChip){
   if(!pl)return "";
-  var parts=[], tipBase=pl.roleNote||(pl.teamPrev? (pl.teamPrev+" → "+(pl.t||pl.teamCurr||"")) : "New team");
+  var tipBase=moverRoleTooltip(pl);
   var vacTip=vacatedWhyClause(pl);
   if(vacTip) tipBase=tipBase? (tipBase+" · "+vacTip) : vacTip;
   var tip=esc(tipBase);
   var cls=asPcChip?"pc-chip ":"";
+  var parts=[];
   if(pl.mover){
     parts.push('<span class="'+cls+'mv-chip" title="'+tip+'">NEW</span>');
   }
@@ -1012,16 +1050,8 @@ function moverRoleChipHtml(pl, asPcChip){
   return parts.join("");
 }
 function appendMoverWhy(pl, parts){
-  if(!pl||!parts)return;
-  if(pl.mover){
-    var note=(pl.roleNote||"").trim();
-    if(note.length>60)note=note.slice(0,57)+"…";
-    parts.push(note?("new team · "+note):"new team");
-  }else if(pl.roleDelta==="up"){
-    parts.push("expanded role");
-  }else if(pl.roleDelta==="down"){
-    parts.push("smaller role");
-  }
+  var clause=moverWhyClause(pl);
+  if(clause&&parts)parts.push(clause);
 }
 function vacatedWhyClause(pl){
   if(!pl||!pl.vacatedGainers||!pl.vacatedGainers.length)return "";
@@ -1086,6 +1116,7 @@ function buildPickCoachWhy(pl, choice, pickNumber, jevWhy){
     if(choice==="reach"&&parts.length)parts.push("but "+adpBit);
     else parts.push(adpBit);
   }
+  appendMoverWhy(pl, parts);
   appendVacatedWhy(pl, parts);
   var boardWhy=parts.join(" · ");
   var jw=(jevWhy||"").trim();
@@ -1152,6 +1183,7 @@ function refreshPickCoach(){
       var src=(window.PickCoach.sourceLabel&&window.PickCoach.sourceLabel(res))||"";
       if(!src){
         if(res.error)src="Unavailable";
+        else if(res.fallback==="preview-softfail"||res.fallback==="preview-network")src="Stub";
         else if(res.model==="stub"||res.fallback)src="Stub · offline";
         else if(res.model)src=/^jev/i.test(String(res.model))?"Jev":String(res.model);
       }
@@ -1198,23 +1230,19 @@ function refreshPickCoach(){
       if(softFail){
         if(uTitle)uTitle.textContent="Coach unavailable";
         if(uSub)uSub.textContent="Unavailable — not a low-confidence read · your call";
-        if(uWhy){
-          // Quiet error: keep diagnostic out of the hero line; optional muted note.
-          uWhy.textContent="";
-          uWhy.hidden=true;
-        }
       }else{
         if(uTitle)uTitle.textContent="Not sure enough to suggest";
         if(uSub)uSub.textContent="Low confidence — your call";
-        var tagsOnly=pickCoachStrengthTags(pl);
-        var uBits=[];
-        if(tagsOnly.length)uBits.push(tagsOnly.join(" · "));
-        var vac=vacatedWhyClause(pl);
-        if(vac)uBits.push(vac);
-        if(uWhy){
-          if(uBits.length){uWhy.textContent=uBits.join(" · ");uWhy.hidden=false;}
-          else{uWhy.textContent="";uWhy.hidden=true;}
-        }
+      }
+      // Always paint mover / vacated why on uncertain (incl. softFail / unavailable).
+      var uBits=[];
+      var moverWhy=moverWhyClause(pl);
+      if(moverWhy)uBits.push(moverWhy);
+      var vac=vacatedWhyClause(pl);
+      if(vac)uBits.push(vac);
+      if(uWhy){
+        uWhy.textContent=uBits.join(" · ");
+        uWhy.hidden=!uBits.length;
       }
     }
     pcShow(still,"pc-card");

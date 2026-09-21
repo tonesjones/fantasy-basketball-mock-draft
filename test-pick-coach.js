@@ -1,5 +1,6 @@
-/* PickCoach tests: stub bias, 0.7 gate, http TypeError → uncertain (not stub),
- * soft-error shape, fingerprint cache, sourceLabel, softAdpClause fixtures. */
+/* PickCoach tests: stub bias, 0.7 gate, preview soft-fail → labeled stub,
+ * non-preview https TypeError → uncertain (not stub), soft-error shape,
+ * fingerprint cache, sourceLabel, softAdpClause fixtures. */
 var assert = require("assert");
 var path = require("path");
 var fs = require("fs");
@@ -127,12 +128,24 @@ function withFakeLocation(protocol, host, run) {
 var chain = Promise.resolve();
 
 chain = chain.then(function () {
-  return withFakeLocation("https:", "tony-draft-lab-preview.pages.dev", function (r, n) {
+  // *.pages.dev preview: network TypeError → labeled stub (QA), never Jev.
+  return withFakeLocation("https:", "tony-draft-lab-preview.pages.dev", function (r, n, PC2) {
+    assert.ok(n >= 1, "fetch attempted on https");
+    assert.strictEqual(r.model, "stub", "preview pages.dev may stub on network soft-fail");
+    assert.strictEqual(r.fallback, "preview-network");
+    assert.ok(!r.error, "stub fallback must not carry soft-fail error");
+    assert.strictEqual(PC2.sourceLabel(r), "Stub");
+  });
+});
+
+chain = chain.then(function () {
+  // Non-pages.dev https: still uncertain, NOT stub.
+  return withFakeLocation("https:", "example.com", function (r, n, PC2) {
     assert.ok(n >= 1, "fetch attempted on https");
     assert.strictEqual(r.verdict, "uncertain");
-    assert.ok(r.error, "https TypeError must set error");
-    assert.notStrictEqual(r.model, "stub", "https must NOT fall back to stub");
-    assert.strictEqual(PC.sourceLabel(r), "Unavailable");
+    assert.ok(r.error, "non-preview https TypeError must set error");
+    assert.notStrictEqual(r.model, "stub", "non-preview https must NOT fall back to stub");
+    assert.strictEqual(PC2.sourceLabel(r), "Unavailable");
   });
 });
 
@@ -184,6 +197,74 @@ chain = chain.then(function () {
     });
   });
 });
+
+// Soft-fail API (TYPESAFE_API_KEY) on *.pages.dev → labeled stub
+chain = chain.then(function () {
+  var PC5 = loadPickCoach({
+    location: { protocol: "https:", hostname: "feat-coach-softfail-why.tony-draft-lab-preview.pages.dev" },
+    fetch: function () {
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        text: function () {
+          return Promise.resolve(
+            JSON.stringify({
+              score: null,
+              scoreConfidence: 0,
+              choice: null,
+              choiceConfidence: 0,
+              verdict: "uncertain",
+              why: "",
+              model: "jev-1.13.0",
+              error: "TYPESAFE_API_KEY not configured",
+            })
+          );
+        },
+      });
+    },
+  });
+  PC5.clearCache();
+  return PC5.evaluate({ player: "KeyMiss", pickNumber: 20, adp: 18, logLen: 19 }).then(function (r) {
+    assert.strictEqual(r.model, "stub");
+    assert.strictEqual(r.fallback, "preview-softfail");
+    assert.ok(!r.error);
+    assert.strictEqual(PC5.sourceLabel(r), "Stub");
+    assert.ok(r.verdict === "suggest" || r.verdict === "uncertain");
+  });
+});
+
+// Soft-fail API on non-pages host → keep uncertain + error (no stub)
+chain = chain.then(function () {
+  var PC6 = loadPickCoach({
+    location: { protocol: "https:", hostname: "localhost" },
+    fetch: function () {
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        text: function () {
+          return Promise.resolve(
+            JSON.stringify({
+              verdict: "uncertain",
+              error: "TYPESAFE_API_KEY not configured",
+              model: "jev-1.13.0",
+              scoreConfidence: 0,
+              choiceConfidence: 0,
+            })
+          );
+        },
+      });
+    },
+  });
+  PC6.clearCache();
+  return PC6.evaluate({ player: "LocalKey", pickNumber: 20, adp: 18, logLen: 19 }).then(function (r) {
+    assert.ok(r.error && /TYPESAFE_API_KEY/.test(r.error));
+    assert.notStrictEqual(r.model, "stub");
+    assert.strictEqual(PC6.sourceLabel(r), "Unavailable");
+  });
+});
+
+assert.ok(PC.isStubbableSoftFail("TYPESAFE_API_KEY not configured"));
+assert.ok(PC.isPreviewPagesHost === undefined || typeof PC.isPreviewPagesHost === "function");
 
 // Cancel aborts pending evaluate
 chain = chain.then(function () {

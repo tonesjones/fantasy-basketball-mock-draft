@@ -21,17 +21,21 @@ Code lives on `main`. Do **not** put `TYPESAFE_API_KEY` on the prod Pages projec
    Function → TypeSafe System One, **pinned model `jev-1.13.0`**). Score (0–4) +
    Choice `take|wait|reach` match spike `scripts/pick_quality_jev.py` (PR #3).
 2. **Fail-soft** — missing `TYPESAFE_API_KEY`, timeout, or API error → HTTP 200
-   with `verdict: "uncertain"` + `error` string (draft never breaks). The UI
-   shows **Coach unavailable** (not “low confidence”). Browser does **not**
-   silently swap in the stub on live hosts.
-3. **http(s) network TypeError** — uncertain + quiet error + source
-   **Unavailable** (never a stub suggest that looks live).
+   with `verdict: "uncertain"` + `error` string (draft never breaks). On hosts
+   whose hostname includes **`pages.dev`**, the browser then falls back to a
+   **labeled stub** (`model: "stub"`, source **Stub**) so QA can still see
+   suggest / “Not sure enough to suggest”. Never labeled as Jev. On other
+   http(s) hosts the UI shows **Coach unavailable** (not “low confidence”) and
+   does **not** swap in the stub.
+3. **http(s) network TypeError** — on `*.pages.dev` → labeled stub (**Stub**);
+   elsewhere → uncertain + quiet error + source **Unavailable**.
 4. **Offline / local file** — `file://` (or no `fetch`) falls back to the
    deterministic ADP stub with `model: "stub"` and source **Stub · offline** so
    `index.html` still opens without wrangler.
 
-UI source marker (`.pc-source`): **Jev** | **Stub · offline** | **Unavailable**.
-Tooltip may show the raw `model` id (e.g. `jev-1.13.0`).
+UI source marker (`.pc-source`): **Jev** | **Stub** (preview soft-fail) |
+**Stub · offline** | **Unavailable**.
+Tooltip may show the raw `model` id (e.g. `jev-1.13.0` / `stub`).
 
 `verdict` is `"suggest"` only when **both** confidences are ≥ **0.7**.
 
@@ -69,6 +73,22 @@ curl -sS -X POST http://localhost:8788/api/pick-quality \
 Tony must set the Pages secret (or `.dev.vars` / env for `pages dev`) for live
 Jev. Opening `index.html` via `file://` does **not** need the secret (stub only).
 
+### Production vs Preview environment secrets
+
+Cloudflare Pages **Production** secrets on project **tony-draft-lab-preview**
+apply to the production hostname
+(`tony-draft-lab-preview.pages.dev`) after a deploy that picks them up.
+They do **not** automatically apply to **branch / feat-* preview aliases**
+(`https://<branch>.tony-draft-lab-preview.pages.dev`) — those use the
+**Preview** environment. Branch aliases that return
+`TYPESAFE_API_KEY not configured` are expected until the secret is also added
+under **Settings → Environment variables → Preview** (or “Encrypt” / secret for
+Preview) in the CF dashboard, then **redeploy** the branch preview.
+
+Same-origin `POST /api/pick-quality` from a branch alias does not need CORS for
+the browser call (same project / same origin). CORS still allows draft-lab /
+preview `*.pages.dev` and local wrangler origins when Origin is sent (not `*`).
+
 **CORS** — Function allows draft-lab / preview `*.pages.dev` origins and local
 `localhost` / `127.0.0.1` wrangler ports (not `*`).
 
@@ -85,11 +105,16 @@ Jev. Opening `index.html` via `file://` does **not** need the secret (stub only)
 - Suggest: choice chip Take|Wait|Reach + board why (strengths/scarcity/INJ/soft ADP); quiet Confidence N%; score words demoted
 - Uncertain (low conf): “Not sure enough…” / “Low confidence — your call”
 - Soft error (`res.error`): “Coach unavailable” / “Unavailable — not a low-confidence read”
+  — **still paints** muted `.pc-uncertain-why` mover/role clause when applicable
+  (do not clear why on softFail). Vacated `Vacates usage → …` uses the same rule.
+- Preview soft-fail stub (`model: "stub"`, source **Stub**): may show true
+  uncertain (“Not sure enough…”) or suggest — never source **Jev**.
 - Choice: `take` | `wait` | `reach`
 - Advisory only — never auto-drafts
 - **Movers / outlook (preview):** may show quiet NEW / ↑ role / ↓ role chips and
-  why clauses (`new team · …` / `expanded role` / `smaller role`). Role chips are
-  ADP-vs-last heuristic — see `docs/movers-outlook.md`. Not on prod.
+  why clauses (`new team · …` / `expanded role` / `smaller role`) on suggest
+  **and** uncertain (including Coach unavailable). Role chips are ADP-vs-last
+  heuristic — see `docs/movers-outlook.md`. Not on prod.
 
 ## Evaluate payload (browser → `/api/pick-quality`)
 

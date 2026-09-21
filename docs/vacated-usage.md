@@ -34,7 +34,8 @@ plus notable ADP &lt; 100). Remaining movers have no `vacatedGainers`.
 - **Pick coach only** — one muted line when present:
   `Vacates usage → Player A, Player B`
 - Wired via `vacatedWhyClause` / `appendVacatedWhy` inside `buildPickCoachWhy`
-  (suggest why) and the uncertain muted why.
+  (suggest why) and always on uncertain muted why — including softFail /
+  **Coach unavailable** (same pattern as mover why; do not clear on softFail).
 - Optional: same clause appended to the **NEW** chip tooltip (no list-row spam).
 - Mobile coach dock unchanged; advisory-only.
 
