@@ -1,3 +1,12 @@
+# Changelog
+
+## Docs: vacated-usage + softFail why truth (2026-09-20)
+- Align README / `docs/vacated-usage.md` / movers / pick-coach after PRs #10–#11:
+  22 curated vacatedGainers; Pick coach one-liner on suggest **and** softFail;
+  Stub labeled on feat-* soft-fail; preview only — not prod.
+- Fix CHANGELOG heading order (soft-fail entry was above `# Changelog`).
+- Fold PR #9 tooltip copy (**expanded** / **smaller**) into movers docs.
+
 ## Pick coach soft-fail UX (mover why + preview stub) (2026-09-20)
 - Uncertain card **always** paints muted `.pc-uncertain-why` mover/role clause
   when mover / ↑ / ↓ apply — including softFail **Coach unavailable** (title/sub
@@ -10,8 +19,6 @@
   **feat-*** aliases need the secret in the **Preview** environment + redeploy.
   Same-origin `/api` on branch aliases; CORS allowlist unchanged.
 - Preview only (`tony-draft-lab-preview`). Prod **tony-draft-lab** untouched.
-
-# Changelog
 
 ## Vacated usage phase 2 (2026-09-20) — preview only
 - Curated `vacatedGainers` overlay (`vacated-usage.js`) for **22** high-ADP movers

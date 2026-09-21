@@ -54,11 +54,14 @@ replace them.
 ## UI
 
 - List row `.l2`: quiet muted **NEW** when `mover`; quiet **↑ role** / **↓ role**
-  for `up`/`down` only (`flat`/`unknown` hidden). Tooltip = `roleNote`
-  (heuristic ADP-vs-last wording — not a projection).
-- Pick coach: same chips near strengths; `buildPickCoachWhy` appends
-  `new team · {note≤60}` or `expanded role` / `smaller role`. Uncertain keeps
-  chips (no choice chip).
+  for `up`/`down` only (`flat`/`unknown` hidden). Tooltip prefers a short human
+  `roleNote` when present; else concise **expanded** / **smaller** (PR #9).
+  Role signal is ADP-vs-last heuristic — not a projection.
+- Pick coach: same chips near strengths; why appends `new team · …` or
+  expanded/smaller role clauses on **suggest and uncertain**, including softFail
+  / **Coach unavailable** (PR #11 — do not clear why). No choice chip on uncertain.
+- Vacated-usage quiet line (22 curated movers) is separate — see
+  `docs/vacated-usage.md`.
 - **`projMpg` / `projRank`:** not shipped (0 in bundle). Do not document as present.
 
 ## Regenerate

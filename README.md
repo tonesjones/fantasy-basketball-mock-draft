@@ -102,8 +102,9 @@ The category-scarcity panel shows, for each of the nine categories, the share of
 
 Live at **[tony-draft-lab-preview.pages.dev](https://tony-draft-lab-preview.pages.dev)** — **not** on prod `tony-draft-lab.pages.dev`:
 
-- **Pick coach** — advisory TypeSafe/Jev (see `docs/pick-coach.md`).
+- **Pick coach** — advisory TypeSafe/Jev; softFail / unavailable still shows mover/role (and vacated) why; `feat-*` soft-fails may use labeled **Stub** (never as Jev). See `docs/pick-coach.md`.
 - **Movers / role outlook (phase 1)** — 71 real `teamPrev`→`teamCurr` movers; quiet NEW + ↑/↓ role chips (roleDelta is ADP-vs-last heuristic). No `projMpg`/`projRank`. See `docs/movers-outlook.md`.
+- **Vacated usage (phase 2)** — curated `vacatedGainers` for **22** high-ADP movers; one quiet Pick coach line `Vacates usage → …` (also on softFail). Not a BM scrape. See `docs/vacated-usage.md`.
 
 ## Feature notes
 

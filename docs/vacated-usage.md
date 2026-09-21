@@ -1,7 +1,9 @@
 # Vacated usage (phase 2) — preview only
 
-Code is on branch `feat/vacated-usage` (PR). **Preview host only** — do **not**
-ship to prod [tony-draft-lab.pages.dev](https://tony-draft-lab.pages.dev).
+Code is on `main` (PRs #10 / #11). **Preview host only:**
+[tony-draft-lab-preview.pages.dev](https://tony-draft-lab-preview.pages.dev)
+(and `feat-*` branch aliases). Do **not** ship to prod
+[tony-draft-lab.pages.dev](https://tony-draft-lab.pages.dev).
 
 Thin, curated overlay: for **high-ADP movers**, name who on the **previous**
 team (`teamPrev`) likely gains touches/minutes when the mover leaves.
@@ -47,8 +49,8 @@ plus notable ADP &lt; 100). Remaining movers have no `vacatedGainers`.
 
 ## Deploy
 
-Prefer a **branch alias**
-(`feat-vacated-usage.*.pages.dev` / Cloudflare Pages preview URL) so other
-previews stay intact. Do **not** retarget prod `tony-draft-lab`.
+Live on preview / branch aliases only. Do **not** retarget prod `tony-draft-lab`.
+On `feat-*` aliases, Pick coach soft-fails may use labeled **Stub** until the CF
+**Preview** env has `TYPESAFE_API_KEY` — vacated + mover why still paint (PR #11).
 
-Copy-nit polish for mover why text remains separate (PR #9).
+Mover tooltip / uncertain-why copy nits: PR #9 (`expanded` / `smaller`).
