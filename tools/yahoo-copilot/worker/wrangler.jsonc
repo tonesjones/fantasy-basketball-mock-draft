@@ -1,0 +1,30 @@
+{
+  "$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/config-schema.json",
+  "name": "yahoo-draft-copilot",
+  "main": "src/index.mjs",
+  "compatibility_date": "2026-09-21",
+  "workers_dev": true,
+  "preview_urls": true,
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    "PAGE_ORIGIN": "https://tony-draft-lab-yahoo.pages.dev"
+  },
+  "kv_namespaces": [
+    {
+      "binding": "YAHOO_SESSIONS",
+      "id": "382e2505a5bb46cc8fea18751a22fe2c"
+    }
+  ],
+  "ratelimits": [
+    {
+      "name": "AUTH_LIMITER",
+      "namespace_id": "24092101",
+      "simple": {
+        "limit": 10,
+        "period": 60
+      }
+    }
+  ]
+}

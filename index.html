@@ -30,6 +30,7 @@ html{background:#0b1320}body{background:#0b1320;margin:0;min-width:320px}
 #md .setup-div{border:0;border-top:1px solid var(--hatch-widget-border);margin:22px 0 6px}
 #md .yhrow{display:flex;gap:8px;margin:10px 0;flex-wrap:wrap}
 #md .yhrow input{flex:1;min-width:220px}
+#md .yhrow input[type=url],#md .yhrow input[type=password]{background:#fff;color:#111;border:1px solid #c9c9c9;border-radius:4px;padding:9px 10px}
 #md .yhrow textarea{flex:1;min-width:220px;min-height:54px;font-family:ui-monospace,SFMono-Regular,monospace;font-size:11px;word-break:break-all}
 #md .yhsync{margin:8px 0}
 #md .yhsync summary{cursor:pointer;font-size:13px;color:var(--muted,#888)}
@@ -798,7 +799,14 @@ function cleanState(raw){
   }).slice(0,TEAMS*out.rounds);
   out.log=pairs.map(function(e){return e.pi;});
   out.yahooNames=pairs.map(function(e){return e.nm;});
-  out.yahooLive=(raw0.yahooLive&&parseInt(raw0.yahooLive.teams,10))?{teams:TEAMS,teamNames:raw0.yahooLive.teamNames||{}}:null;
+  out.yahooLive=(raw0.yahooLive&&parseInt(raw0.yahooLive.teams,10))?{
+    teams:TEAMS,
+    teamNames:raw0.yahooLive.teamNames||{},
+    draftId:raw0.yahooLive.draftId||null,
+    boardHash:raw0.yahooLive.boardHash||null,
+    fetchedAt:raw0.yahooLive.fetchedAt||null,
+    worker:!!raw0.yahooLive.worker
+  }:null;
   out.phase=out.log.length>=TEAMS*out.rounds?"done":(out.phase==="draft"?"draft":"setup");
   out.f=["All","PG","SG","SF","PF","C"].indexOf(out.f)>=0?out.f:"All";
   out.sort=["cons","rank","adp","last","lastTotal"].indexOf(out.sort)>=0?out.sort:"cons";
@@ -1258,6 +1266,11 @@ function fillPickCoachBoard(still, pl, payload){
 function refreshPickCoach(){
   var root=el("pick-coach");
   if(!root||typeof window.PickCoach==="undefined")return;
+  if(state.yahooLive&&!yahooBoardFresh()){
+    cancelPickCoach();
+    root.innerHTML='<div class="pc-card"><div class="pc-name">Waiting for Yahoo</div><div class="pc-meta">Pick advice resumes after a fresh board update.</div></div>';
+    updateCoachDockPeek("");syncCoachDock();return;
+  }
   if(!isUserTurn()){pcShow(root,"pc-wait");updateCoachDockPeek("");syncCoachDock();return;}
   var pi=resolveFocusPi();
   if(pi==null){pcShow(root,"pc-empty");updateCoachDockPeek("");return;}
@@ -1514,37 +1527,74 @@ function yahooLoadCode(raw){
   status(log.length?("Board synced \u2014 "+log.length+" of "+(d.teams*d.rounds)+" picks."):"Empty board ready. Auto-sync fills it in once the publisher is running.");
 }
 /* ---- Yahoo live auto-sync ----
-   publish.py writes yh-sync.json next to this page while the draft runs.
-   During a Yahoo Live draft, poll it and auto-apply any newer board.
-   Only applies when teams/slot/rounds match the current board. */
+   A standalone Cloudflare Worker reads the Yahoo draft API. The browser keeps
+   the user's watch token in sessionStorage only and polls a structured board. */
+var YAHOO_WORKER_URL="https://yahoo-draft-copilot.tonyjaysales.workers.dev";
+var YAHOO_TOKEN_KEY="draft-lab.yahoo-watch-token";
 var _liveSyncTimer=null,_liveSyncBusy=false;
-function liveSyncStatus(m){var s=el("yhsyncstatus");if(s)s.textContent=m;}
+function liveSyncStatus(m){var s=el("yhsyncstatus")||el("yhstatus");if(s)s.textContent=m;}
+function yahooWorkerReady(){return /^https:\/\/[^_]+/i.test(YAHOO_WORKER_URL);}
+function yahooWatchToken(){try{return sessionStorage.getItem(YAHOO_TOKEN_KEY)||"";}catch(e){return "";}}
+function yahooBoardFresh(){
+  if(!state.yahooLive||!state.yahooLive.worker)return true;
+  var at=Date.parse(state.yahooLive.fetchedAt||"");
+  return isFinite(at)&&Date.now()-at<=25000;
+}
+function yahooApplySnapshot(j){
+  if(!j||!j.ok||!j.draftId||!Array.isArray(j.picks))throw new Error("Yahoo returned an invalid board.");
+  var teams=parseInt(j.teams,10),slot=parseInt(j.userSlot,10),rounds=parseInt(j.rounds,10);
+  if(!(teams>=2&&teams<=20&&slot>=1&&slot<=teams&&rounds>=1&&rounds<=30))throw new Error("Yahoo returned invalid draft settings.");
+  var picks=j.picks.slice().sort(function(a,b){return a.overallPick-b.overallPick;}),log=[],yn=[];
+  picks.forEach(function(p,i){
+    if(parseInt(p.overallPick,10)!==i+1||!p.playerName)throw new Error("Yahoo returned a board with a missing pick.");
+    var pi=yahooPoolIndex(p.playerName);log.push(pi);yn.push(pi>=0?null:p.playerName);
+  });
+  if(state.yahooLive&&state.yahooLive.draftId===j.draftId&&log.length<state.log.length)throw new Error("Yahoo returned an older board; keeping the newer picks.");
+  if(state.yahooLive&&state.yahooLive.draftId===j.draftId&&state.yahooLive.boardHash===j.boardHash){
+    setState({yahooLive:Object.assign({},state.yahooLive,{fetchedAt:j.fetchedAt})});return false;
+  }
+  cancelPickCoach();
+  var keepView=state.view,keepQ=state.q,keepF=state.f,keepSort=state.sort,keepPW=state.playoffStart;
+  var fresh=freshState();
+  fresh.view=keepView;fresh.q=keepQ;fresh.f=keepF;fresh.sort=keepSort;fresh.playoffStart=keepPW;
+  fresh.yahooLive={teams:teams,teamNames:j.teamNames||{},draftId:j.draftId,boardHash:j.boardHash||null,fetchedAt:j.fetchedAt,worker:true};
+  fresh.draftPos=slot;fresh.rounds=rounds;fresh.log=log;fresh.yahooNames=yn;
+  fresh.phase=(j.complete||log.length>=teams*rounds)?"done":"draft";
+  setState(fresh);return true;
+}
 function liveSyncTick(){
-  if(!state.yahooLive||state.phase!=="draft"||_liveSyncBusy)return;
+  if(!state.yahooLive||!state.yahooLive.worker||state.phase!=="draft"||_liveSyncBusy)return;
+  var token=yahooWatchToken();
+  if(!token){liveSyncStatus("Watch token missing — reconnect from the setup screen.");return;}
   _liveSyncBusy=true;
-  fetch("yh-sync.json?_="+Date.now(),{cache:"no-store"}).then(function(r){
-    if(!r.ok)throw 0;return r.json();
+  fetch(YAHOO_WORKER_URL+"/api/board",{cache:"no-store",headers:{Authorization:"Bearer "+token}}).then(function(r){
+    return r.json().catch(function(){return null;}).then(function(j){if(!r.ok)throw new Error(j&&j.error&&j.error.message||("Yahoo sync failed ("+r.status+")."));return j;});
   }).then(function(j){
     _liveSyncBusy=false;
-    if(!state.yahooLive||state.phase!=="draft"||!j||!j.code)return;
-    if(j.picks>state.log.length){
-      var d=yahooDecode(j.code);
-      if(!d||d.teams!==state.yahooLive.teams||d.slot!==state.draftPos||d.rounds!==state.rounds)return;
-      yahooLoadCode(j.code); // sets its own "Board synced" status
-    }else if(j.picks!=null){
-      var ago=j.updated_at?(" \u00b7 updated "+Math.max(0,Math.round(Date.now()/1000-j.updated_at))+"s ago"):"";
-      liveSyncStatus("Auto-sync on \u00b7 pick "+j.picks+" of "+(j.total||"?")+ago+".");
-    }
-  }).catch(function(){_liveSyncBusy=false;});
+    var changed=yahooApplySnapshot(j);
+    if(!changed)liveSyncStatus("Yahoo synced · pick "+j.pickCount+" of "+(j.teams*j.rounds)+" · just now.");
+  }).catch(function(e){_liveSyncBusy=false;liveSyncStatus(e.message||"Yahoo sync failed.");});
 }
 function liveSyncEnsure(){
-  var want=!!(state.yahooLive&&state.phase==="draft");
-  if(want&&!_liveSyncTimer){_liveSyncTimer=setInterval(liveSyncTick,15000);liveSyncTick();}
+  var want=!!(state.yahooLive&&state.yahooLive.worker&&state.phase==="draft");
+  if(want&&!_liveSyncTimer){_liveSyncTimer=setInterval(liveSyncTick,12000);liveSyncTick();}
   if(!want&&_liveSyncTimer){clearInterval(_liveSyncTimer);_liveSyncTimer=null;}
+}
+function yahooStartWatch(){
+  var room=(el("yhroom")||{}).value||"",slot=parseInt((el("yhslot")||{}).value,10)||0,token=(el("yhtoken")||{}).value||"";
+  if(!yahooWorkerReady()){liveSyncStatus("Yahoo Worker is not configured yet.");return;}
+  if(!room||!slot||!token){liveSyncStatus("Enter the Yahoo room URL, your draft slot, and watch token.");return;}
+  liveSyncStatus("Connecting to Yahoo…");
+  fetch(YAHOO_WORKER_URL+"/api/watch",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+token},body:JSON.stringify({roomUrl:room,userSlot:slot})}).then(function(r){
+    return r.json().catch(function(){return null;}).then(function(j){if(!r.ok)throw new Error(j&&j.error&&j.error.message||("Connection failed ("+r.status+")."));return j;});
+  }).then(function(j){
+    try{sessionStorage.setItem(YAHOO_TOKEN_KEY,token);}catch(e){}
+    yahooApplySnapshot(j);liveSyncStatus("Connected to Yahoo.");
+  }).catch(function(e){liveSyncStatus(e.message||"Could not connect to Yahoo.");});
 }
 function yahooAdvice(){
   try{
-    if(!state.yahooLive||typeof window.PickSignals==="undefined")return null;
+    if(!state.yahooLive||!yahooBoardFresh()||typeof window.PickSignals==="undefined")return null;
     var idx=state.log.length,tot=totalPicks();
     if(idx>=tot)return null;
     var taken={},i;for(i=0;i<state.log.length;i++)taken[state.log[i]]=1;
@@ -1575,15 +1625,12 @@ function renderSetup(){
   h+='</div><h3>Rounds</h3><select id="mdrounds">';
   [10,11,12,13,14,15].forEach(function(r){h+='<option value="'+r+'"'+(state.rounds===r?' selected':'')+'>'+r+' rounds</option>';});
   h+='</select><div class="setup-actions"><button class="bigbtn" id="mdstart">Start Mock Draft</button></div>';
-  h+='<hr class="setup-div"><h3>Yahoo live draft</h3><div class="muted">Mirror a real Yahoo mock or live draft: your agent watches the Yahoo board and the app syncs itself \u2014 every pick comes off your board automatically, no pasting. No CPU picks; you draft in Yahoo, Draft Lab is the live board plus the engine\u2019s take on your turns. Before the draft starts, leave the code empty and set teams / slot / rounds.</div>';
-  h+='<div class="yhrow"><textarea id="yhcode" rows="3" placeholder="Optional: paste a sync code or link (empty = fresh board, auto-sync takes over)" aria-label="Draft sync code"></textarea></div>';
-  h+='<div class="yhrow"><select id="yhteams" aria-label="Teams">';
-  [8,10,12,14].forEach(function(t){h+='<option value="'+t+'"'+(t===12?' selected':'')+'>'+t+' teams</option>';});
-  h+='</select><select id="yhslot" aria-label="Your draft slot">';
-  for(var s2=1;s2<=14;s2++)h+='<option value="'+s2+'"'+(s2===6?' selected':'')+'>Slot '+s2+'</option>';
-  h+='</select><select id="yhrounds" aria-label="Rounds">';
-  [10,11,12,13,14,15].forEach(function(r){h+='<option value="'+r+'"'+(r===13?' selected':'')+'>'+r+' rounds</option>';});
-  h+='</select><button class="bigbtn" id="yhconnect">Load board</button></div><div class="muted" id="yhstatus" role="status"></div>';
+  h+='<hr class="setup-div"><h3>Yahoo live draft</h3><div class="muted">Connect a Yahoo mock or live draft. Draft Lab reads the room through its private Cloudflare Worker, removes every Yahoo pick from this board, and gives advice only while the board is fresh. The token stays in this browser tab.</div>';
+  h+='<div class="yhrow"><input id="yhroom" type="url" placeholder="Yahoo draft-room URL" aria-label="Yahoo draft-room URL"></div>';
+  h+='<div class="yhrow"><input id="yhtoken" type="password" autocomplete="off" placeholder="Watch token" aria-label="Watch token"><select id="yhslot" aria-label="Your draft slot">';
+  for(var s2=1;s2<=20;s2++)h+='<option value="'+s2+'"'+(s2===6?' selected':'')+'>Slot '+s2+'</option>';
+  h+='</select><button class="bigbtn" id="yhconnect">Connect Yahoo</button></div><div class="muted" id="yhstatus" role="status"></div>';
+  h+='<details class="yhsync"><summary>Manual sync fallback</summary><div class="muted">If Yahoo access is unavailable, paste the existing yh1 sync code.</div><div class="yhrow"><textarea id="yhcode" rows="3" placeholder="Paste a yh1 sync code or link" aria-label="Draft sync code"></textarea><button class="ghostbtn" id="yhmanual">Load code</button></div></details>';
   h+='<div class="muted" style="margin-top:8px">Drafts save automatically in this browser. Data version: '+DATA_VERSION+'. · <button type="button" class="textlink" id="mdclear">Clear saved draft</button></div>';
   h+=playoffSettingsHtml();
   h+=renderDataHealth();
@@ -1594,7 +1641,8 @@ function renderSetup(){
     var chosenPlayoff=state.playoffStart,chosenPos=state.draftPos,chosenRounds=parseInt(el("mdrounds").value,10);state=freshState();state.draftPos=chosenPos;state.rounds=chosenRounds;state.playoffStart=chosenPlayoff;state.phase="draft";save();advance();
   });
   el("mdclear").addEventListener("click",function(){restartDraft();});
-  el("yhconnect").addEventListener("click",function(){yahooLoadCode(el("yhcode").value);});
+  el("yhconnect").addEventListener("click",yahooStartWatch);
+  el("yhmanual").addEventListener("click",function(){yahooLoadCode(el("yhcode").value);});
   wirePlayoffSettings(el("mdapp"));
   liveSyncEnsure();
 }
@@ -1639,9 +1687,10 @@ function renderDraft(){
   if(state.phase==="done"){h+='<span><b>Draft complete.</b></span>';liveCore="Draft complete.";}
   else if(isUserTurn()&&state.yahooLive){
     h+='<span class="you">YOUR PICK — make it in Yahoo</span><span class="muted">Round '+round+', overall pick '+(idx+1)+' of '+totalPicks()+'</span>';
-    var adv=yahooAdvice();
-    if(adv)h+='<span class="nextpick">Engine\u2019s take: <b>'+esc(adv.name)+'</b> ('+adv.verdict+', '+(adv.valueAtPick>0?"+":"")+adv.valueAtPick+')</span>';
-    liveCore="Your pick in Yahoo. Round "+round+", overall pick "+(idx+1)+". Engine's take: "+(adv?adv.name:"—")+".";
+    var freshYahoo=yahooBoardFresh(),adv=freshYahoo?yahooAdvice():null;
+    if(!freshYahoo)h+='<span class="nextpick">Waiting for a fresh Yahoo board.</span>';
+    else if(adv)h+='<span class="nextpick">Engine\u2019s take: <b>'+esc(adv.name)+'</b> ('+adv.verdict+', '+(adv.valueAtPick>0?"+":"")+adv.valueAtPick+')</span>';
+    liveCore="Your pick in Yahoo. Round "+round+", overall pick "+(idx+1)+(freshYahoo?(". Engine's take: "+(adv?adv.name:"—")+"."):". Advice unavailable until Yahoo syncs.");
   }
   else if(isUserTurn()){h+='<span class="you">YOUR PICK</span><span class="muted">Round '+round+', overall pick '+(idx+1)+' of '+totalPicks()+'</span>';liveCore="Your pick. Round "+round+", overall pick "+(idx+1)+" of "+totalPicks()+".";}
   else{h+='<span><b>'+esc(teamName(team))+'</b> is picking...</span><span class="muted">Round '+round+', overall pick '+(idx+1)+'</span>';liveCore=teamName(team)+" is picking. Round "+round+", overall pick "+(idx+1)+".";}
@@ -1653,7 +1702,7 @@ function renderDraft(){
   if(state.userTurns.length&&!state.yahooLive)h+='<button class="ghostbtn" id="mdundo">Undo my last pick</button>';
   if(state.phase!=="done"&&!isUserTurn()&&!state.yahooLive)h+='<button class="ghostbtn" id="mdsim">Sim to my pick</button>';
   h+='<button class="ghostbtn" id="mdnew">Restart</button></div>';
-  if(state.yahooLive&&state.phase!=="done")h+='<details class="yhsync"><summary>Sync board</summary><div class="muted" id="yhsyncstatus" role="status">Auto-sync on \u2014 the board updates itself.</div><div class="yhrow"><textarea id="yhcode2" rows="2" placeholder="Manual fallback: paste a sync code if auto-sync stalls" aria-label="Manual sync code"></textarea><button class="ghostbtn" id="yhsync">Sync</button></div></details>';
+  if(state.yahooLive&&state.phase!=="done")h+='<details class="yhsync"><summary>Sync board</summary><div class="muted" id="yhsyncstatus" role="status">'+(state.yahooLive.worker?'Yahoo auto-sync is on.':'Manual sync mode.')+'</div><div class="yhrow"><textarea id="yhcode2" rows="2" placeholder="Manual fallback: paste a yh1 sync code" aria-label="Manual sync code"></textarea><button class="ghostbtn" id="yhsync">Sync</button></div></details>';
   h+=renderScarcity();
   h+=viewTabsHtml();
   var glance=state.view==="board"||state.view==="grades"||state.view==="coach";
