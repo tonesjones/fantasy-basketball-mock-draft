@@ -1,9 +1,13 @@
 """Compact draft-board sync codes for Draft Lab's Yahoo Live mode.
 
-The chat is the transport: the agent polls Yahoo, encodes the board as a short
-string, and sends it (or a #link carrying it) in chat. The Draft Lab page
-decodes it and hydrates the board -- no tunnel, no feed server, works on the
-phone today.
+Two transports share this codec:
+
+1. In-app auto-sync (current): publish.py polls Yahoo, encodes the board,
+   and writes yh-sync.json onto the Draft Lab site itself. The page fetches
+   it every ~15s during the draft and auto-applies newer boards. No chat,
+   no pasting, works on the phone.
+2. Chat fallback: the agent sends the code (or a #link carrying it) in
+   chat; the page decodes it from the fragment or the Sync-board paste box.
 
 Format: yh1.<teams>.<slot>.<rounds>.<pick>,<pick>,...
   each pick = "~" + base64url(yahoo display name), e.g. "~Tmlrb2xhIEpva2nEhw"

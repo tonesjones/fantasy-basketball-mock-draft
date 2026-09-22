@@ -1459,12 +1459,14 @@ function refreshPickCoach(){
 
 /* ---- Yahoo live draft mode ----
    Mirror a real Yahoo mock/live draft inside Draft Lab. The agent polls
-   Yahoo's draftresults and sends a compact sync code (tools/yahoo-copilot/
-   sync.py, yh1.<teams>.<slot>.<rounds>.~b64,...) in chat; this page decodes
-   it and hydrates state.log. Pool-matched picks store the PLAYERS index;
-   off-pool picks store -1 with the Yahoo name in the parallel
-   state.yahooNames array (see cleanState). Picks are still made in Yahoo
-   — Draft Lab is view + advice. */
+   Yahoo's draftresults and publish.py writes a compact sync code
+   (tools/yahoo-copilot/sync.py, yh1.<teams>.<slot>.<rounds>.~b64,...) to
+   yh-sync.json on the site itself; this page fetches it every ~15s during
+   the draft and auto-applies newer boards. Pool-matched picks store the
+   PLAYERS index; off-pool picks store -1 with the Yahoo name in the
+   parallel state.yahooNames array (see cleanState). Chat-sent codes,
+   #yh1 links, and the manual Sync-board paste remain as fallback.
+   Picks are still made in Yahoo — Draft Lab is view + advice. */
 var _yahooNameMap=null;
 function yahooNorm(s){return String(s||"").normalize("NFKD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9 ]/g,"").replace(/\s+/g," ").trim();}
 function yahooPoolIndex(poolName){
@@ -1498,7 +1500,7 @@ function yahooLoadCode(raw){
     var teams=parseInt((el("yhteams")||{value:"12"}).value,10)||12,slot=parseInt((el("yhslot")||{value:"6"}).value,10)||6,rounds=parseInt((el("yhrounds")||{value:"13"}).value,10)||13;
     d={teams:teams,slot:Math.min(slot,teams),rounds:rounds,names:[]};
   }
-  if(!d){status("That doesn't look like a draft sync code \u2014 paste the code or link from the chat.");return;}
+  if(!d){status("That doesn't look like a draft sync code \u2014 paste a sync code or link.");return;}
   var log=[],yn=[];
   yahooApplyPicks(d.names,log,yn);
   var keepView=state.view,keepQ=state.q,keepF=state.f,keepSort=state.sort,keepPW=state.playoffStart;
@@ -1509,7 +1511,36 @@ function yahooLoadCode(raw){
   fresh.log=log;fresh.yahooNames=yn;
   fresh.phase=(log.length>=d.teams*d.rounds)?"done":"draft";
   setState(fresh);
-  status(log.length?("Board synced \u2014 "+log.length+" of "+(d.teams*d.rounds)+" picks."):"Empty board ready. Paste a new code (or tap a new link) as picks come in.");
+  status(log.length?("Board synced \u2014 "+log.length+" of "+(d.teams*d.rounds)+" picks."):"Empty board ready. Auto-sync fills it in once the publisher is running.");
+}
+/* ---- Yahoo live auto-sync ----
+   publish.py writes yh-sync.json next to this page while the draft runs.
+   During a Yahoo Live draft, poll it and auto-apply any newer board.
+   Only applies when teams/slot/rounds match the current board. */
+var _liveSyncTimer=null,_liveSyncBusy=false;
+function liveSyncStatus(m){var s=el("yhsyncstatus");if(s)s.textContent=m;}
+function liveSyncTick(){
+  if(!state.yahooLive||state.phase!=="draft"||_liveSyncBusy)return;
+  _liveSyncBusy=true;
+  fetch("yh-sync.json?_="+Date.now(),{cache:"no-store"}).then(function(r){
+    if(!r.ok)throw 0;return r.json();
+  }).then(function(j){
+    _liveSyncBusy=false;
+    if(!state.yahooLive||state.phase!=="draft"||!j||!j.code)return;
+    if(j.picks>state.log.length){
+      var d=yahooDecode(j.code);
+      if(!d||d.teams!==state.yahooLive.teams||d.slot!==state.draftPos||d.rounds!==state.rounds)return;
+      yahooLoadCode(j.code); // sets its own "Board synced" status
+    }else if(j.picks!=null){
+      var ago=j.updated_at?(" \u00b7 updated "+Math.max(0,Math.round(Date.now()/1000-j.updated_at))+"s ago"):"";
+      liveSyncStatus("Auto-sync on \u00b7 pick "+j.picks+" of "+(j.total||"?")+ago+".");
+    }
+  }).catch(function(){_liveSyncBusy=false;});
+}
+function liveSyncEnsure(){
+  var want=!!(state.yahooLive&&state.phase==="draft");
+  if(want&&!_liveSyncTimer){_liveSyncTimer=setInterval(liveSyncTick,15000);liveSyncTick();}
+  if(!want&&_liveSyncTimer){clearInterval(_liveSyncTimer);_liveSyncTimer=null;}
 }
 function yahooAdvice(){
   try{
@@ -1544,8 +1575,8 @@ function renderSetup(){
   h+='</div><h3>Rounds</h3><select id="mdrounds">';
   [10,11,12,13,14,15].forEach(function(r){h+='<option value="'+r+'"'+(state.rounds===r?' selected':'')+'>'+r+' rounds</option>';});
   h+='</select><div class="setup-actions"><button class="bigbtn" id="mdstart">Start Mock Draft</button></div>';
-  h+='<hr class="setup-div"><h3>Yahoo live draft</h3><div class="muted">Mirror a real Yahoo mock or live draft: your agent watches the Yahoo board and sends you a sync code in chat \u2014 paste it (or tap the link) and every pick so far comes off your board. No CPU picks; you draft in Yahoo, Draft Lab is the live board plus the engine\u2019s take on your turns. Before the draft starts, leave the code empty and set teams / slot / rounds.</div>';
-  h+='<div class="yhrow"><textarea id="yhcode" rows="3" placeholder="Paste the sync code or link from the chat (empty = fresh board)" aria-label="Draft sync code"></textarea></div>';
+  h+='<hr class="setup-div"><h3>Yahoo live draft</h3><div class="muted">Mirror a real Yahoo mock or live draft: your agent watches the Yahoo board and the app syncs itself \u2014 every pick comes off your board automatically, no pasting. No CPU picks; you draft in Yahoo, Draft Lab is the live board plus the engine\u2019s take on your turns. Before the draft starts, leave the code empty and set teams / slot / rounds.</div>';
+  h+='<div class="yhrow"><textarea id="yhcode" rows="3" placeholder="Optional: paste a sync code or link (empty = fresh board, auto-sync takes over)" aria-label="Draft sync code"></textarea></div>';
   h+='<div class="yhrow"><select id="yhteams" aria-label="Teams">';
   [8,10,12,14].forEach(function(t){h+='<option value="'+t+'"'+(t===12?' selected':'')+'>'+t+' teams</option>';});
   h+='</select><select id="yhslot" aria-label="Your draft slot">';
@@ -1565,6 +1596,7 @@ function renderSetup(){
   el("mdclear").addEventListener("click",function(){restartDraft();});
   el("yhconnect").addEventListener("click",function(){yahooLoadCode(el("yhcode").value);});
   wirePlayoffSettings(el("mdapp"));
+  liveSyncEnsure();
 }
 function nextUserPickIdx(){
   var tot=totalPicks();
@@ -1621,7 +1653,7 @@ function renderDraft(){
   if(state.userTurns.length&&!state.yahooLive)h+='<button class="ghostbtn" id="mdundo">Undo my last pick</button>';
   if(state.phase!=="done"&&!isUserTurn()&&!state.yahooLive)h+='<button class="ghostbtn" id="mdsim">Sim to my pick</button>';
   h+='<button class="ghostbtn" id="mdnew">Restart</button></div>';
-  if(state.yahooLive&&state.phase!=="done")h+='<details class="yhsync"><summary>Sync board</summary><div class="yhrow"><textarea id="yhcode2" rows="2" placeholder="Paste the latest sync code from the chat"></textarea><button class="ghostbtn" id="yhsync">Sync</button></div><div class="muted" id="yhsyncstatus" role="status"></div></details>';
+  if(state.yahooLive&&state.phase!=="done")h+='<details class="yhsync"><summary>Sync board</summary><div class="muted" id="yhsyncstatus" role="status">Auto-sync on \u2014 the board updates itself.</div><div class="yhrow"><textarea id="yhcode2" rows="2" placeholder="Manual fallback: paste a sync code if auto-sync stalls" aria-label="Manual sync code"></textarea><button class="ghostbtn" id="yhsync">Sync</button></div></details>';
   h+=renderScarcity();
   h+=viewTabsHtml();
   var glance=state.view==="board"||state.view==="grades"||state.view==="coach";
@@ -1654,6 +1686,7 @@ function renderDraft(){
   renderList();renderSide();
   syncCoachDock();
   if(state.view==="coach")refreshPickCoach();
+  liveSyncEnsure();
 }
 function renderList(){
   var taken={},i;for(i=0;i<state.log.length;i++)taken[state.log[i]]=1;

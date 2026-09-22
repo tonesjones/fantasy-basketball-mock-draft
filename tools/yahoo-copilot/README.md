@@ -24,18 +24,26 @@ clicks in the draft room himself.
   `encode_sync(teams, slot, rounds, yahoo_names)` ->
   `yh1.<teams>.<slot>.<rounds>.~b64,~b64,...`; `decode_sync` tolerates a
   full `#`-link; `sync_code_for_state(state)` builds a code from a poll
-  state; `sync_link(base_url, ...)` builds a tappable link. The chat is
-  the transport: the agent sends the code/link, Tony taps or pastes it,
-  Draft Lab hydrates the board. ~2.5KB for a full 140-pick board. The
-  page maps names to its pool itself (diacritic-insensitive), so off-pool
-  Yahoo picks ride along as names.
+  state; `sync_link(base_url, ...)` builds a tappable link. ~2.5KB for a
+  full 140-pick board. The page maps names to its pool itself
+  (diacritic-insensitive), so off-pool Yahoo picks ride along as names.
+- `publish.py` — in-app sync transport (Tony's call 2026-09-22: sync lives
+  in the app, not in chat). `run --state state.json --dir <repo-root>
+  --project NAME --account ACCT [--interval 20] [--max-mins 180]` polls
+  Yahoo, encodes the board, writes `yh-sync.json` into the deploy dir,
+  and redeploys via `cf.py` direct upload (only changed files go up).
+  The page fetches `yh-sync.json` every ~15s during a Yahoo Live draft
+  and auto-applies newer boards. `create-project --project NAME --account
+  ACCT` does the one-time Pages project setup. Chat codes / `#yh1` links
+  / the manual Sync-board paste remain as fallback.
 
 ## Draft Lab Yahoo Live view (index.html)
 
-Setup screen: paste a sync code/link (or tap one from chat — the `#yh1.`
-fragment auto-loads), or start an empty board from the teams/slot/rounds
-selects. Mid-draft, a "Sync board" disclosure under the turn bar takes the
-latest code. Yahoo mode: no CPU picks, no draft buttons — Tony clicks in
+Setup screen: start an empty board from the teams/slot/rounds selects
+(auto-sync fills it in once the publisher is running), or paste a sync
+code/link as a fallback (`#yh1.` fragments auto-load). Mid-draft, a "Sync
+board" disclosure under the turn bar shows auto-sync status plus a manual
+paste fallback. Yahoo mode: no CPU picks, no draft buttons — Tony clicks in
 the Yahoo room; Draft Lab mirrors the board, his roster, and shows the
 engine's take on his turns. Picks outside the 270-player pool consume the
 correct pick slot, show the Yahoo name, and stay out of roster math.
