@@ -5,6 +5,7 @@ class MemoryKV {
   constructor() { this.values = new Map(); }
   async get(key) { return this.values.get(key) || null; }
   async put(key, value) { this.values.set(key, value); }
+  async delete(key) { this.values.delete(key); }
 }
 
 function yahooEnvelope(resource, value) {
@@ -18,6 +19,9 @@ function jsonResponse(body, status = 200) {
 const calls = [];
 async function fakeFetch(url) {
   calls.push(String(url));
+  if (String(url).includes("/oauth2/get_token")) {
+    return jsonResponse({ access_token: "oauth-access", refresh_token: "oauth-refresh", expires_in: 3600 });
+  }
   if (String(url).includes("/fantasy/v2/game/nba")) {
     return jsonResponse({ fantasy_content: { game: [{ game_key: "478" }] } });
   }
@@ -56,6 +60,8 @@ async function fakeFetch(url) {
 const env = {
   PAGE_ORIGIN: "https://tony-draft-lab-yahoo.pages.dev",
   WATCH_TOKEN: "test-watch-token",
+  YAHOO_CLIENT_ID: "test-client-id",
+  YAHOO_CLIENT_SECRET: "test-client-secret",
   YAHOO_ACCESS_TOKEN: "test-yahoo-token",
   YAHOO_SESSIONS: new MemoryKV(),
   AUTH_LIMITER: { async limit() { return { success: true }; } },
@@ -67,8 +73,38 @@ assert.equal(mlidFromInput("https://basketball.fantasysports.yahoo.com/draftclie
 assert.equal(parseWatchInput({ roomUrl: "https://basketball.fantasysports.yahoo.com/mock_waiting?mlid=2440822", slot: 1 }).slot, 1);
 assert.throws(() => mlidFromInput("https://example.com/?mlid=2440822"), /yahoo\.com/);
 
+let response = await worker.fetch(new Request("https://worker.example/oauth/start"), env);
+assert.equal(response.status, 200);
+assert.match(await response.text(), /Authorize with Yahoo/);
+
+response = await worker.fetch(new Request("https://worker.example/oauth/start", {
+  method: "POST",
+  headers: { "Content-Type": "application/x-www-form-urlencoded" },
+  body: new URLSearchParams({ watchToken: "wrong" }),
+}), env);
+assert.equal(response.status, 401);
+
+response = await worker.fetch(new Request("https://worker.example/oauth/start", {
+  method: "POST",
+  headers: { "Content-Type": "application/x-www-form-urlencoded" },
+  body: new URLSearchParams({ watchToken: "test-watch-token" }),
+}), env);
+assert.equal(response.status, 303);
+const authorizationUrl = new URL(response.headers.get("Location"));
+assert.equal(authorizationUrl.hostname, "api.login.yahoo.com");
+assert.equal(authorizationUrl.searchParams.get("redirect_uri"), "https://worker.example/oauth/callback");
+const oauthState = authorizationUrl.searchParams.get("state");
+assert.ok(oauthState);
+
+delete env.YAHOO_ACCESS_TOKEN;
+response = await worker.fetch(new Request(`https://worker.example/oauth/callback?code=one-time-code&state=${oauthState}`), env);
+assert.equal(response.status, 200);
+assert.match(await response.text(), /Yahoo is connected/);
+assert.equal(await env.YAHOO_SESSIONS.get("oauth:refresh-token"), "oauth-refresh");
+env.YAHOO_ACCESS_TOKEN = "test-yahoo-token";
+
 const origin = "https://tony-draft-lab-yahoo.pages.dev";
-let response = await worker.fetch(new Request("https://worker.example/api/board", { headers: { Origin: origin } }), env);
+response = await worker.fetch(new Request("https://worker.example/api/board", { headers: { Origin: origin } }), env);
 assert.equal(response.status, 401, "board rejects a missing watch token");
 
 response = await worker.fetch(new Request("https://worker.example/api/watch", {

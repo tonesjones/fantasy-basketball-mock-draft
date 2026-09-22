@@ -1,4 +1,5 @@
 WATCH_TOKEN=replace-with-a-random-personal-token
 YAHOO_CLIENT_ID=replace-with-yahoo-client-id
 YAHOO_CLIENT_SECRET=replace-with-yahoo-client-secret
+# Optional after completing /oauth/start:
 YAHOO_REFRESH_TOKEN=replace-with-yahoo-refresh-token

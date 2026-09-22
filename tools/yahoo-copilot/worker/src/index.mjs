@@ -1,6 +1,8 @@
 const YAHOO_API = "https://fantasysports.yahooapis.com";
 const YAHOO_TOKEN_URL = "https://api.login.yahoo.com/oauth2/get_token";
 const SESSION_KEY = "watch:active";
+const OAUTH_REFRESH_KEY = "oauth:refresh-token";
+const OAUTH_STATE_PREFIX = "oauth:state:";
 const SESSION_TTL_SECONDS = 8 * 60 * 60;
 const DEFAULT_ORIGIN = "https://tony-draft-lab-yahoo.pages.dev";
 
@@ -27,6 +29,27 @@ function json(request, env, status, body) {
 
 function errorBody(code, message) {
   return { ok: false, error: { code, message } };
+}
+
+function html(status, body) {
+  return new Response(body, {
+    status,
+    headers: {
+      "Cache-Control": "no-store",
+      "Content-Type": "text/html; charset=utf-8",
+      "Referrer-Policy": "no-referrer",
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
+}
+
+function oauthPage(message) {
+  return `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Draft Lab Yahoo setup</title><style>body{font:16px system-ui;max-width:540px;margin:10vh auto;padding:24px;color:#18202b}input,button{box-sizing:border-box;width:100%;padding:12px;margin:8px 0}button{cursor:pointer;font-weight:700}.note{color:#596579;font-size:14px}</style><h1>Draft Lab Yahoo setup</h1>${message}`;
+}
+
+function randomState() {
+  const bytes = crypto.getRandomValues(new Uint8Array(32));
+  return btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
 async function sameSecret(actual, expected) {
@@ -119,13 +142,15 @@ function leagueSub(payload, name) {
 async function getAccessToken(env, fetchImpl, force = false) {
   if (env.YAHOO_ACCESS_TOKEN && !force) return env.YAHOO_ACCESS_TOKEN;
   if (!force && tokenCache && tokenCache.expiresAt > Date.now() + 60_000) return tokenCache.value;
-  if (!env.YAHOO_CLIENT_ID || !env.YAHOO_CLIENT_SECRET || !env.YAHOO_REFRESH_TOKEN) {
+  const storedRefresh = env.YAHOO_SESSIONS ? await env.YAHOO_SESSIONS.get(OAUTH_REFRESH_KEY) : null;
+  const refreshToken = storedRefresh || env.YAHOO_REFRESH_TOKEN;
+  if (!env.YAHOO_CLIENT_ID || !env.YAHOO_CLIENT_SECRET || !refreshToken) {
     throw new Error("Yahoo OAuth secrets are not configured.");
   }
   const basic = btoa(`${env.YAHOO_CLIENT_ID}:${env.YAHOO_CLIENT_SECRET}`);
   const body = new URLSearchParams({
     grant_type: "refresh_token",
-    refresh_token: env.YAHOO_REFRESH_TOKEN,
+    refresh_token: refreshToken,
   });
   const response = await fetchImpl(YAHOO_TOKEN_URL, {
     method: "POST",
@@ -144,7 +169,60 @@ async function getAccessToken(env, fetchImpl, force = false) {
     value: data.access_token,
     expiresAt: Date.now() + Math.max(60, Number(data.expires_in) || 3600) * 1000,
   };
+  if (data.refresh_token && data.refresh_token !== storedRefresh) {
+    await env.YAHOO_SESSIONS.put(OAUTH_REFRESH_KEY, data.refresh_token);
+  }
   return tokenCache.value;
+}
+
+async function beginOAuth(request, env) {
+  if (!env.YAHOO_CLIENT_ID || !env.YAHOO_CLIENT_SECRET || !env.YAHOO_SESSIONS) {
+    return html(503, oauthPage("<p>Cloudflare is missing the Yahoo client credentials or KV binding.</p>"));
+  }
+  const form = await request.formData();
+  if (!(await sameSecret(String(form.get("watchToken") || ""), env.WATCH_TOKEN))) {
+    if (env.AUTH_LIMITER) {
+      const colo = request.cf && request.cf.colo ? request.cf.colo : "unknown";
+      const limited = await env.AUTH_LIMITER.limit({ key: `bad-oauth:${colo}` });
+      if (!limited.success) return html(429, oauthPage("<p>Too many failed attempts. Wait a minute and try again.</p>"));
+    }
+    return html(401, oauthPage("<p>The watch token was not accepted.</p><p><a href=\"/oauth/start\">Try again</a></p>"));
+  }
+  const state = randomState();
+  const redirectUri = `${new URL(request.url).origin}/oauth/callback`;
+  await env.YAHOO_SESSIONS.put(`${OAUTH_STATE_PREFIX}${state}`, JSON.stringify({ redirectUri }), { expirationTtl: 600 });
+  const auth = new URL("https://api.login.yahoo.com/oauth2/request_auth");
+  auth.searchParams.set("client_id", env.YAHOO_CLIENT_ID);
+  auth.searchParams.set("redirect_uri", redirectUri);
+  auth.searchParams.set("response_type", "code");
+  auth.searchParams.set("state", state);
+  return Response.redirect(auth.toString(), 303);
+}
+
+async function finishOAuth(request, env, fetchImpl) {
+  const url = new URL(request.url);
+  const state = url.searchParams.get("state") || "";
+  const code = url.searchParams.get("code") || "";
+  if (url.searchParams.get("error")) return html(400, oauthPage("<p>Yahoo authorization was cancelled.</p>"));
+  if (!state || !code) return html(400, oauthPage("<p>Yahoo did not return a complete authorization response.</p>"));
+  const stateKey = `${OAUTH_STATE_PREFIX}${state}`;
+  const saved = await env.YAHOO_SESSIONS.get(stateKey);
+  if (!saved) return html(400, oauthPage("<p>This authorization link is invalid or has expired. Start again.</p>"));
+  await env.YAHOO_SESSIONS.delete(stateKey);
+  const { redirectUri } = JSON.parse(saved);
+  const basic = btoa(`${env.YAHOO_CLIENT_ID}:${env.YAHOO_CLIENT_SECRET}`);
+  const response = await fetchImpl(YAHOO_TOKEN_URL, {
+    method: "POST",
+    headers: { Accept: "application/json", Authorization: `Basic ${basic}`, "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ grant_type: "authorization_code", redirect_uri: redirectUri, code }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.access_token || !data.refresh_token) {
+    return html(502, oauthPage(`<p>Yahoo token exchange failed (HTTP ${response.status}). Start again.</p>`));
+  }
+  await env.YAHOO_SESSIONS.put(OAUTH_REFRESH_KEY, data.refresh_token);
+  tokenCache = { value: data.access_token, expiresAt: Date.now() + Math.max(60, Number(data.expires_in) || 3600) * 1000 };
+  return html(200, oauthPage("<p><strong>Yahoo is connected.</strong></p><p>You can close this tab and connect your draft from Draft Lab.</p><p class=\"note\">The Yahoo tokens were stored inside Cloudflare and were not shown in the browser.</p>"));
 }
 
 async function yahooGet(path, env, fetchImpl) {
@@ -312,6 +390,11 @@ export function createWorker(fetchImpl = fetch) {
   return {
     async fetch(request, env) {
       const url = new URL(request.url);
+      if (url.pathname === "/oauth/start" && request.method === "GET") {
+        return html(200, oauthPage('<p>Enter the same private watch token configured in Cloudflare. You will then approve Draft Lab in Yahoo.</p><form method="post"><label>Watch token<input name="watchToken" type="password" autocomplete="off" required></label><button type="submit">Authorize with Yahoo</button></form><p class="note">Your Yahoo client secret and OAuth tokens never enter this page.</p>'));
+      }
+      if (url.pathname === "/oauth/start" && request.method === "POST") return beginOAuth(request, env);
+      if (url.pathname === "/oauth/callback" && request.method === "GET") return finishOAuth(request, env, fetchImpl);
       if (request.method === "OPTIONS") {
         if (!ensureAllowedOrigin(request, env)) return json(request, env, 403, errorBody("origin_denied", "Origin is not allowed."));
         const headers = corsHeaders(request, env);
@@ -321,12 +404,13 @@ export function createWorker(fetchImpl = fetch) {
         return new Response(null, { status: 204, headers });
       }
       if (url.pathname === "/health" && request.method === "GET") {
+        const storedRefresh = env.YAHOO_SESSIONS ? await env.YAHOO_SESSIONS.get(OAUTH_REFRESH_KEY) : null;
         return json(request, env, 200, {
           ok: true,
           configured: {
             sessions: Boolean(env.YAHOO_SESSIONS),
             watchToken: Boolean(env.WATCH_TOKEN),
-            yahooOAuth: Boolean(env.YAHOO_ACCESS_TOKEN || (env.YAHOO_CLIENT_ID && env.YAHOO_CLIENT_SECRET && env.YAHOO_REFRESH_TOKEN)),
+            yahooOAuth: Boolean(env.YAHOO_ACCESS_TOKEN || (env.YAHOO_CLIENT_ID && env.YAHOO_CLIENT_SECRET && (storedRefresh || env.YAHOO_REFRESH_TOKEN))),
           },
         });
       }

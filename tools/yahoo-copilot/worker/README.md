@@ -15,10 +15,17 @@ Set these as encrypted Worker secrets in Cloudflare. Never commit their values:
 - `WATCH_TOKEN`: a private passphrase entered in Draft Lab when connecting
 - `YAHOO_CLIENT_ID`: Yahoo app client ID
 - `YAHOO_CLIENT_SECRET`: Yahoo app client secret
-- `YAHOO_REFRESH_TOKEN`: refresh token for the Yahoo account that can view the draft
+- `YAHOO_REFRESH_TOKEN`: optional bootstrap fallback; the normal setup flow creates and rotates this credential in KV
 
-The Yahoo app callback URL must exactly match the callback URL used when the
-refresh token was issued. The browser never receives the Yahoo credentials.
+Add this exact redirect URI to the Yahoo app:
+
+`https://yahoo-draft-copilot.tonyjaysales.workers.dev/oauth/callback`
+
+After deploying and setting `WATCH_TOKEN`, `YAHOO_CLIENT_ID`, and
+`YAHOO_CLIENT_SECRET`, visit `/oauth/start`. Enter the watch token and approve
+the app in Yahoo. The Worker exchanges the one-time code itself, keeps the
+refresh token in KV, and preserves any rotated replacement. The browser never
+receives the Yahoo credentials.
 
 ## Local checks and deployment
 
