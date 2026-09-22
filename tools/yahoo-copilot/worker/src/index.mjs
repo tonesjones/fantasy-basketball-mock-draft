@@ -427,7 +427,7 @@ export function createWorker(fetchImpl = fetch) {
         if (url.pathname === "/api/board" && request.method === "GET") {
           const board = await loadBoard(env, fetchImpl);
           if (!board) return json(request, env, 404, errorBody("no_watch", "Start a Yahoo watch session first."));
-          return json(request, env, 200, board);
+          return json(request, env, 200, { ok: true, ...board });
         }
         return json(request, env, 404, errorBody("not_found", "Route not found."));
       } catch (error) {

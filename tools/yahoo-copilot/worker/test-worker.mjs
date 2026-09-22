@@ -124,6 +124,7 @@ response = await worker.fetch(new Request("https://worker.example/api/board", {
 }), env);
 assert.equal(response.status, 200);
 const board = await response.json();
+assert.equal(board.ok, true, "poll responses use the same success envelope as the initial watch response");
 assert.equal(board.pickCount, 1, "unmade Yahoo slots are excluded from completed picks");
 assert.equal(board.picks[0].playerName, "Victor Wembanyama");
 assert.equal(board.picks[0].playerIndex, null);
