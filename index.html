@@ -137,6 +137,11 @@ body{background:radial-gradient(ellipse at top right,#19352f66,transparent 55%),
 #md .catmu{display:inline-block;font-size:11px;font-weight:700;margin:0 3px;white-space:nowrap}
 #md .catmu.win{color:#85e5bc}#md .catmu.even{color:#ffd479}#md .catmu.loss{color:#ff8a7a}
 #md .unrated{color:var(--hatch-widget-muted);font-size:11px;font-weight:700;cursor:help}
+#md .puntbox{border:1px solid var(--hatch-widget-border);background:#0d1724;border-radius:10px;padding:12px;margin:12px 0}
+#md .puntbox h3{margin:0 0 6px}
+#md .puntcontrols{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0}
+#md .puntbox ol{margin:8px 0 0;padding-left:22px;font-size:12px}
+#md .puntbox li{margin:4px 0}
 #md .catdot{display:inline-block;width:10px;height:10px;border-radius:50%;margin:0 2px;vertical-align:middle}
 #md .catdot.win{background:#85e5bc}#md .catdot.even{background:#ffd479}#md .catdot.loss{background:#ff8a7a}
 #md .playoffnote a{color:#85e5bc}
@@ -303,6 +308,7 @@ body{background:radial-gradient(ellipse at top right,#19352f66,transparent 55%),
 <script src="movers-outlook.js"></script>
 <script src="vacated-usage.js"></script>
 <script src="draft-core.js"></script>
+<script src="punt-core.js"></script>
 <script src="data-health.js"></script>
 <script src="playoff-data.js"></script>
 <script src="playoff-core.js"></script>
@@ -770,7 +776,7 @@ var BASE_SLOTS=["PG","SG","G","SF","PF","F","C","C","Util","Util","BN","BN","BN"
 var DATA_VERSION="2026-09-20-vacated";
 var STORAGE_KEY="fantasy-basketball-mock-draft.v2";
 var HW=(typeof window!=="undefined"&&window.hatchWidget)?window.hatchWidget:null;
-var DEFAULTS={phase:"setup",draftPos:6,rounds:13,log:[],q:"",f:"All",view:"team",sort:"cons",playoffStart:20,page:0,seed:123456789,rngState:123456789,userTurns:[],filtersOpen:false,scarcityOpen:false,focusPi:null};
+var DEFAULTS={phase:"setup",draftPos:6,rounds:13,log:[],q:"",f:"All",view:"team",sort:"cons",puntCategory:null,playoffStart:20,page:0,seed:123456789,rngState:123456789,userTurns:[],filtersOpen:false,scarcityOpen:false,focusPi:null};
 function freshState(){var seed=(Date.now()>>>0)||1;return Object.assign({},DEFAULTS,{seed:seed,rngState:seed,log:[],userTurns:[]});}
 function cleanState(raw){
   var out=Object.assign({},DEFAULTS,raw||{}), used={};
@@ -779,7 +785,9 @@ function cleanState(raw){
   out.log=Array.isArray(out.log)?out.log.filter(function(pi){if(!CORE.validPlayerIndex(PLAYERS,[],pi)||used[pi])return false;used[pi]=true;return true;}).slice(0,TEAMS*out.rounds):[];
   out.phase=out.log.length>=TEAMS*out.rounds?"done":(out.phase==="draft"?"draft":"setup");
   out.f=["All","PG","SG","SF","PF","C"].indexOf(out.f)>=0?out.f:"All";
-  out.sort=["cons","rank","adp","last","lastTotal"].indexOf(out.sort)>=0?out.sort:"cons";
+  out.puntCategory=PuntCore.valid(out.puntCategory)?out.puntCategory:null;
+  out.sort=["cons","rank","adp","last","lastTotal","punt"].indexOf(out.sort)>=0?out.sort:"cons";
+  if(out.sort==="punt"&&!out.puntCategory)out.sort="cons";
   out.view=["team","board","grades","coach"].indexOf(out.view)>=0?out.view:"team";
   out.focusPi=(out.focusPi==null||out.focusPi==="")?null:(parseInt(out.focusPi,10)>=0?parseInt(out.focusPi,10):null);
   out.filtersOpen=!!out.filtersOpen;
@@ -889,8 +897,14 @@ function visibleCandidateIndexes(){
     cands.push(i);
   }
   var srt=state.sort||"cons";
+  var puntByPi={};
+  if(srt==="punt"){
+    var taken={};state.log.forEach(function(pi){taken[pi]=1;});
+    PuntCore.rankings(PLAYERS,PDATA,taken,state.puntCategory).forEach(function(row){puntByPi[row.pi]=row;});
+  }
   function skey(x){return x==null?1e9:x;}
-  if(srt==="adp")cands.sort(function(a,b){return skey(PLAYERS[a].adp)-skey(PLAYERS[b].adp);});
+  if(srt==="punt")cands.sort(function(a,b){return (puntByPi[a]?puntByPi[a].puntRank:1e9)-(puntByPi[b]?puntByPi[b].puntRank:1e9)||consRank(PLAYERS[a])-consRank(PLAYERS[b]);});
+  else if(srt==="adp")cands.sort(function(a,b){return skey(PLAYERS[a].adp)-skey(PLAYERS[b].adp);});
   else if(srt==="last")cands.sort(function(a,b){return skey(PLAYERS[a].last)-skey(PLAYERS[b].last);});
   else if(srt==="lastTotal")cands.sort(function(a,b){return skey(PLAYERS[a].lastTotal)-skey(PLAYERS[b].lastTotal);});
   else if(srt==="cons")cands.sort(function(a,b){return consRank(PLAYERS[a])-consRank(PLAYERS[b]);});
@@ -1463,7 +1477,7 @@ function nextUserPickIdx(){
 function consRank(p){var a=p.adp,f=p.adpF;return a==null?(f==null?p.r:f):(f==null?a:(a+f)/2);}
 function vBadge(pi,idx){var p=PLAYERS[pi];if(p.adp==null)return "";var d=Math.round(p.adp)-(idx+1);if(d===0)return "";return '<span class="vdelta '+(d>0?'g':'b')+'" title="'+(d>0?'Value':'Reach')+' vs ADP '+p.adp+'">'+(d>0?'+':'')+d+'</span>';}
 function sortLabel(s){
-  return ({cons:"Consensus",rank:"Rank",adp:"ADP",last:"Last · PER",lastTotal:"Last · TOT"})[s]||"Consensus";
+  return ({cons:"Consensus",rank:"Rank",adp:"ADP",last:"Last · PER",lastTotal:"Last · TOT",punt:"Punt value"})[s]||"Consensus";
 }
 
 function syncCoachDock(){
@@ -1514,7 +1528,9 @@ function renderDraft(){
   h+='<div class="filters">';
   ["All","PG","SG","SF","PF","C"].forEach(function(f){h+='<button class="fchip'+(state.f===f?' sel':'')+'" data-f="'+f+'">'+f+'</button>';});
   h+='</div><div class="filters"><span class="muted">Sort:</span>';
-  [["cons","Consensus","Average of Yahoo and Fantrax ADP"],["rank","Rank","Built-in preseason rank (sim order)"],["adp","ADP","Yahoo ADP via Hashtag Basketball (14 Sep 2026)"],["last","Last · PER","2025-26 nine-category per-game rank (Basketball Monster / Hashtag)"],["lastTotal","Last · TOT","2025-26 nine-category TOTALS rank — derived from Basketball-Reference season totals, not a published rank"]].forEach(function(s){h+='<button class="fchip'+((state.sort||"cons")===s[0]?' sel':'')+'" data-sort="'+s[0]+'" title="'+s[2]+'">'+s[1]+'</button>';});
+  var sorts=[["cons","Consensus","Average of Yahoo and Fantrax ADP"],["rank","Rank","Built-in preseason rank (sim order)"],["adp","ADP","Yahoo ADP via Hashtag Basketball (14 Sep 2026)"],["last","Last · PER","2025-26 nine-category per-game rank (Basketball Monster / Hashtag)"],["lastTotal","Last · TOT","2025-26 nine-category TOTALS rank — derived from Basketball-Reference season totals, not a published rank"]];
+  if(state.puntCategory)sorts.push(["punt","Punt value","Historical eight-category value, excluding "+state.puntCategory]);
+  sorts.forEach(function(s){h+='<button class="fchip'+((state.sort||"cons")===s[0]?' sel':'')+'" data-sort="'+s[0]+'" title="'+s[2]+'">'+s[1]+'</button>';});
   h+='</div></details><div class="plist" id="mdplist"></div><div id="mdpager"></div></div>';
   h+='<div class="side" id="mdside"></div></div>';
   el("mdapp").innerHTML=h;
@@ -1537,6 +1553,8 @@ function renderDraft(){
 }
 function renderList(){
   var taken={},i;for(i=0;i<state.log.length;i++)taken[state.log[i]]=1;
+  var puntRows=state.puntCategory?PuntCore.rankings(PLAYERS,PDATA,taken,state.puntCategory):[];
+  var puntByPi={};puntRows.forEach(function(row){puntByPi[row.pi]=row;});
   var q=state.q.toLowerCase(),f=state.f,ut=isUserTurn(),cands=[];
   for(i=0;i<PLAYERS.length;i++){
     if(taken[i])continue;var pl=PLAYERS[i];
@@ -1546,7 +1564,8 @@ function renderList(){
   }
   var srt=state.sort||"cons";
   function skey(x){return x==null?1e9:x;}
-  if(srt==="adp")cands.sort(function(a,b){return skey(PLAYERS[a].adp)-skey(PLAYERS[b].adp);});
+  if(srt==="punt")cands.sort(function(a,b){return (puntByPi[a]?puntByPi[a].puntRank:1e9)-(puntByPi[b]?puntByPi[b].puntRank:1e9)||consRank(PLAYERS[a])-consRank(PLAYERS[b]);});
+  else if(srt==="adp")cands.sort(function(a,b){return skey(PLAYERS[a].adp)-skey(PLAYERS[b].adp);});
   else if(srt==="last")cands.sort(function(a,b){return skey(PLAYERS[a].last)-skey(PLAYERS[b].last);});
   else if(srt==="lastTotal")cands.sort(function(a,b){return skey(PLAYERS[a].lastTotal)-skey(PLAYERS[b].lastTotal);});
   else if(srt==="cons")cands.sort(function(a,b){return consRank(PLAYERS[a])-consRank(PLAYERS[b]);});
@@ -1560,10 +1579,12 @@ function renderList(){
   for(var k=from;k<to;k++){
     if((srt==="adp"||srt==="cons")&&k>0){var kk=tierKey(cands[k]),pk=tierKey(cands[k-1]);if(pk<1e9&&kk-pk>=4)rows.push('<div class="tierbreak" title="Talent cliff"></div>');}
     i=cands[k];var pl2=PLAYERS[i];
-    var rlabel=srt==="cons"?consRank(pl2).toFixed(1):pl2.r;
+    var pr=puntByPi[i];
+    var rlabel=srt==="punt"?(pr?pr.puntRank:"—"):(srt==="cons"?consRank(pl2).toFixed(1):pl2.r);
     var sub='<span>ADP '+disp(pl2.adp)+'</span><span>Last '+disp(pl2.last)+'</span><span>Tot '+disp(pl2.lastTotal)+'</span><span>MPG '+(pl2.mpg==null?'—':pl2.mpg.toFixed(1))+'</span><span>'+posBadges(pl2.p)+'</span>'+playoffBadge(pl2);
     var mvRow=moverRoleChipHtml(pl2, false);if(mvRow)sub+=mvRow;
     if(pl2.c.length)sub+='<span>'+pl2.c.slice(0,4).join(" · ")+'</span>';
+    if(state.puntCategory)sub+=pr?'<span title="Historical available-player ranks, nine-category vs excluding '+state.puntCategory+'">Punt '+state.puntCategory+': #'+pr.baseRank+' → #'+pr.puntRank+(pr.gain>0?' (+'+pr.gain+')':'')+'</span>':'<span>Punt value: unknown (no 2025-26 category data)</span>';
     var focusCls=(focusNow===i)?' pc-focus':'';
     rows.push('<div class="prow'+focusCls+'" data-pi="'+i+'" role="button" tabindex="0" aria-pressed="'+(focusNow===i?'true':'false')+'"><div class="l1"><span class="prank">'+rlabel+'</span><span class="pname">'+esc(pl2.n)+' <span class="teamtag">'+esc(pl2.t)+'</span>'+injBadge(pl2)+'</span><button class="draftbtn" data-pi="'+i+'" aria-label="Draft '+esc(pl2.n)+'"'+(ut?'':' disabled')+'>Draft</button></div><div class="l2">'+sub+'</div></div>');
   }
@@ -1600,7 +1621,7 @@ function renderSide(){
     refreshPickCoach();
     return;
   }
-  if(state.view==="grades"){s.innerHTML=renderGrades();wireInjToggles(s);return;}
+  if(state.view==="grades"){s.innerHTML=renderGrades();wirePuntControls(s);wireInjToggles(s);return;}
   if(state.view==="board"){
     var h='<h3>Draft board</h3><div class="boardwrap"><table class="board"><tr><th>Rd</th>';
     for(var t=0;t<TEAMS;t++)h+='<th>'+esc(teamName(t))+'</th>';
@@ -1674,7 +1695,7 @@ function renderGrades(){
   var g=draftGrades();
   var me=g.filter(function(x){return x.team===userTeam();})[0];
   var muOrder=[6,7,5,0,1,2,3,4,8]; // FG% FT% 3PM Pts REB AST STL BLK TO
-  var h='<h3>Draft grades</h3><div class="muted">Score = sum of 2025-26 per-game category values (9-cat z-scores) across the full roster. Higher is better. Historical production only — not a projection of 2026-27 totals.</div>';
+  var h=renderPuntStrategy(g)+'<h3>Draft grades</h3><div class="muted">Score = sum of 2025-26 per-game category values (9-cat z-scores) across the full roster. Higher is better. Historical production only — not a projection of 2026-27 totals.</div>';
   h+='<div class="muted" style="margin:6px 0">Category matchup = historical category-value comparison vs your team (2025-26 z-scores, not projected category totals). <span class="catmu win">PTS</span> = you win the category <span class="catmu even">PTS</span> = even <span class="catmu loss">PTS</span> = they win it. Tally is your wins-losses vs that team.</div>';
   h+='<div class="boardwrap"><table class="board"><thead><tr><th>#</th><th>Team</th><th>Score</th><th>Grade</th><th>Category matchup</th></tr></thead><tbody>';
   g.forEach(function(x){
@@ -1697,6 +1718,36 @@ function renderGrades(){
   });
   h+='</tbody></table></div><p class="muted"><span class="unrated">&#8224;N</span> = N rostered players had no 2025-26 category data (injured stars, prospects) and were counted at replacement level. Bench and starters weighted equally; playoff schedule, injuries, and projected 2026-27 role changes are not factored in.</p>';
   return h;
+}
+function renderPuntStrategy(grades,previewCat){
+  var taken={};state.log.forEach(function(pi){taken[pi]=1;});
+  var next=nextUserPickIdx(),choice=PuntCore.suggest(grades,userTeam(),PLAYERS,PDATA,taken,next);
+  var cat=PuntCore.valid(previewCat)?previewCat:(state.puntCategory||choice&&choice.cat);
+  var h='<section class="puntbox"><h3>Punt strategy</h3><div class="muted">Optional eight-category scenario based on 2025-26 per-game values. Your regular grade remains nine-category. Turnovers (TO) cannot be punted.</div>';
+  if(state.puntCategory)h+='<p><b>Committed: punt '+state.puntCategory+'</b> · This changes the value view, not the draft simulation or Pick Coach verdicts.</p>';
+  else if(choice)h+='<p><b>Watch '+choice.cat+'</b>: your per-pick value trails '+choice.below+' comparable teams, and '+choice.risers+' nearby draft targets rise in the eight-category view. This is a suggestion, not a commitment.</p>';
+  else h+='<p class="muted">No clear punt signal yet. Wait for at least three rated picks and enough comparable teams, or explore a category yourself.</p>';
+  h+='<div class="puntcontrols"><label for="mdpunt">Explore:</label><select id="mdpunt"><option value="">Choose a category</option>';
+  PuntCore.CATS.slice(0,8).forEach(function(c){h+='<option value="'+c+'"'+(cat===c?' selected':'')+'>'+c+'</option>';});
+  h+='</select><button class="ghostbtn" id="mdpuntcommit">'+(state.puntCategory?'Change punt':'Commit to punt')+'</button>';
+  if(state.puntCategory)h+='<button class="ghostbtn" id="mdpuntclear">Clear punt</button>';
+  h+='</div>';
+  if(cat){
+    var rows=PuntCore.rankings(PLAYERS,PDATA,taken,cat);
+    var near=rows.filter(function(r){var p=PLAYERS[r.pi],market=p.adp==null?p.r:p.adp;return r.gain>0&&r.puntRank<=50&&(next<0||Math.abs(market-(next+1))<=30);});
+    near.sort(function(a,b){return a.puntRank-b.puntRank;});
+    h+='<b>Available players who gain value if you punt '+cat+'</b>';
+    if(near.length){h+='<ol>';near.slice(0,6).forEach(function(r){h+='<li>'+esc(PLAYERS[r.pi].n)+' · #'+r.baseRank+' → #'+r.puntRank+' (+'+r.gain+')</li>';});h+='</ol>';}
+    else h+='<p class="muted">No nearby available players rise in this category scenario.</p>';
+    h+='<p class="muted">Ranks compare available players with category data only. Missing data stays unknown; ADP and future projections are not recalculated.</p>';
+  }
+  return h+'</section>';
+}
+function wirePuntControls(root){
+  var select=root.querySelector('#mdpunt'),commit=root.querySelector('#mdpuntcommit'),clear=root.querySelector('#mdpuntclear');
+  select.addEventListener('change',function(){var selected=select.value;root.querySelector('.puntbox').outerHTML=renderPuntStrategy(draftGrades(),selected);wirePuntControls(root);});
+  commit.addEventListener('click',function(){if(PuntCore.valid(select.value))setState({puntCategory:select.value});});
+  if(clear)clear.addEventListener('click',function(){setState({puntCategory:null,sort:state.sort==='punt'?'cons':state.sort});});
 }
 function renderDone(){
   cancelPickCoach();
