@@ -26,10 +26,21 @@
     if(pick<0)return [];
     var cutoff=pick+1+(followingPick>pick?Math.floor((followingPick-pick)/2):0);
     return rows.filter(function(r){
-      var p=players[r.pi],a=p.adp,f=p.adpF;
-      var market=a==null?f:(f==null?a:(a+f)/2);
+      var market=marketAdp(players[r.pi]);
       return r.gain>0&&r.puntRank<=50&&market!=null&&market<=cutoff;
     }).sort(function(a,b){return a.puntRank-b.puntRank;});
+  }
+  function marketAdp(p){
+    var a=p.adp,f=p.adpF;
+    return a==null?f:(f==null?a:(a+f)/2);
+  }
+  function laterRisers(rows,players,pick,followingPick){
+    if(pick<0||followingPick<0)return [];
+    var cutoff=pick+1+Math.floor((followingPick-pick)/2),end=followingPick+1+12;
+    return rows.filter(function(r){
+      var market=marketAdp(players[r.pi]);
+      return r.gain>0&&r.puntRank<=50&&market!=null&&market>cutoff&&market<=end;
+    }).sort(function(a,b){return marketAdp(players[a.pi])-marketAdp(players[b.pi])||a.puntRank-b.puntRank;});
   }
   function groupRisers(rows,players,perGroup){
     var groups={guards:[],frontcourt:[],wings:[]};
@@ -57,5 +68,5 @@
     choices.sort(function(a,b){return b.below-a.below||b.risers-a.risers||CATS.indexOf(a.cat)-CATS.indexOf(b.cat);});
     return choices[0]||null;
   }
-  return {CATS:CATS,valid:valid,rankings:rankings,nearTermRisers:nearTermRisers,groupRisers:groupRisers,suggest:suggest};
+  return {CATS:CATS,valid:valid,rankings:rankings,nearTermRisers:nearTermRisers,laterRisers:laterRisers,groupRisers:groupRisers,suggest:suggest};
 });

@@ -1745,16 +1745,20 @@ function renderPuntStrategy(grades,previewCat,expanded){
   if(cat){
     var rows=PuntCore.rankings(PLAYERS,PDATA,taken,cat);
     var near=PuntCore.nearTermRisers(rows,PLAYERS,next,following);
+    var later=PuntCore.laterRisers(rows,PLAYERS,next,following);
     h+='<b>'+(next<0?'Draft complete':'Worth considering near pick #'+(next+1)+' if you punt '+cat)+'</b>';
-    if(near.length){
+    if(!near.length&&next>=0)h+='<p class="muted">No available punt risers look urgent for this pick. The watches below are for later, not for this turn.</p>';
+    if(near.length||later.length){
       var groups=PuntCore.groupRisers(near,PLAYERS,2);
+      var laterGroups=PuntCore.groupRisers(later,PLAYERS,1);
       [["guards","Guards"],["frontcourt","Frontcourt (PF/C)"],["wings","Wings"]].forEach(function(g){
         h+='<h4>'+g[1]+'</h4>';
         if(groups[g[0]].length){h+='<ol>';groups[g[0]].forEach(function(r){var p=PLAYERS[r.pi],market=consRank(p);h+='<li>'+esc(p.n)+' · ADP '+market.toFixed(1)+' · punt rank #'+r.baseRank+' → #'+r.puntRank+' (+'+r.gain+')</li>';});h+='</ol>';}
-        else h+='<p class="muted">No near-term '+g[0]+' gain value. Do not force the position.</p>';
+        else if(laterGroups[g[0]].length){var watch=laterGroups[g[0]][0],wp=PLAYERS[watch.pi];h+='<p class="muted">None for this pick. Later watch, not a pick-now target: '+esc(wp.n)+' · ADP '+consRank(wp).toFixed(1)+' · punt rank #'+watch.baseRank+' → #'+watch.puntRank+' (+'+watch.gain+').</p>';}
+        else h+='<p class="muted">No '+g[0]+' gain value near your next two picks. Do not force the position.</p>';
       });
-    }else h+='<p class="muted">'+(next<0?'No picks remain.':'No available punt risers look urgent for this pick. Use Punt value sort to explore later-round players.')+'</p>';
-    h+='<p class="muted">These are position alternatives, not a ranking to draft in order. Each player appears once by eligible position. Shortlist uses consensus ADP before the midpoint to your following pick. Ranks compare available players with category data only.</p>';
+    }else h+='<p class="muted">'+(next<0?'No picks remain.':'No qualifying position options near your next two picks. Use Punt value sort to explore the full board.')+'</p>';
+    h+='<p class="muted">These are position alternatives, not a ranking to draft in order. Each player appears once by eligible position. Pick-now targets use consensus ADP before the midpoint to your following pick; later watches stop about one round after it. Ranks compare available players with category data only.</p>';
   }
   return h+'</details></section>';
 }

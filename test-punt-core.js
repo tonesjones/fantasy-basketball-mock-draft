@@ -35,6 +35,8 @@ const latePlayers=[
 const rising=latePlayers.map((_,pi)=>({pi,puntRank:pi+1,gain:3}));
 assert.deepEqual(Punt.nearTermRisers(rising,latePlayers,89,101).map(r=>r.pi),[6],
   'at pick 90, later-round ADP 106-133 players must not crowd out the near-term target');
+assert.deepEqual(Punt.laterRisers(rising,latePlayers,89,101).map(r=>r.pi),[2,5],
+  'near-future players may be watches, but distant ADP 115+ players stay out');
 assert.deepEqual(Punt.nearTermRisers(rising,latePlayers,-1,-1),[]);
 const mixedPlayers=[
   {n:'Guard 1',p:['PG']},{n:'Guard 2',p:['SG']},{n:'Guard 3',p:['PG']},
