@@ -24,20 +24,20 @@
   }
   function suggest(teams,userTeam,players,pdata,taken,nextPick){
     var me=teams.filter(function(t){return t.team===userTeam;})[0];
-    if(!me||me.rated<3||me.unrated>0||nextPick<0)return null;
-    var peers=teams.filter(function(t){return t.rated>=3&&t.unrated===0;});
-    if(peers.length<4)return null;
+    if(!me||me.rated<2||me.rated+me.unrated<3||nextPick<0)return null;
+    var peers=teams.filter(function(t){return t.team!==userTeam&&t.rated>=2;});
+    if(peers.length<3)return null;
     var choices=[];
     CATS.slice(0,8).forEach(function(cat,ci){
-      var others=peers.filter(function(t){return t.team!==userTeam;});
-      var below=others.filter(function(t){return t.cats[ci]/t.rated>me.cats[ci]/me.rated;}).length;
-      if(below<Math.ceil(others.length*0.75))return;
+      var mine=me.cats[ci]/me.rated;
+      var below=peers.filter(function(t){return t.cats[ci]/t.rated>mine;}).length;
+      if(below<=peers.length/2)return;
       var rows=rankings(players,pdata,taken,cat);
       var useful=rows.filter(function(r){
         var p=players[r.pi],market=p.adp==null?p.r:p.adp;
-        return r.gain>=3&&r.puntRank<=45&&market<=nextPick+25&&market>=nextPick-25;
+        return r.gain>0&&r.puntRank<=50&&Math.abs(market-(nextPick+1))<=30;
       });
-      if(useful.length>=2)choices.push({cat:cat,below:below,risers:useful.length});
+      choices.push({cat:cat,below:below,peers:peers.length,risers:useful.length,missing:me.unrated});
     });
     choices.sort(function(a,b){return b.below-a.below||b.risers-a.risers||CATS.indexOf(a.cat)-CATS.indexOf(b.cat);});
     return choices[0]||null;

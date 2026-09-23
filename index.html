@@ -142,6 +142,9 @@ body{background:radial-gradient(ellipse at top right,#19352f66,transparent 55%),
 #md .puntcontrols{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0}
 #md .puntbox ol{margin:8px 0 0;padding-left:22px;font-size:12px}
 #md .puntbox li{margin:4px 0}
+#md .puntbox>p{margin:4px 0 8px;font-size:12px}
+#md .puntbox details{border-top:1px solid var(--hatch-widget-border);padding-top:7px}
+#md .puntbox summary{font-size:12px;font-weight:700;color:var(--hatch-widget-accent)}
 #md .catdot{display:inline-block;width:10px;height:10px;border-radius:50%;margin:0 2px;vertical-align:middle}
 #md .catdot.win{background:#85e5bc}#md .catdot.even{background:#ffd479}#md .catdot.loss{background:#ff8a7a}
 #md .playoffnote a{color:#85e5bc}
@@ -1617,11 +1620,12 @@ function myRoster(){
 function renderSide(){
   var s=el("mdside");if(!s)return;
   if(state.view==="coach"){
-    s.innerHTML='<div class="pc-dock-handle" id="pc-dock-handle"><span class="pc-dock-grip" aria-hidden="true"></span><span class="pc-dock-label">Pick coach</span></div><h3 class="pc-side-title">Pick coach</h3><p class="muted pc-advisory">Advisory preview — never auto-drafts.</p>'+pickCoachShellHtml();
+    s.innerHTML='<div class="pc-dock-handle" id="pc-dock-handle"><span class="pc-dock-grip" aria-hidden="true"></span><span class="pc-dock-label">Pick coach</span></div><h3 class="pc-side-title">Pick coach</h3><p class="muted pc-advisory">Advisory preview — never auto-drafts.</p>'+renderPuntStrategy(draftGrades())+pickCoachShellHtml();
+    wirePuntControls(s);
     refreshPickCoach();
     return;
   }
-  if(state.view==="grades"){s.innerHTML=renderGrades();wirePuntControls(s);wireInjToggles(s);return;}
+  if(state.view==="grades"){s.innerHTML=renderGrades();wireInjToggles(s);return;}
   if(state.view==="board"){
     var h='<h3>Draft board</h3><div class="boardwrap"><table class="board"><tr><th>Rd</th>';
     for(var t=0;t<TEAMS;t++)h+='<th>'+esc(teamName(t))+'</th>';
@@ -1695,7 +1699,7 @@ function renderGrades(){
   var g=draftGrades();
   var me=g.filter(function(x){return x.team===userTeam();})[0];
   var muOrder=[6,7,5,0,1,2,3,4,8]; // FG% FT% 3PM Pts REB AST STL BLK TO
-  var h=renderPuntStrategy(g)+'<h3>Draft grades</h3><div class="muted">Score = sum of 2025-26 per-game category values (9-cat z-scores) across the full roster. Higher is better. Historical production only — not a projection of 2026-27 totals.</div>';
+  var h='<h3>Draft grades</h3><div class="muted">Score = sum of 2025-26 per-game category values (9-cat z-scores) across the full roster. Higher is better. Historical production only — not a projection of 2026-27 totals. Punt advice is in Pick coach.</div>';
   h+='<div class="muted" style="margin:6px 0">Category matchup = historical category-value comparison vs your team (2025-26 z-scores, not projected category totals). <span class="catmu win">PTS</span> = you win the category <span class="catmu even">PTS</span> = even <span class="catmu loss">PTS</span> = they win it. Tally is your wins-losses vs that team.</div>';
   h+='<div class="boardwrap"><table class="board"><thead><tr><th>#</th><th>Team</th><th>Score</th><th>Grade</th><th>Category matchup</th></tr></thead><tbody>';
   g.forEach(function(x){
@@ -1719,14 +1723,15 @@ function renderGrades(){
   h+='</tbody></table></div><p class="muted"><span class="unrated">&#8224;N</span> = N rostered players had no 2025-26 category data (injured stars, prospects) and were counted at replacement level. Bench and starters weighted equally; playoff schedule, injuries, and projected 2026-27 role changes are not factored in.</p>';
   return h;
 }
-function renderPuntStrategy(grades,previewCat){
+function renderPuntStrategy(grades,previewCat,expanded){
   var taken={};state.log.forEach(function(pi){taken[pi]=1;});
   var next=nextUserPickIdx(),choice=PuntCore.suggest(grades,userTeam(),PLAYERS,PDATA,taken,next);
   var cat=PuntCore.valid(previewCat)?previewCat:(state.puntCategory||choice&&choice.cat);
-  var h='<section class="puntbox"><h3>Punt strategy</h3><div class="muted">Optional eight-category scenario based on 2025-26 per-game values. Your regular grade remains nine-category. Turnovers (TO) cannot be punted.</div>';
-  if(state.puntCategory)h+='<p><b>Committed: punt '+state.puntCategory+'</b> · This changes the value view, not the draft simulation or Pick Coach verdicts.</p>';
-  else if(choice)h+='<p><b>Watch '+choice.cat+'</b>: your per-pick value trails '+choice.below+' comparable teams, and '+choice.risers+' nearby draft targets rise in the eight-category view. This is a suggestion, not a commitment.</p>';
-  else h+='<p class="muted">No clear punt signal yet. Wait for at least three rated picks and enough comparable teams, or explore a category yourself.</p>';
+  var h='<section class="puntbox"><h3>Punt advice</h3>';
+  if(state.puntCategory)h+='<p><b>Punting '+state.puntCategory+'.</b> The player board can now sort by eight-category value. Your regular grade and Pick Coach verdicts remain nine-category.</p>';
+  else if(choice)h+='<p><b>Consider punting '+choice.cat+'.</b> Your per-pick value trails '+choice.below+' of '+choice.peers+' comparable teams.'+(choice.missing?' '+choice.missing+' of your picks lack category data, so treat this as tentative.':'')+' This is advice, not an automatic commitment.</p>';
+  else h+='<p class="muted">No punt recommendation yet. It needs three picks, category data for at least two of yours, and a weak category against other teams.</p>';
+  h+='<details'+(expanded?' open':'')+'><summary>Explore punt values and choices</summary><p class="muted">Based on 2025-26 per-game values, not a 2026-27 projection. TO cannot be punted.</p>';
   h+='<div class="puntcontrols"><label for="mdpunt">Explore:</label><select id="mdpunt"><option value="">Choose a category</option>';
   PuntCore.CATS.slice(0,8).forEach(function(c){h+='<option value="'+c+'"'+(cat===c?' selected':'')+'>'+c+'</option>';});
   h+='</select><button class="ghostbtn" id="mdpuntcommit">'+(state.puntCategory?'Change punt':'Commit to punt')+'</button>';
@@ -1741,11 +1746,11 @@ function renderPuntStrategy(grades,previewCat){
     else h+='<p class="muted">No nearby available players rise in this category scenario.</p>';
     h+='<p class="muted">Ranks compare available players with category data only. Missing data stays unknown; ADP and future projections are not recalculated.</p>';
   }
-  return h+'</section>';
+  return h+'</details></section>';
 }
 function wirePuntControls(root){
   var select=root.querySelector('#mdpunt'),commit=root.querySelector('#mdpuntcommit'),clear=root.querySelector('#mdpuntclear');
-  select.addEventListener('change',function(){var selected=select.value;root.querySelector('.puntbox').outerHTML=renderPuntStrategy(draftGrades(),selected);wirePuntControls(root);});
+  select.addEventListener('change',function(){var selected=select.value;root.querySelector('.puntbox').outerHTML=renderPuntStrategy(draftGrades(),selected,true);wirePuntControls(root);});
   commit.addEventListener('click',function(){if(PuntCore.valid(select.value))setState({puntCategory:select.value});});
   if(clear)clear.addEventListener('click',function(){setState({puntCategory:null,sort:state.sort==='punt'?'cons':state.sort});});
 }
