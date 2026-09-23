@@ -1733,7 +1733,8 @@ function renderPuntStrategy(grades,previewCat,expanded){
   var next=nextUserPickIdx(),following=next<0?-1:followingUserPickIdx(next),choice=PuntCore.suggest(grades,userTeam(),PLAYERS,PDATA,taken,next,following);
   var cat=PuntCore.valid(previewCat)?previewCat:(state.puntCategory||choice&&choice.cat);
   var h='<section class="puntbox"><h3>Punt advice</h3>';
-  if(state.puntCategory)h+='<p><b>Punting '+state.puntCategory+'.</b> The player board can now sort by eight-category value. Your regular grade and Pick Coach verdicts remain nine-category.</p>';
+  if(state.puntCategory&&cat!==state.puntCategory)h+='<p><b>Previewing '+cat+'.</b> Your committed punt is still '+state.puntCategory+' until you select Change punt.</p>';
+  else if(state.puntCategory)h+='<p><b>Punting '+state.puntCategory+'.</b> The player board can now sort by eight-category value. Your regular grade and Pick Coach verdicts remain nine-category.</p>';
   else if(choice)h+='<p><b>Consider punting '+choice.cat+'.</b> Your per-pick value trails '+choice.below+' of '+choice.peers+' comparable teams.'+(choice.missing?' '+choice.missing+' of your picks lack category data, so treat this as tentative.':'')+' This is advice, not an automatic commitment.</p>';
   else h+='<p class="muted">No punt recommendation yet. It needs three picks, category data for at least two of yours, and a weak category against other teams.</p>';
   h+='<details'+(expanded?' open':'')+'><summary>Explore punt values and choices</summary><p class="muted">Based on 2025-26 per-game values, not a 2026-27 projection. TO cannot be punted.</p>';
