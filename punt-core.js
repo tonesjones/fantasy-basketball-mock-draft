@@ -31,6 +31,15 @@
       return r.gain>0&&r.puntRank<=50&&market!=null&&market<=cutoff;
     }).sort(function(a,b){return a.puntRank-b.puntRank;});
   }
+  function groupRisers(rows,players,perGroup){
+    var groups={guards:[],frontcourt:[],wings:[]};
+    rows.forEach(function(row){
+      var positions=players[row.pi].p;
+      var group=positions.indexOf("PF")>=0||positions.indexOf("C")>=0?"frontcourt":positions.indexOf("PG")>=0||positions.indexOf("SG")>=0?"guards":"wings";
+      if(groups[group].length<perGroup)groups[group].push(row);
+    });
+    return groups;
+  }
   function suggest(teams,userTeam,players,pdata,taken,nextPick,followingPick){
     var me=teams.filter(function(t){return t.team===userTeam;})[0];
     if(!me||me.rated<2||me.rated+me.unrated<3||nextPick<0)return null;
@@ -48,5 +57,5 @@
     choices.sort(function(a,b){return b.below-a.below||b.risers-a.risers||CATS.indexOf(a.cat)-CATS.indexOf(b.cat);});
     return choices[0]||null;
   }
-  return {CATS:CATS,valid:valid,rankings:rankings,nearTermRisers:nearTermRisers,suggest:suggest};
+  return {CATS:CATS,valid:valid,rankings:rankings,nearTermRisers:nearTermRisers,groupRisers:groupRisers,suggest:suggest};
 });

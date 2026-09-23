@@ -142,6 +142,7 @@ body{background:radial-gradient(ellipse at top right,#19352f66,transparent 55%),
 #md .puntcontrols{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0}
 #md .puntbox ol{margin:8px 0 0;padding-left:22px;font-size:12px}
 #md .puntbox li{margin:4px 0}
+#md .puntbox h4{font-size:12px;margin:10px 0 3px}
 #md .puntbox>p{margin:4px 0 8px;font-size:12px}
 #md .puntbox details{border-top:1px solid var(--hatch-widget-border);padding-top:7px}
 #md .puntbox summary{font-size:12px;font-weight:700;color:var(--hatch-widget-accent)}
@@ -1745,9 +1746,15 @@ function renderPuntStrategy(grades,previewCat,expanded){
     var rows=PuntCore.rankings(PLAYERS,PDATA,taken,cat);
     var near=PuntCore.nearTermRisers(rows,PLAYERS,next,following);
     h+='<b>'+(next<0?'Draft complete':'Worth considering near pick #'+(next+1)+' if you punt '+cat)+'</b>';
-    if(near.length){h+='<ol>';near.slice(0,6).forEach(function(r){var p=PLAYERS[r.pi],market=consRank(p);h+='<li>'+esc(p.n)+' · ADP '+market.toFixed(1)+' · punt rank #'+r.baseRank+' → #'+r.puntRank+' (+'+r.gain+')</li>';});h+='</ol>';}
-    else h+='<p class="muted">'+(next<0?'No picks remain.':'No available punt risers look urgent for this pick. Use Punt value sort to explore later-round players.')+'</p>';
-    h+='<p class="muted">Shortlist uses consensus ADP before the midpoint to your following pick. Ranks compare available players with category data only; ADP is a guide, not a prediction.</p>';
+    if(near.length){
+      var groups=PuntCore.groupRisers(near,PLAYERS,2);
+      [["guards","Guards"],["frontcourt","Frontcourt (PF/C)"],["wings","Wings"]].forEach(function(g){
+        h+='<h4>'+g[1]+'</h4>';
+        if(groups[g[0]].length){h+='<ol>';groups[g[0]].forEach(function(r){var p=PLAYERS[r.pi],market=consRank(p);h+='<li>'+esc(p.n)+' · ADP '+market.toFixed(1)+' · punt rank #'+r.baseRank+' → #'+r.puntRank+' (+'+r.gain+')</li>';});h+='</ol>';}
+        else h+='<p class="muted">No near-term '+g[0]+' gain value. Do not force the position.</p>';
+      });
+    }else h+='<p class="muted">'+(next<0?'No picks remain.':'No available punt risers look urgent for this pick. Use Punt value sort to explore later-round players.')+'</p>';
+    h+='<p class="muted">These are position alternatives, not a ranking to draft in order. Each player appears once by eligible position. Shortlist uses consensus ADP before the midpoint to your following pick. Ranks compare available players with category data only.</p>';
   }
   return h+'</details></section>';
 }

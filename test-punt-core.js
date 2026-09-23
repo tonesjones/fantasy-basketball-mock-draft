@@ -36,6 +36,20 @@ const rising=latePlayers.map((_,pi)=>({pi,puntRank:pi+1,gain:3}));
 assert.deepEqual(Punt.nearTermRisers(rising,latePlayers,89,101).map(r=>r.pi),[6],
   'at pick 90, later-round ADP 106-133 players must not crowd out the near-term target');
 assert.deepEqual(Punt.nearTermRisers(rising,latePlayers,-1,-1),[]);
+const mixedPlayers=[
+  {n:'Guard 1',p:['PG']},{n:'Guard 2',p:['SG']},{n:'Guard 3',p:['PG']},
+  {n:'Big 1',p:['PF','C']},{n:'Big 2',p:['C']},{n:'Wing 1',p:['SF']},
+];
+const mixedRisers=mixedPlayers.map((_,pi)=>({pi,puntRank:pi+1,gain:pi+1}));
+const groups=Punt.groupRisers(mixedRisers,mixedPlayers,2);
+assert.deepEqual(groups.guards.map(r=>r.pi),[0,1]);
+assert.deepEqual(groups.frontcourt.map(r=>r.pi),[3,4],
+  'a guard-heavy ranking must still show qualifying frontcourt alternatives');
+assert.deepEqual(groups.wings.map(r=>r.pi),[5]);
+assert.deepEqual(Punt.groupRisers(mixedRisers.slice(0,3),mixedPlayers,2).frontcourt,[],
+  'do not invent a big when none qualifies');
+assert.deepEqual(Punt.groupRisers([{pi:0,puntRank:1,gain:2}],[{n:'Forward',p:['SF','PF']}],2).frontcourt.map(r=>r.pi),[0],
+  'a player eligible at PF should count as a frontcourt alternative');
 const teams = Array.from({length:5},(_,team)=>({team,rated:3,unrated:0,cats:[team===0?-9:9,0,0,0,0,0,0,0,0]}));
 const choice = Punt.suggest(teams,0,players,pdata,{},10);
 assert.equal(choice.cat,'PTS','a weak category should be suggested even with only one nearby riser');
