@@ -23,6 +23,19 @@ assert.equal(rows[0].baseRank,2);
 assert.equal(rows[0].puntRank,1);
 assert.equal(rows[0].gain,1);
 assert.equal(Punt.rankings(players,pdata,{1:1},'PTS').length,1);
+const latePlayers=[
+  {n:'DeMar DeRozan',adp:116.7,adpF:138.6},
+  {n:'Reed Sheppard',adp:114.7,adpF:118.3},
+  {n:'Ayo Dosunmu',adp:106.3,adpF:105.5},
+  {n:'Collin Gillespie',adp:124.8,adpF:140.6},
+  {n:'Cason Wallace',adp:114.6,adpF:114.9},
+  {n:'Ajay Mitchell',adp:110.2,adpF:114.2},
+  {n:'Near-term player',adp:93,adpF:95},
+];
+const rising=latePlayers.map((_,pi)=>({pi,puntRank:pi+1,gain:3}));
+assert.deepEqual(Punt.nearTermRisers(rising,latePlayers,89,101).map(r=>r.pi),[6],
+  'at pick 90, later-round ADP 106-133 players must not crowd out the near-term target');
+assert.deepEqual(Punt.nearTermRisers(rising,latePlayers,-1,-1),[]);
 const teams = Array.from({length:5},(_,team)=>({team,rated:3,unrated:0,cats:[team===0?-9:9,0,0,0,0,0,0,0,0]}));
 const choice = Punt.suggest(teams,0,players,pdata,{},10);
 assert.equal(choice.cat,'PTS','a weak category should be suggested even with only one nearby riser');

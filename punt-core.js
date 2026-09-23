@@ -22,7 +22,16 @@
     rows.forEach(function(row,i){row.puntRank=i+1;row.gain=row.baseRank-row.puntRank;});
     return rows;
   }
-  function suggest(teams,userTeam,players,pdata,taken,nextPick){
+  function nearTermRisers(rows,players,pick,followingPick){
+    if(pick<0)return [];
+    var cutoff=pick+1+(followingPick>pick?Math.floor((followingPick-pick)/2):0);
+    return rows.filter(function(r){
+      var p=players[r.pi],a=p.adp,f=p.adpF;
+      var market=a==null?f:(f==null?a:(a+f)/2);
+      return r.gain>0&&r.puntRank<=50&&market!=null&&market<=cutoff;
+    }).sort(function(a,b){return a.puntRank-b.puntRank;});
+  }
+  function suggest(teams,userTeam,players,pdata,taken,nextPick,followingPick){
     var me=teams.filter(function(t){return t.team===userTeam;})[0];
     if(!me||me.rated<2||me.rated+me.unrated<3||nextPick<0)return null;
     var peers=teams.filter(function(t){return t.team!==userTeam&&t.rated>=2;});
@@ -33,14 +42,11 @@
       var below=peers.filter(function(t){return t.cats[ci]/t.rated>mine;}).length;
       if(below<=peers.length/2)return;
       var rows=rankings(players,pdata,taken,cat);
-      var useful=rows.filter(function(r){
-        var p=players[r.pi],market=p.adp==null?p.r:p.adp;
-        return r.gain>0&&r.puntRank<=50&&Math.abs(market-(nextPick+1))<=30;
-      });
+      var useful=nearTermRisers(rows,players,nextPick,followingPick);
       choices.push({cat:cat,below:below,peers:peers.length,risers:useful.length,missing:me.unrated});
     });
     choices.sort(function(a,b){return b.below-a.below||b.risers-a.risers||CATS.indexOf(a.cat)-CATS.indexOf(b.cat);});
     return choices[0]||null;
   }
-  return {CATS:CATS,valid:valid,rankings:rankings,suggest:suggest};
+  return {CATS:CATS,valid:valid,rankings:rankings,nearTermRisers:nearTermRisers,suggest:suggest};
 });
