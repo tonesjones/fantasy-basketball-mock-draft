@@ -99,7 +99,7 @@ assert.ok(ei >= 0, "paint block end not found");
 var body = html.slice(si + startMarker.length, ei);
 body = body.replace("if(seq!==_pcEvalSeq)return;", "");
 body = body.replace('var still=el("pick-coach");', "");
-body = body.replace("var pl=PLAYERS[pi];", ""); // pl comes in as a param; page resolves it from closure pi
+body = body.replace("var pl=PLAYERS[pi];", "var pi=PLAYERS.indexOf(pl);"); // pl comes in as a param; page resolves it from closure pi
 vm.runInNewContext("function __paint(still,res,pl,payload){" + body + "\n    pcShow(still,\"pc-card\");\n}", sandbox);
 
 // ---- stubs for paint-block deps (kept minimal; why-clauses stay real) ----
@@ -120,6 +120,8 @@ function newNode(tag, cls, id, hidden) {
   var node = {
     tag: tag, classes: cls.slice(), id: id || null, children: [], text: "",
     hidden: !!hidden, className: (cls || []).join(" "),
+    dataset: {}, attributes: {},
+    setAttribute: function (name, value) { this.attributes[name] = String(value); },
     querySelector: function (sel) { return qsa(this, sel)[0] || null; },
     querySelectorAll: function (sel) { return qsa(this, sel); },
   };
@@ -217,6 +219,13 @@ t("wemby: agreeing Jev prose appended", function () {
 t("wemby: conf line hidden (deterministic)", function () { assert.ok(hid(sA, ".pc-suggest .pc-conf")); });
 t("wemby: target window hidden", function () { assert.ok(hid(sA, ".pc-target")); });
 t("wemby: source labeled Jev", function () { assert.strictEqual(txt(sA, ".pc-source"), "Jev"); });
+t("wemby: coach draft action targets the evaluated player", function () {
+  var draft = sA.querySelector(".pc-draft");
+  assert.strictEqual(draft.textContent, "Draft");
+  assert.strictEqual(draft.attributes["aria-label"], "Draft Victor Wembanyama from Pick coach");
+  assert.strictEqual(draft.dataset.pi, String(PLAYERS.indexOf(w.pl)));
+  assert.strictEqual(draft.disabled, false);
+});
 
 // ---------- B. Luka @1: PASS, contradicting Jev prose dropped ----------
 var l = evaluate("Luka Doncic", 1, 24);
