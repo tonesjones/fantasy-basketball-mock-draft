@@ -142,6 +142,7 @@ body{background:radial-gradient(ellipse at top right,#19352f66,transparent 55%),
 #md .puntcontrols{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0}
 #md .puntbox ol{margin:8px 0 0;padding-left:22px;font-size:12px}
 #md .puntbox li{margin:4px 0}
+#md .puntbox .punt-eval{margin-left:8px;color:var(--hatch-widget-accent);font-size:12px}
 #md .puntbox h4{font-size:12px;margin:10px 0 3px}
 #md .puntbox>p{margin:4px 0 8px;font-size:12px}
 #md .puntbox details{border-top:1px solid var(--hatch-widget-border);padding-top:7px}
@@ -192,7 +193,10 @@ body{background:radial-gradient(ellipse at top right,#19352f66,transparent 55%),
 /* pc-source-truth: model/fallback marker + soft-error copy (preview verify) */
 #md .pick-coach{padding:4px 0 8px}
 #md .pick-coach .pc-card{border:1px solid var(--hatch-widget-border);border-radius:12px;background:#0d1724;padding:14px 16px;margin-top:8px}
-#md .pick-coach .pc-head{margin-bottom:10px}
+#md .pick-coach .pc-basis{font-size:11px;margin:0 0 8px}
+#md .pick-coach .pc-draft{flex-shrink:0}
+#md .pick-coach .pc-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
+#md .pick-coach .pc-identity{min-width:0}
 #md .pick-coach .pc-name{font-size:16px;font-weight:700;letter-spacing:-.2px}
 #md .pick-coach .pc-meta{font-size:12px;margin-top:4px}
 #md .pick-coach .pc-source{font-size:11px;margin-top:4px;letter-spacing:.2px}
@@ -255,6 +259,7 @@ body{background:radial-gradient(ellipse at top right,#19352f66,transparent 55%),
   /* Viewport split lives only on .cols — list top / coach bottom */
   #md .cols.coach-dock{display:flex;flex-direction:column;gap:0;align-items:stretch;overflow:hidden;height:min(70dvh,calc(100dvh - 240px));min-height:260px;max-height:70dvh;position:relative;z-index:1}
   #md .cols.coach-dock .avail{flex:1.5;flex-basis:0;min-height:0;width:100%;overflow:hidden;display:flex;flex-direction:column;padding-bottom:8px;border-radius:16px 16px 0 0}
+  #md .cols.coach-dock .list-hint{display:none}
   #md .cols.coach-dock .avail>h3{flex-shrink:0;margin-top:0}
   #md .cols.coach-dock .avail>input,#md .cols.coach-dock .avail>.filters-disclose{flex-shrink:0}
   #md .cols.coach-dock .plist{flex:1;min-height:0;max-height:none;overflow-y:auto;-webkit-overflow-scrolling:touch}
@@ -945,20 +950,33 @@ function setFocusPi(pi,opts){
   }
   refreshPickCoach();
 }
+function evaluatePlayer(pi){
+  var cands=visibleCandidateIndexes(),index=cands.indexOf(pi),patch={focusPi:pi,view:"coach"};
+  if(index<0){patch.q=PLAYERS[pi].n;patch.f="All";index=0;}
+  patch.page=Math.floor(Math.max(0,index)/50);
+  if(state.view==="coach"&&state.page===patch.page&&index>=0&&patch.q==null)setFocusPi(pi);
+  else setState(patch);
+  revealFocusedRow(pi);
+}
+function revealFocusedRow(pi){
+  var list=el("mdplist"),row=list&&list.querySelector('.prow[data-pi="'+pi+'"]');
+  if(row){var r=row.getBoundingClientRect(),box=list.getBoundingClientRect(),meta=list.querySelector('.listmeta'),top=box.top+(meta?meta.getBoundingClientRect().height:0);if(r.height>=box.bottom-top||r.top<top)list.scrollTop+=r.top-top;else if(r.bottom>box.bottom)list.scrollTop+=r.bottom-box.bottom;}
+}
 function pickCoachShellHtml(){
   return '<section id="pick-coach" class="pick-coach" aria-label="Pick coach">'
     +'<p class="pc-empty muted" hidden>Select a player to evaluate.</p>'
     +'<p class="pc-wait muted" hidden>Available on your turn.</p>'
     +'<p class="pc-loading muted" hidden>Evaluating…</p>'
     +'<div class="pc-card" hidden>'
-    +'<div class="pc-head"><div class="pc-name"></div><div class="pc-meta muted"></div><div class="pc-source muted" hidden></div></div>'
-    +'<div class="pc-strengths" hidden></div>'
-    +'<div class="pc-playoff muted" hidden></div>'
-    +'<div class="pc-target muted" hidden></div>'
+    +'<div class="pc-head"><div class="pc-identity"><div class="pc-name"></div><div class="pc-meta muted"></div><div class="pc-source muted" hidden></div></div><button class="draftbtn pc-draft" type="button" disabled>Draft</button></div>'
+    +'<p class="pc-basis muted">Coach: all 9 categories</p>'
     +'<div class="pc-suggest"><div class="pc-choice"></div><p class="pc-why muted"></p><p class="pc-conf muted"></p><p class="pc-score-quiet muted" hidden></p><div class="pc-score" hidden></div></div>'
     +'<div class="pc-lean" hidden><div class="pc-choice pc-choice-lean"></div><p class="pc-lean-sub muted">Soft lean \u2014 mid confidence</p><p class="pc-why muted"></p><p class="pc-conf muted"></p></div>'
     +'<div class="pc-pass" hidden><div class="pc-choice pc-choice-pass">Pass</div><p class="pc-pass-sub muted">Below value at this pick</p><p class="pc-why muted"></p><p class="pc-conf muted" hidden></p></div>'
     +'<div class="pc-uncertain"><p class="pc-uncertain-title">Not sure enough to suggest</p><p class="pc-uncertain-sub muted">Low confidence \u2014 your call</p><p class="pc-uncertain-why muted" hidden></p><p class="pc-conf muted" hidden></p></div>'
+    +'<div class="pc-strengths" hidden></div>'
+    +'<div class="pc-playoff muted" hidden></div>'
+    +'<div class="pc-target muted" hidden></div>'
     +'</div></section>';
 }
 function pcShow(root, which){
@@ -1270,6 +1288,8 @@ function refreshPickCoach(){
     var nameEl=still.querySelector(".pc-name");
     var metaEl=still.querySelector(".pc-meta");
     if(nameEl)nameEl.textContent=pl.n;
+    var draftEl=still.querySelector(".pc-draft");
+    if(draftEl){draftEl.setAttribute("aria-label","Draft "+pl.n+" from Pick coach");draftEl.dataset.pi=String(pi);draftEl.disabled=false;}
     updateCoachDockPeek(pl.n);
     if(metaEl){
       var adpTxt=pl.adp!=null?String(pl.adp):"—";
@@ -1529,7 +1549,7 @@ function renderDraft(){
   h+=viewTabsHtml();
   var glance=state.view==="board"||state.view==="grades"||state.view==="coach";
   h+='<div class="cols'+(glance?' glance':'')+'"><div class="avail">';
-  h+='<h3>Available players</h3><input type="text" id="mdq" aria-label="Search available players" placeholder="Search players..." value="'+esc(state.q)+'">';
+  h+='<h3>Available players</h3><p class="muted list-hint">Select a player for advice. Draft adds them to your team.</p><input type="text" id="mdq" aria-label="Search available players" placeholder="Search players..." value="'+esc(state.q)+'">';
   var filterSummary=(state.f==="All"?"All positions":state.f)+" · "+sortLabel(state.sort||"cons");
   h+='<details class="filters-disclose" id="mdfilters"'+(state.filtersOpen?' open':'')+'>';
   h+='<summary>Filters &amp; sort <span class="muted">'+esc(filterSummary)+'</span></summary>';
@@ -1557,6 +1577,7 @@ function renderDraft(){
   el("mdnew").addEventListener("click",restartDraft);
   renderList();renderSide();
   syncCoachDock();
+  if(state.view==="coach")revealFocusedRow(state.focusPi);
   if(state.view==="coach")refreshPickCoach();
 }
 function renderList(){
@@ -1594,7 +1615,7 @@ function renderList(){
     if(pl2.c.length)sub+='<span>'+pl2.c.slice(0,4).join(" · ")+'</span>';
     if(state.puntCategory)sub+=pr?'<span title="Historical available-player ranks, nine-category vs excluding '+state.puntCategory+'">Punt '+state.puntCategory+': #'+pr.baseRank+' → #'+pr.puntRank+(pr.gain>0?' (+'+pr.gain+')':'')+'</span>':'<span>Punt value: unknown (no 2025-26 category data)</span>';
     var focusCls=(focusNow===i)?' pc-focus':'';
-    rows.push('<div class="prow'+focusCls+'" data-pi="'+i+'" role="button" tabindex="0" aria-pressed="'+(focusNow===i?'true':'false')+'"><div class="l1"><span class="prank">'+rlabel+'</span><span class="pname">'+esc(pl2.n)+' <span class="teamtag">'+esc(pl2.t)+'</span>'+injBadge(pl2)+'</span><button class="draftbtn" data-pi="'+i+'" aria-label="Draft '+esc(pl2.n)+'"'+(ut?'':' disabled')+'>Draft</button></div><div class="l2">'+sub+'</div></div>');
+    rows.push('<div class="prow'+focusCls+'" data-pi="'+i+'" role="button" tabindex="0" aria-label="Evaluate '+esc(pl2.n)+'" aria-pressed="'+(focusNow===i?'true':'false')+'"><div class="l1"><span class="prank">'+rlabel+'</span><span class="pname">'+esc(pl2.n)+' <span class="teamtag">'+esc(pl2.t)+'</span>'+injBadge(pl2)+'</span><button class="draftbtn" data-pi="'+i+'" aria-label="Draft '+esc(pl2.n)+'"'+(ut?'':' disabled')+'>Draft</button></div><div class="l2">'+sub+'</div></div>');
   }
   if(!cands.length)rows.push('<div class="prow"><div class="l1"><span class="muted">No players match.</span></div></div>');
   el("mdplist").innerHTML=rows.join("");
@@ -1605,10 +1626,10 @@ function renderList(){
     row.addEventListener("click",function(e){
       if(e.target.closest&&e.target.closest(".draftbtn"))return;
       if(e.target.closest&&e.target.closest(".injtag"))return;
-      setFocusPi(parseInt(row.getAttribute("data-pi"),10));
+      evaluatePlayer(parseInt(row.getAttribute("data-pi"),10));
     });
     row.addEventListener("keydown",function(e){
-      if(e.key==="Enter"||e.key===" "){e.preventDefault();setFocusPi(parseInt(row.getAttribute("data-pi"),10));}
+      if(e.key==="Enter"||e.key===" "){e.preventDefault();evaluatePlayer(parseInt(row.getAttribute("data-pi"),10));}
     });
   });
   wireInjToggles(el("mdplist"));
@@ -1625,7 +1646,8 @@ function myRoster(){
 function renderSide(){
   var s=el("mdside");if(!s)return;
   if(state.view==="coach"){
-    s.innerHTML='<div class="pc-dock-handle" id="pc-dock-handle"><span class="pc-dock-grip" aria-hidden="true"></span><span class="pc-dock-label">Pick coach</span></div><h3 class="pc-side-title">Pick coach</h3><p class="muted pc-advisory">Advisory preview — never auto-drafts.</p>'+renderPuntStrategy(draftGrades())+pickCoachShellHtml();
+    s.innerHTML='<div class="pc-dock-handle" id="pc-dock-handle"><span class="pc-dock-grip" aria-hidden="true"></span><span class="pc-dock-label">Pick coach</span></div><h3 class="pc-side-title">Pick coach</h3><p class="muted pc-advisory">Advice only. Drafting always takes a separate click.</p>'+pickCoachShellHtml()+renderPuntStrategy(draftGrades());
+    s.querySelector('.pc-draft').addEventListener('click',function(e){var pi=parseInt(e.currentTarget.dataset.pi,10);if(isUserTurn()&&pi===resolveFocusPi())userDraft(pi);});
     wirePuntControls(s);
     refreshPickCoach();
     return;
@@ -1747,15 +1769,16 @@ function renderPuntStrategy(grades,previewCat,expanded){
     var rows=PuntCore.rankings(PLAYERS,PDATA,taken,cat);
     var near=PuntCore.nearTermRisers(rows,PLAYERS,next,following);
     var later=PuntCore.laterRisers(rows,PLAYERS,next,following);
-    h+='<b>'+(next<0?'Draft complete':'Worth considering near pick #'+(next+1)+' if you punt '+cat)+'</b>';
+    h+='<p class="muted">Punt '+cat+': historical 8-category value. Coach advice above still uses all 9 categories.</p>';
+    h+='<b>'+(next<0?'Draft complete':'Consider at pick #'+(next+1)+' if you punt '+cat)+'</b>';
     if(!near.length&&next>=0)h+='<p class="muted">No available punt risers look urgent for this pick. The watches below are for later, not for this turn.</p>';
     if(near.length||later.length){
       var groups=PuntCore.groupRisers(near,PLAYERS,2);
       var laterGroups=PuntCore.groupRisers(later,PLAYERS,1);
       [["guards","Guards"],["frontcourt","Frontcourt (PF/C)"],["wings","Wings"]].forEach(function(g){
         h+='<h4>'+g[1]+'</h4>';
-        if(groups[g[0]].length){h+='<ol>';groups[g[0]].forEach(function(r){var p=PLAYERS[r.pi],market=consRank(p);h+='<li>'+esc(p.n)+' · ADP '+market.toFixed(1)+' · punt rank #'+r.baseRank+' → #'+r.puntRank+' (+'+r.gain+')</li>';});h+='</ol>';}
-        else if(laterGroups[g[0]].length){var watch=laterGroups[g[0]][0],wp=PLAYERS[watch.pi];h+='<p class="muted">None for this pick. Later watch, not a pick-now target: '+esc(wp.n)+' · ADP '+consRank(wp).toFixed(1)+' · punt rank #'+watch.baseRank+' → #'+watch.puntRank+' (+'+watch.gain+').</p>';}
+        if(groups[g[0]].length){h+='<ol>';groups[g[0]].forEach(function(r){var p=PLAYERS[r.pi],market=consRank(p);h+='<li>'+esc(p.n)+' · Consensus ADP '+market.toFixed(1)+' · punt rank #'+r.baseRank+' → #'+r.puntRank+' (+'+r.gain+') <button type="button" class="textlink punt-eval" data-punt-eval="'+r.pi+'">Evaluate</button></li>';});h+='</ol>';}
+        else if(laterGroups[g[0]].length){var watch=laterGroups[g[0]][0],wp=PLAYERS[watch.pi];h+='<p class="muted">None for this pick. Watch for later, not a pick-now target: '+esc(wp.n)+' · Consensus ADP '+consRank(wp).toFixed(1)+' · punt rank #'+watch.baseRank+' → #'+watch.puntRank+' (+'+watch.gain+'). <button type="button" class="textlink punt-eval" data-punt-eval="'+watch.pi+'">Evaluate</button></p>';}
         else h+='<p class="muted">No '+g[0]+' gain value near your next two picks. Do not force the position.</p>';
       });
     }else h+='<p class="muted">'+(next<0?'No picks remain.':'No qualifying position options near your next two picks. Use Punt value sort to explore the full board.')+'</p>';
@@ -1768,6 +1791,7 @@ function wirePuntControls(root){
   select.addEventListener('change',function(){var selected=select.value;root.querySelector('.puntbox').outerHTML=renderPuntStrategy(draftGrades(),selected,true);wirePuntControls(root);});
   commit.addEventListener('click',function(){if(PuntCore.valid(select.value))setState({puntCategory:select.value});});
   if(clear)clear.addEventListener('click',function(){setState({puntCategory:null,sort:state.sort==='punt'?'cons':state.sort});});
+  root.querySelectorAll('[data-punt-eval]').forEach(function(b){b.addEventListener('click',function(){evaluatePlayer(parseInt(b.getAttribute('data-punt-eval'),10));});});
 }
 function renderDone(){
   cancelPickCoach();
