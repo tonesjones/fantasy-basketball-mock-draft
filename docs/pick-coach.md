@@ -203,12 +203,48 @@ Board context feeds Jev (`notable_available` / `recently_taken` / optional
   "choice": "wait",
   "choiceConfidence": 0.32,
   "verdict": "uncertain",
-  "why": "…",
+  "choiceProbabilities": { "take": 0.3, "wait": 0.6, "reach": 0.1 },
+  "scoreProbabilities": { "0": 0.05, "1": 0.1, "2": 0.3, "3": 0.35, "4": 0.2 },
+  "why": "",
   "model": "jev-1.13.0",
   "scoreLabel": "Average",
   "error": "optional soft-fail string"
 }
 ```
+
+`why` is always `""` from the live API: Jev (System One) returns typed answers,
+probabilities and confidence only — no prose. All wording is built client-side.
+
+### Jev as a second opinion (deterministic path)
+
+When the engine (`pick-signals.js`) produced a verdict, the worker sends its
+**numbers** (`engine_numbers`: true value rank, consensus rank, value at pick,
+edges) plus precomputed `candidate.picks_past_adp` / `picks_past_rank`, but
+**not** the engine verdict or reason strings. Jev answers take/wait/reach
+independently. `PickCoach.jevOpinion()` compares it to the engine verdict (Jev
+`wait` vs engine `pass` counts as agreement). Jev never changes the verdict or
+the reasons text.
+
+### Clear call / Close call (`.pc-call`)
+
+`PickCoach.callStrength(res)` turns the engine margin and Jev's opinion into
+one cue under the verdict, answering "how firm is this?":
+
+- **Close call** — the engine's best alternative (`signals.alternative`) is
+  within `CLOSE_GAP` (3) ranks of value, **or** Jev is undecided (choice
+  confidence < `JEV_UNDECIDED_CONF`, 0.15) or disagrees. The verdict stands,
+  but roster fit / preference can break the tie.
+- **Clear call** — neither.
+
+The alternative is shown as a tappable link (loads him into the coach):
+`Compare: X ›` on a close call, `Better: X ›` on any pass / wait. `.pc-source`
+reads `Checked by Jev` (tooltip: `Jev agrees · 77%` / `Jev disagrees: take ·
+87%` / `Jev undecided` + model) or `Deterministic · Jev unavailable`.
+
+`.pc-basis` is hidden unless a punt is committed; then it warns that the
+verdict still counts all 9 categories.
+
+### Legacy path (no engine signals)
 
 `verdict` from normalize / UI is `"suggest" | "lean" | "uncertain"`. The Pages
 Function may still return only `suggest|uncertain`; the client reclassifies lean

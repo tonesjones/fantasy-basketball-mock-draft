@@ -2,13 +2,13 @@
 "use strict";
 var fs = require("fs"), path = require("path"), vm = require("vm"), assert = require("assert");
 
-function loadWorker() {
+function loadWorker(fetchImpl) {
   var src = fs.readFileSync(path.join(__dirname, "_worker.js"), "utf8")
     .replace(/export default\s*\{/, "module.exports = {");
   var mod = { exports: {} };
   var ctx = { module: mod, URL: URL, Request: Request, Response: Response, Map: Map,
     AbortController: AbortController, setTimeout: setTimeout, clearTimeout: clearTimeout,
-    fetch: function () { throw new Error("upstream fetch must not be called in tests"); } };
+    fetch: fetchImpl || function () { throw new Error("upstream fetch must not be called in tests"); } };
   vm.runInNewContext(src, ctx);
   return mod.exports;
 }
@@ -58,6 +58,43 @@ function req(opts) {
   r = await w.fetch(req({ ip: "6.6.6.6" }), bound);
   assert.strictEqual(r.status, 429, "binding verdict respected");
   assert.strictEqual(calls, 1);
+
+  // --- Jev contract: neutral questions, no fed-in verdict, no fake prose ---
+  var sent = null;
+  var mocked = loadWorker(async function (url, init) {
+    sent = JSON.parse(init.body);
+    return new Response(JSON.stringify({
+      model: "jev-1.13.0",
+      answers: {
+        score: { score: 2.6, confidence: 0.1, probabilities: { "0": 0.05, "1": 0.1, "2": 0.3, "3": 0.35, "4": 0.2 } },
+        choice: { choice: "wait", confidence: 0.4, probabilities: { take: 0.3, wait: 0.6, reach: 0.1 } },
+      },
+    }), { status: 200, headers: { "Content-Type": "application/json" } });
+  });
+  var jevBody = {
+    player: "Test Guy", pickNumber: 30, adp: 22, rank: 25, picksUntilNext: 17,
+    signals: { verdict: "pass", V: 40, consensus: 23.4, valueAtPick: -10,
+      reasons: ["our #40 vs market #23"], edges: [{ k: "role", v: -3, note: "bench" }], target: "40-48" },
+  };
+  r = await mocked.fetch(req({ ip: "7.7.7.7", body: JSON.stringify(jevBody) }), { TYPESAFE_API_KEY: "k" });
+  j = await r.json();
+  assert.ok(sent, "upstream called");
+  var sentText = JSON.stringify(sent);
+  assert.ok(!/HARD RULE|EXPLAIN|deterministic_signals/.test(sentText), "no forced-agreement / explain prompts");
+  assert.ok(!sent.state.engine_numbers.verdict && !sent.state.engine_numbers.reasons, "engine verdict/reasons not sent");
+  assert.strictEqual(sent.state.engine_numbers.true_value_rank, 40, "engine numbers sent");
+  assert.strictEqual(sent.state.candidate.picks_past_adp, 8, "picks_past_adp precomputed");
+  assert.strictEqual(sent.state.candidate.picks_past_rank, 5, "picks_past_rank precomputed");
+  assert.ok(/engine_numbers/.test(sent.questions.choice.instructions), "engine numbers referenced when present");
+  assert.strictEqual(j.why, "", "no synthesized numeric string posing as prose");
+  assert.strictEqual(j.choice, "wait");
+  assert.strictEqual(j.choiceProbabilities.wait, 0.6, "choice probabilities passed through");
+  assert.strictEqual(j.scoreProbabilities["3"], 0.35, "score probabilities passed through");
+
+  r = await mocked.fetch(req({ ip: "8.8.8.8", body: JSON.stringify({ player: "No Sig", pickNumber: 5 }) }), { TYPESAFE_API_KEY: "k" });
+  assert.ok(!sent.state.engine_numbers, "no engine numbers without signals");
+  assert.ok(!/engine_numbers/.test(sent.questions.score.instructions), "no dangling engine_numbers reference");
+  assert.strictEqual(sent.state.candidate.picks_past_adp, null, "no ADP -> null, not NaN");
 
   console.log("worker guard tests passed");
 })().catch(function (e) { console.error(e); process.exit(1); });

@@ -77,7 +77,7 @@ Advisory-only **Pick coach** side tab (your turn only). Code is on `main`.
 
 Confidence bands (TEMPORARY client gates): **suggest** ≥ 0.45; **lean** ≥ 0.25 (outline `Lean take|wait|reach`); below that “Not sure enough…”. SoftFail stays uncertain. QA on preview/local hosts: `?leanDemo=1`. Details: `docs/pick-coach.md`.
 
-- Source labels: **Jev** | **Stub** (preview soft-fail QA) | **Stub · offline** (`file://`) | **Unavailable**
+- Source labels: **Jev agrees / disagrees / undecided** (Jev's independent take vs the engine verdict) | **Jev** (legacy path) | **Stub** (preview soft-fail QA) | **Stub · offline** (`file://`) | **Unavailable**
 - Soft-fail / unavailable still shows mover/role why when applicable; preview soft-fails may use labeled stub (never as Jev)
 - Never auto-drafts; never runs for CPU picks
 
