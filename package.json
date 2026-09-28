@@ -4,7 +4,11 @@
   "description": "Static 9-cat fantasy basketball mock draft trainer",
   "scripts": {
     "test": "node run-tests.js",
-    "audit-data": "node audit-data.js"
+    "audit-data": "node audit-data.js",
+    "format": "npx --yes prettier@3 --write draft-core.js punt-core.js playoff-core.js data-health.js audit-data.js _worker.js run-tests.js",
+    "format:check": "npx --yes prettier@3 --check draft-core.js punt-core.js playoff-core.js data-health.js audit-data.js _worker.js run-tests.js"
   },
-  "engines": { "node": ">=18" }
+  "engines": {
+    "node": ">=18"
+  }
 }

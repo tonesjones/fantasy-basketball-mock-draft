@@ -11,5 +11,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - run: npm run format:check
       - run: npm test
       - run: node audit-data.js

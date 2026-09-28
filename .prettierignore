@@ -1,0 +1,9 @@
+# Generated/bundled data and the single-file UI are left as-is.
+player-data.js
+playoff-data.js
+movers-outlook.js
+vacated-usage.js
+index.html
+scripts/
+docs/
+*.md
