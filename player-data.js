@@ -2,12 +2,14 @@
 //
 // adp : 2026-27 Yahoo overall ADP (decimal), from Hashtag Basketball's fantasy
 //       ADP table (https://hashtagbasketball.com/fantasy-basketball-adp,
-//       updated 14 September 2026), using the table's YAHOO ADP column.
+//       updated 17 September 2026), using the table's YAHOO ADP column.
 //       null where Yahoo published no ADP for the player.
 // adpF: 2026-27 Fantrax overall ADP (decimal), same table and date, using the
 //       FANTRAX ADP column. null where Fantrax published no ADP.
-//       Consensus rank = mean of the available platform ADPs (Yahoo, Fantrax);
-//       falls back to the built-in rank when neither platform published.
+//       Consensus rank = DraftCore.marketRank (draft-core.js): the mean of
+//       the two, with each platform's saturated tail down-weighted (Yahoo
+//       100-125, Fantrax 150+); players neither lists sort last.
+//       Refresh: node scripts/refresh-adp.js <table.csv> [--apply].
 // last: final 2025-26 nine-category per-game fantasy rank.
 //       Primary source: Basketball Monster player pages (basketballmonster.com,
 //       "NBA 25-26" season row Rank), observed 2026-09-11.
