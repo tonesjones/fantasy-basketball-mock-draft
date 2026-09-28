@@ -36,8 +36,8 @@ for (const name of keys) {
 const g = ctx.PDATA['Giannis Antetokounmpo'];
 assert.ok(g.vacatedGainers.some((x) => /Turner/.test(x.name)));
 
-const html = fs.readFileSync('index.html', 'utf8');
-assert.ok(html.includes('vacated-usage.js'));
+const html = fs.readFileSync('app.js', 'utf8');
+assert.ok(fs.readFileSync('index.html', 'utf8').includes('vacated-usage.js'));
 assert.ok(html.includes('vacatedWhyClause'));
 assert.ok(html.includes('appendVacatedWhy'));
 assert.ok(/Vacates usage/.test(html));

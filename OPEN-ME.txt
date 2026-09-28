@@ -1,1 +1,1 @@
-Extract the entire Draft Lab site folder, then double-click index.html. Keep all JS files next to it. No server, installation, or internet connection is needed to load the app. Browser saving may vary for local file URLs.
+Extract the entire Draft Lab site folder, then double-click index.html. Keep all JS and CSS files next to it. No server, installation, or internet connection is needed to load the app. Browser saving may vary for local file URLs.

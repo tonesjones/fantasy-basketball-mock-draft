@@ -48,7 +48,11 @@ The layout collapses to a single column with compact two-line player rows; filte
 
 ## Files
 
-- `index.html` — UI, player pool, and draft flow.
+- `index.html` — page shell: loads `styles.css` and the scripts below in order.
+- `styles.css` — all styling.
+- `app.js` — UI: state, rendering, event wiring, save/restore.
+- `player-pool.js` — the player pool (rank order, positions, teams, category tags) merged with `player-data.js`.
+- `draft-analysis.js` — pure consensus rank, category replacement levels, draft grades and matchups (used by the app and tests).
 - `draft-core.js` — dependency-free validation, roster matching, seeded random source, and CPU selection. It is also usable from Node for tests.
 - `player-data.js` — ADP, prior-season ranks, per-game category values (`cv`), and minutes per game (`mpg`) merged into the player pool on load.
 - `movers-outlook.js` — phase-1 overlay: real movers + heuristic `roleDelta` (preview only; 71 movers; no proj fields); see `docs/movers-outlook.md`.
@@ -60,7 +64,7 @@ The layout collapses to a single column with compact two-line player rows; filte
 - `audit-data.js` — reproducible audit of the actual bundled player, category, and ADP data.
 - `test-*.js` — automated checks; run them all with `npm test`. `test-worker.js` covers the `/api/pick-quality` abuse guard.
 - `run-tests.js`, `package.json` — test runner and `npm test` / `npm run format` scripts; `.github/workflows/test.yml` runs them in CI.
-- `scripts/` — `build-widget.py` (rebuilds the standalone in-chat widget), `build-playoff-data.py` and `import-playoff-schedule.py` (playoff schedule refresh).
+- `scripts/` — `load-data.js` (loads the bundled data in Node for tests/audit), `build-widget.py` (rebuilds the standalone in-chat widget), `build-playoff-data.py` and `import-playoff-schedule.py` (playoff schedule refresh).
 - `CHANGELOG.md` — dated change log. `OPEN-ME.txt` — desktop handoff notes.
 
 ## Pick coach

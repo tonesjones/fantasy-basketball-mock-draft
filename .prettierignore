@@ -4,6 +4,9 @@ playoff-data.js
 movers-outlook.js
 vacated-usage.js
 index.html
+app.js
+player-pool.js
+styles.css
 scripts/
 docs/
 *.md

@@ -14,7 +14,7 @@ var vm = require("vm");
 
 var DIR = __dirname;
 // Normalize checkout line endings so marker extraction works on Windows too.
-var html = fs.readFileSync(DIR + "/index.html", "utf8").replace(/\r\n/g, "\n");
+var html = fs.readFileSync(DIR + "/app.js", "utf8").replace(/\r\n/g, "\n"); // UI code (was inline in index.html)
 
 var sandbox = { console: console };
 sandbox.globalThis = sandbox;
@@ -25,22 +25,7 @@ function loadInto(file) {
 ["player-data.js", "movers-outlook.js", "vacated-usage.js",
  "playoff-data.js", "playoff-core.js", "pick-signals.js", "pick-coach.js"].forEach(loadInto);
 
-// PLAYERS literal + enrichment, exactly as index.html builds it.
-var lit = html.match(/var PLAYERS=\[[\s\S]*?\n\];/);
-assert.ok(lit, "PLAYERS literal not found in index.html");
-vm.runInNewContext(lit[0], sandbox);
-vm.runInNewContext(
-  'PLAYERS.forEach(function(p,i){p.r=i+1;p.n=p[0];p.p=p[1];p.t=p[2]||"\\u2014";});' +
-  'PLAYERS.forEach(function(p){var d=(typeof PDATA!=="undefined"&&PDATA[p.n])||null;' +
-  'p.adp=d&&d.adp!=null?d.adp:null;p.adpF=d&&d.adpF!=null?d.adpF:null;' +
-  'p.last=d&&d.last!=null?d.last:null;p.lastTotal=d&&d.lastTotal!=null?d.lastTotal:null;' +
-  'p.mpg=d&&d.mpg!=null?d.mpg:null;p.inj=(typeof INJ!=="undefined"&&INJ[p.n])||null;' +
-  'p.teamPrev=d&&d.teamPrev||null;p.teamCurr=(d&&d.teamCurr)||p.t;p.mover=!!(d&&d.mover);' +
-  'p.roleDelta=(d&&d.roleDelta)||"unknown";p.roleNote=(d&&d.roleNote)||null;' +
-  'p.projMpg=d&&d.projMpg!=null?d.projMpg:null;p.projRank=d&&d.projRank!=null?d.projRank:null;' +
-  'p.vacatedGainers=(d&&d.vacatedGainers)||null;});',
-  sandbox
-);
+loadInto("player-pool.js"); // real PLAYERS literal + PDATA enrichment
 
 var S = sandbox.PickSignals;
 var PickCoach = sandbox.PickCoach;
@@ -71,7 +56,7 @@ function evaluate(name, pick, nextPick) {
   return { pl: pl, sig: sig };
 }
 
-// ---- extract real functions from index.html ----
+// ---- extract real functions from app.js ----
 function extractFn(name) {
   var idx = html.indexOf("function " + name + "(");
   assert.ok(idx >= 0, "fn not found: " + name);

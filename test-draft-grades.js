@@ -1,55 +1,19 @@
 const assert=require('node:assert/strict');
-const fs=require('node:fs');
-const path=require('node:path');
-const vm=require('node:vm');
 const core=require('./draft-core');
-const HERE=__dirname;
-const read=(f)=>fs.readFileSync(path.join(HERE,f),'utf8');
 
-// Load PDATA
-const pdataCtx={};vm.createContext(pdataCtx);
-vm.runInContext(read('player-data.js'),pdataCtx);
-const PDATA=pdataCtx.PDATA;
-
-// Extract PLAYERS from index.html (same pattern as test-draft-simulation.js)
-const html=read('index.html');
-const playersMatch=html.match(/var PLAYERS=([\s\S]*?\r?\n\];)\r?\nPLAYERS\.forEach/);
-assert(playersMatch,'PLAYERS array extraction failed: expected "var PLAYERS=[...];" followed by "PLAYERS.forEach" in index.html');
-const snippet=playersMatch[1];
-const ctx={};vm.createContext(ctx);
-vm.runInContext('var PLAYERS='+snippet+'; this.PLAYERS=PLAYERS;',ctx);
-const PLAYERS=ctx.PLAYERS.map((p,i)=>({n:p[0],p:p[1],t:p[2],r:i+1,
-  adp:(PDATA[p[0]]||{}).adp ?? null}));
-
-// Extract draftGrades and catMatchup functions from index.html
-const fnMatch=html.match(/function draftGrades\(\)\{[\s\S]*?\n\}/);
-assert(fnMatch,'draftGrades function must exist in index.html');
-const cmMatch=html.match(/function catMatchup\(userCats,oppCats\)\{[\s\S]*?\n\}/);
-assert(cmMatch,'catMatchup function must exist in index.html');
-// draftGrades uses scarcityBase().repl as the replacement fill; extract it + consRank
-const sbMatch=html.match(/var _scarcBase=null;\r?\n[ \t]*function scarcityBase\(\)\{[\s\S]*?\r?\n[ \t]*\}/);
-assert(sbMatch,'scarcityBase function must exist in index.html');
-const crMatch=html.match(/function consRank\(p\)\{[^\n]*\}/);
-assert(crMatch,'consRank function must exist in index.html');
-
-// Set up context with mocked globals
-const TEAMS=12;
-const state={log:[],rounds:13};
-const userTeam=()=>5;
-const teamName=(t)=>t===5?'You':'CPU '+(t+1);
-const testCtx={CORE:core,PLAYERS,PDATA,TEAMS,state,userTeam,teamName,esc:(s)=>String(s)};
-vm.createContext(testCtx);
-vm.runInContext(crMatch[0]+'; this.consRank=consRank;',testCtx);
-vm.runInContext(sbMatch[0]+'; this.scarcityBase=scarcityBase;',testCtx);
-vm.runInContext(fnMatch[0]+'; this.draftGrades=draftGrades;',testCtx);
-vm.runInContext(cmMatch[0]+'; this.catMatchup=catMatchup;',testCtx);
+const DA=require('./draft-analysis');
+const data=require('./scripts/load-data').loadData();
+const PDATA=data.PDATA;
+// Yahoo-ADP-only pool view, as the original extraction built it.
+const PLAYERS=data.PLAYERS.map((p,i)=>({n:p.n,p:p.p,t:p.t,r:i+1,adp:p.adp}));
+const catMatchup=DA.catMatchup;
+const scarcityBase=()=>DA.scarcityBase(PLAYERS,PDATA);
+const state={log:[]};
 
 // Test catMatchup logic
-vm.runInContext(`
-this.mu1=catMatchup([2,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0]);
-this.mu2=catMatchup([0,0,0,0,0,0,0,0,0],[2,0,0,0,0,0,0,0,0]);
-this.mu3=catMatchup([0.3,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0]);
-`,testCtx);
+const testCtx={mu1:catMatchup([2,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0]),
+  mu2:catMatchup([0,0,0,0,0,0,0,0,0],[2,0,0,0,0,0,0,0,0]),
+  mu3:catMatchup([0.3,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0])};
 assert.equal(testCtx.mu1[0],'win','user ahead by >0.5 should be win');
 assert.equal(testCtx.mu2[0],'loss','user behind by >0.5 should be loss');
 assert.equal(testCtx.mu3[0],'even','diff within 0.5 should be even');
@@ -64,8 +28,7 @@ while(log.length<156){
 state.log=log;
 
 // Run draftGrades
-vm.runInContext('this.result=draftGrades();',testCtx);
-const g=testCtx.result;
+const g=DA.draftGrades({players:PLAYERS,pdata:PDATA,log:state.log,teams:12,core,repl:scarcityBase().repl});
 
 // Assertions (note: g comes from a VM context, so avoid deepStrictEqual across realms)
 assert.equal(g.length,12,'must grade all 12 teams');
@@ -80,7 +43,7 @@ g.forEach(x=>assert(validGrades.includes(x.grade),'grade must be valid: '+x.grad
 g.forEach(x=>assert.equal(x.rated+x.unrated,13,'rated+unrated must cover the full roster'));
 // Replacement fill: a team with unrated players must score higher than the
 // same roster with those spots contributing zero
-const repl=Array.from(testCtx.scarcityBase().repl);
+const repl=Array.from(scarcityBase().repl);
 assert(repl.length===9&&repl.every(v=>typeof v==='number'&&isFinite(v)),'replacement vector must be 9 finite numbers');
 const replTotal=repl.reduce((a,b)=>a+b,0);
 g.forEach(x=>{

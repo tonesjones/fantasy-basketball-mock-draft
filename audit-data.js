@@ -1,22 +1,8 @@
 "use strict";
-const fs = require("node:fs");
-const path = require("node:path");
-const vm = require("node:vm");
 const health = require("./data-health");
 function loadBundledData() {
-  const html = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
-  const players = html.match(/var PLAYERS=([\s\S]*?\r?\n\];)\r?\nPLAYERS\.forEach/);
-  const tags = html.match(/var CATS=([\s\S]*?\r?\n};)\r?\nPLAYERS\.forEach/);
-  if (!players || !tags) throw new Error("Cannot locate player pool/category tags in index.html");
-  const context = {};
-  vm.createContext(context);
-  vm.runInContext("var PLAYERS=" + players[1] + "\nvar CATS=" + tags[1], context);
-  vm.runInContext(fs.readFileSync(path.join(__dirname, "player-data.js"), "utf8"), context);
-  const moversPath = path.join(__dirname, "movers-outlook.js");
-  if (fs.existsSync(moversPath)) vm.runInContext(fs.readFileSync(moversPath, "utf8"), context);
-  const vacatedPath = path.join(__dirname, "vacated-usage.js");
-  if (fs.existsSync(vacatedPath)) vm.runInContext(fs.readFileSync(vacatedPath, "utf8"), context);
-  return { players: context.PLAYERS, data: context.PDATA, tags: context.CATS };
+  const ctx = require("./scripts/load-data").loadData();
+  return { players: ctx.PLAYERS, data: ctx.PDATA, tags: ctx.CATS };
 }
 if (require.main === module) {
   const { players, data, tags } = loadBundledData();
