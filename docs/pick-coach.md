@@ -219,3 +219,18 @@ from confidences via `PickCoach.classifyVerdict`.
 ```bash
 node test-pick-coach.js
 ```
+
+## Abuse protection (rate limiting)
+
+CORS only stops browsers; without a guard anyone could `curl` `/api/pick-quality` and spend TypeSafe credits. `_worker.js` now checks, in order:
+
+1. **Origin** must be a Draft Lab host (prod, preview, branch aliases, localhost). Browsers always send `Origin` on POST, so the app is unaffected; bare scripts get `403`.
+2. **Body size** capped at 16 KB (`413`). Real payloads are ~2–4 KB.
+3. **Per-IP rate limit**: 20 calls per minute (`429`). A 429 soft-fails in the client, so the deterministic coach verdict still shows.
+
+The built-in limiter is in-memory per worker isolate, so it's best effort. Cloudflare may run several isolates. For a hard global limit, do either of these:
+
+- **Dashboard (recommended, no code):** Cloudflare → Security → WAF → Rate limiting rules. Match `URI Path equals /api/pick-quality`, 20 requests / 1 minute per IP, action Block. Requires the site on a custom domain/zone; `*.pages.dev` hosts can't have zone WAF rules.
+- **Rate Limiting binding:** add a binding named `PICK_RATE_LIMITER` (limit 20, period 60). The worker uses it automatically when present and falls back to the in-memory limiter otherwise.
+
+Covered by `test-worker.js`. Origin checking raises the bar but can be spoofed by a determined script; the rate limit is the real cost cap.

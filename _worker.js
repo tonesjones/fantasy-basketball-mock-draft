@@ -26,6 +26,11 @@ var CONF_GATE = 0.7;
 var MODEL = "jev-1.13.0";
 var TYPESAFE_URL = "https://api.typesafe.ai/v1/systemone";
 var FETCH_TIMEOUT_MS = 25000;
+/** Largest request body accepted (real payloads are ~2-4 KB). */
+var MAX_BODY_BYTES = 16 * 1024;
+/** Per-client budget: calls allowed per window before HTTP 429. */
+var RATE_LIMIT = 20;
+var RATE_WINDOW_MS = 60 * 1000;
 
 var SCORE_WORDS = ["Poor", "Below avg", "Average", "Good", "Excellent"];
 
@@ -78,7 +83,7 @@ function corsHeaders(request) {
     "Access-Control-Allow-Origin": allow,
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
-    "Vary": "Origin",
+    Vary: "Origin",
     "Content-Type": "application/json; charset=utf-8",
   };
 }
@@ -109,6 +114,53 @@ function uncertain(error, request, extra) {
   return jsonResponse(out, 200, request);
 }
 
+/*
+ * Abuse guard. CORS only stops browsers, so anyone could otherwise curl this
+ * endpoint and spend TypeSafe credits. Layers, cheapest first:
+ *   1. Origin must be one of ours (browsers always send it on POST).
+ *   2. Body size cap.
+ *   3. Per-IP rate limit. Uses a Cloudflare Rate Limiting binding named
+ *      PICK_RATE_LIMITER when configured (global, reliable); otherwise a
+ *      best-effort in-memory window per worker isolate.
+ * A dashboard WAF rate-limit rule on /api/pick-quality is still the strongest
+ * option - see docs/pick-coach.md.
+ */
+var rateBuckets = new Map();
+
+function clientKey(request) {
+  return (
+    request.headers.get("CF-Connecting-IP") || request.headers.get("X-Forwarded-For") || "unknown"
+  );
+}
+
+function memoryRateOk(key, now) {
+  var b = rateBuckets.get(key);
+  if (!b || now - b.start >= RATE_WINDOW_MS) {
+    b = { start: now, count: 0 };
+    rateBuckets.set(key, b);
+  }
+  b.count += 1;
+  if (rateBuckets.size > 5000) {
+    rateBuckets.forEach(function (v, k) {
+      if (now - v.start >= RATE_WINDOW_MS) rateBuckets.delete(k);
+    });
+  }
+  return b.count <= RATE_LIMIT;
+}
+
+async function rateOk(request, env) {
+  var key = clientKey(request);
+  if (env && env.PICK_RATE_LIMITER && typeof env.PICK_RATE_LIMITER.limit === "function") {
+    try {
+      var r = await env.PICK_RATE_LIMITER.limit({ key: key });
+      return !!(r && r.success);
+    } catch (e) {
+      /* fall through to the in-memory limiter */
+    }
+  }
+  return memoryRateOk(key, Date.now());
+}
+
 function scoreLabel(score) {
   var i = Math.max(0, Math.min(4, Math.round(Number(score) || 0)));
   return SCORE_WORDS[i];
@@ -118,11 +170,7 @@ function normalizeRosterNeeds(rosterNeeds, drafted) {
   var rn = rosterNeeds && typeof rosterNeeds === "object" ? rosterNeeds : {};
   var filled = rn.filledSlots || rn.filled_slots || [];
   var open = rn.openSlots || rn.open_slots || [];
-  var already =
-    rn.alreadyDraftedByUser ||
-    rn.already_drafted_by_user ||
-    drafted ||
-    [];
+  var already = rn.alreadyDraftedByUser || rn.already_drafted_by_user || drafted || [];
   var priority = rn.priorityNeeds || rn.priority_needs || [];
   return {
     filled_slots: filled,
@@ -134,35 +182,39 @@ function normalizeRosterNeeds(rosterNeeds, drafted) {
 
 function normalizeBoardList(list, kind) {
   if (!Array.isArray(list)) return [];
-  return list.slice(0, 8).map(function (item) {
-    if (!item || typeof item !== "object") return null;
-    if (kind === "recent") {
+  return list
+    .slice(0, 8)
+    .map(function (item) {
+      if (!item || typeof item !== "object") return null;
+      if (kind === "recent") {
+        return {
+          name: item.name || item.player || "",
+          pick: item.pick != null ? Number(item.pick) : null,
+        };
+      }
       return {
         name: item.name || item.player || "",
-        pick: item.pick != null ? Number(item.pick) : null,
+        adp: item.adp != null && item.adp !== "" ? Number(item.adp) : null,
+        positions: Array.isArray(item.positions) ? item.positions : [],
+        rank: item.rank != null && item.rank !== "" ? Number(item.rank) : null,
       };
-    }
-    return {
-      name: item.name || item.player || "",
-      adp: item.adp != null && item.adp !== "" ? Number(item.adp) : null,
-      positions: Array.isArray(item.positions) ? item.positions : [],
-      rank: item.rank != null && item.rank !== "" ? Number(item.rank) : null,
-    };
-  }).filter(function (x) {
-    return x && x.name;
-  });
+    })
+    .filter(function (x) {
+      return x && x.name;
+    });
 }
 
 function buildState(body) {
   var pickNumber = Number(body.pickNumber) || 1;
   var teams = 12;
   var picksUntil =
-    body.picksUntilNext != null && body.picksUntilNext !== ""
-      ? Number(body.picksUntilNext)
-      : null;
+    body.picksUntilNext != null && body.picksUntilNext !== "" ? Number(body.picksUntilNext) : null;
   var rn = normalizeRosterNeeds(body.rosterNeeds, body.drafted);
   var scarcity =
-    body.scarcityRem || body.scarcity_rem || body.boardContext && body.boardContext.scarcity_rem || null;
+    body.scarcityRem ||
+    body.scarcity_rem ||
+    (body.boardContext && body.boardContext.scarcity_rem) ||
+    null;
   var board = {
     notable_available: normalizeBoardList(
       body.notableAvailable ||
@@ -211,12 +263,15 @@ function buildState(body) {
     out.deterministic_signals = {
       verdict: body.signals.verdict || null,
       true_value_rank: body.signals.V != null ? Number(body.signals.V) : null,
-      market_consensus_rank: body.signals.consensus != null ? Math.round(Number(body.signals.consensus)) : null,
+      market_consensus_rank:
+        body.signals.consensus != null ? Math.round(Number(body.signals.consensus)) : null,
       value_at_pick: body.signals.valueAtPick != null ? Number(body.signals.valueAtPick) : null,
       reasons: Array.isArray(body.signals.reasons) ? body.signals.reasons : [],
-      edges: Array.isArray(body.signals.edges) ? body.signals.edges.map(function (e) {
-        return { signal: e.k, impact: e.v, note: e.note };
-      }) : [],
+      edges: Array.isArray(body.signals.edges)
+        ? body.signals.edges.map(function (e) {
+            return { signal: e.k, impact: e.v, note: e.note };
+          })
+        : [],
       target_window: body.signals.target || null,
     };
   }
@@ -242,7 +297,9 @@ function buildQuestions(hasSignals) {
       "vs market #70, +42 value'). Keep confidence calibrated to how clear " +
       "the numbers are, not to the player's star power.";
     scoreInstructions += grounding;
-    choiceInstructions += grounding + " HARD RULE — stay consistent with " +
+    choiceInstructions +=
+      grounding +
+      " HARD RULE — stay consistent with " +
       "the deterministic verdict: verdict take → choose take; wait → wait; " +
       "reach → reach; pass → choose wait (do not take now). Never recommend " +
       "a different action than the deterministic verdict, and never " +
@@ -278,16 +335,11 @@ function buildQuestions(hasSignals) {
 
 function buildWhy(scoreAns, choiceAns, score, choice) {
   var label = scoreLabel(score);
-  var parts = [
-    "Jev pick quality " + Number(score).toFixed(2) + " ≈ " + label,
-    "choice " + choice,
-  ];
+  var parts = ["Jev pick quality " + Number(score).toFixed(2) + " ≈ " + label, "choice " + choice];
   var sc = Number(scoreAns && scoreAns.confidence);
   var cc = Number(choiceAns && choiceAns.confidence);
   if (isFinite(sc) && isFinite(cc)) {
-    parts.push(
-      "conf score " + sc.toFixed(2) + " / choice " + cc.toFixed(2)
-    );
+    parts.push("conf score " + sc.toFixed(2) + " / choice " + cc.toFixed(2));
   }
   return parts.join("; ") + ".";
 }
@@ -301,20 +353,41 @@ async function handlePickQuality(request, env) {
     return jsonResponse({ error: "POST only", verdict: "uncertain" }, 405, request);
   }
 
-  var apiKey = env.TYPESAFE_API_KEY;
-  if (!apiKey) {
-    return uncertain("TYPESAFE_API_KEY not configured", request);
+  if (!isAllowedOrigin(request.headers.get("Origin") || "")) {
+    return jsonResponse({ error: "Origin not allowed", verdict: "uncertain" }, 403, request);
+  }
+
+  var declared = Number(request.headers.get("Content-Length"));
+  if (isFinite(declared) && declared > MAX_BODY_BYTES) {
+    return jsonResponse({ error: "Request too large", verdict: "uncertain" }, 413, request);
+  }
+
+  if (!(await rateOk(request, env))) {
+    return jsonResponse(
+      { error: "Too many coach requests; try again in a minute", verdict: "uncertain" },
+      429,
+      request
+    );
   }
 
   var body;
   try {
-    body = await request.json();
+    var raw = await request.text();
+    if (raw.length > MAX_BODY_BYTES) {
+      return jsonResponse({ error: "Request too large", verdict: "uncertain" }, 413, request);
+    }
+    body = JSON.parse(raw);
   } catch (e) {
     return uncertain("Invalid JSON body", request);
   }
 
   if (!body || typeof body !== "object" || !body.player) {
     return uncertain("Missing player in request body", request);
+  }
+
+  var apiKey = env.TYPESAFE_API_KEY;
+  if (!apiKey) {
+    return uncertain("TYPESAFE_API_KEY not configured", request);
   }
 
   var state = buildState(body);
@@ -360,10 +433,7 @@ async function handlePickQuality(request, env) {
       errText = "";
     }
     var snippet = (errText || "").slice(0, 200).replace(/\s+/g, " ");
-    return uncertain(
-      "TypeSafe HTTP " + upstream.status + (snippet ? ": " + snippet : ""),
-      request
-    );
+    return uncertain("TypeSafe HTTP " + upstream.status + (snippet ? ": " + snippet : ""), request);
   }
 
   var data;
@@ -394,22 +464,25 @@ async function handlePickQuality(request, env) {
     return uncertain("Unexpected choice: " + String(choice), request);
   }
 
-  var verdict =
-    scoreConf >= CONF_GATE && choiceConf >= CONF_GATE ? "suggest" : "uncertain";
+  var verdict = scoreConf >= CONF_GATE && choiceConf >= CONF_GATE ? "suggest" : "uncertain";
 
   var modelUsed = (data && data.model) || MODEL;
   var label = scoreLabel(score);
 
-  return jsonResponse({
-    score: score,
-    scoreConfidence: scoreConf,
-    choice: choice,
-    choiceConfidence: choiceConf,
-    why: buildWhy(scoreAns, choiceAns, score, choice),
-    verdict: verdict,
-    model: modelUsed,
-    scoreLabel: label,
-  }, 200, request);
+  return jsonResponse(
+    {
+      score: score,
+      scoreConfidence: scoreConf,
+      choice: choice,
+      choiceConfidence: choiceConf,
+      why: buildWhy(scoreAns, choiceAns, score, choice),
+      verdict: verdict,
+      model: modelUsed,
+      scoreLabel: label,
+    },
+    200,
+    request
+  );
 }
 
 export default {
