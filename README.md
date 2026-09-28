@@ -59,7 +59,7 @@ The layout collapses to a single column with compact two-line player rows; filte
 - `audit-data.js` — reproducible audit of the actual bundled player, category, and ADP data.
 - `test-draft-core.js`, `test-data-health.js`, `test-playoff-core.js`, `test-draft-grades.js`, `test-draft-simulation.js` — automated checks (run with `node <file>`).
 - `scripts/` — `build-widget.py` (rebuilds the standalone in-chat widget), `build-playoff-data.py` and `import-playoff-schedule.py` (playoff schedule refresh).
-- `CHANGELOG.md` — dated change log. `OPEN-ME.txt` / `desktop-changes.patch` — desktop handoff notes.
+- `CHANGELOG.md` — dated change log. `OPEN-ME.txt` — desktop handoff notes.
 
 ## Pick coach
 
@@ -80,14 +80,13 @@ Primary: **[https://tony-draft-lab.pages.dev](https://tony-draft-lab.pages.dev)*
 
 Local: open `index.html` directly, or serve this folder with any static server. Draft state is stored only in the browser that created it. A `DATA_VERSION` bump (most recently `2026-09-20`, when built-in ranks were reconciled to Yahoo ADP for buried outliers — see `CHANGELOG.md`) invalidates older saved drafts.
 
-Run the logic checks with:
+Run every logic check with:
 
 ```bash
-node test-draft-core.js
-node test-data-health.js
-node test-playoff-core.js
-node test-draft-grades.js
+npm test        # or: node run-tests.js
 ```
+
+GitHub Actions runs the same suite (plus `audit-data.js`) on every push to `main` and every pull request.
 
 ## Data notes
 

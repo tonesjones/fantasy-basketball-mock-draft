@@ -1,0 +1,10 @@
+{
+  "name": "fantasy-basketball-mock-draft",
+  "private": true,
+  "description": "Static 9-cat fantasy basketball mock draft trainer",
+  "scripts": {
+    "test": "node run-tests.js",
+    "audit-data": "node audit-data.js"
+  },
+  "engines": { "node": ">=18" }
+}
