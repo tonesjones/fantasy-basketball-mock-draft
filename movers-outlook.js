@@ -8,7 +8,8 @@
 // projMpg / projRank: omitted (no Hashtag projection snapshot in repo).
 // See docs/movers-outlook.md and scripts/data-provenance/2026-09-20-movers-outlook/.
 //
-// Generated 2026-09-20. Regenerate: node scripts/data-provenance/2026-09-20-movers-outlook/generate.js
+// Generated 2026-09-20; Hield/Dillingham teamCurr hand-updated 2026-09-28
+// (Sep 26 CHI-CHA trade). Regenerate: node scripts/data-provenance/2026-09-20-movers-outlook/generate.js
 var MOVES={
 "AJ Dybantsa":{teamPrev:"WAS",teamCurr:"WAS",mover:false,roleDelta:"unknown"},
 "AJ Green":{teamCurr:"MIL",mover:false,roleDelta:"up",roleNote:"ADP ahead of last rank"},
@@ -47,7 +48,7 @@ var MOVES={
 "Brice Sensabaugh":{teamPrev:"UTA",teamCurr:"UTA",mover:false,roleDelta:"down",roleNote:"ADP behind last rank"},
 "Brook Lopez":{teamPrev:"LAC",teamCurr:"LAC",mover:false,roleDelta:"up",roleNote:"ADP ahead of last rank"},
 "Bub Carrington":{teamPrev:"WAS",teamCurr:"WAS",mover:false,roleDelta:"unknown"},
-"Buddy Hield":{teamPrev:"GS",teamCurr:"ATL",mover:true,roleDelta:"unknown",roleNote:"GS→ATL · team change; role unclear"},
+"Buddy Hield":{teamPrev:"GS",teamCurr:"CHI",mover:true,roleDelta:"unknown",roleNote:"GS→CHI · team change; role unclear"},
 "CJ McCollum":{teamPrev:"WAS",teamCurr:"ATL",mover:true,roleDelta:"flat",roleNote:"WAS→ATL · team change; ADP near last rank"},
 "Cade Cunningham":{teamPrev:"DET",teamCurr:"DET",mover:false,roleDelta:"flat"},
 "Caleb Wilson":{teamCurr:"CHI",mover:false,roleDelta:"unknown"},
@@ -233,7 +234,7 @@ var MOVES={
 "Quentin Grimes":{teamPrev:"PHI",teamCurr:"LAL",mover:true,roleDelta:"up",roleNote:"PHI→LAL · ADP ahead of last rank"},
 "RJ Barrett":{teamPrev:"TOR",teamCurr:"TOR",mover:false,roleDelta:"up",roleNote:"ADP ahead of last rank"},
 "Reed Sheppard":{teamPrev:"HOU",teamCurr:"HOU",mover:false,roleDelta:"down",roleNote:"ADP behind last rank"},
-"Rob Dillingham":{teamPrev:"MIN",teamCurr:"CHI",mover:true,roleDelta:"unknown",roleNote:"MIN→CHI · team change; role unclear"},
+"Rob Dillingham":{teamPrev:"MIN",teamCurr:"CHA",mover:true,roleDelta:"unknown",roleNote:"MIN→CHA · team change; role unclear"},
 "Ron Holland":{teamPrev:"DET",teamCurr:"DET",mover:false,roleDelta:"up",roleNote:"ADP ahead of last rank"},
 "Royce O'Neale":{teamPrev:"PHO",teamCurr:"CHA",mover:true,roleDelta:"down",roleNote:"PHO→CHA · ADP behind last rank"},
 "Rudy Gobert":{teamPrev:"MIN",teamCurr:"MIN",mover:false,roleDelta:"flat"},
