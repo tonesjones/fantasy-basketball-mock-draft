@@ -872,7 +872,8 @@ function undoUserPick(){
   setState({log:checkpoint.log,rngState:checkpoint.rngState,userTurns:history,phase:"draft",page:0});
 }
 function restartDraft(){clearSaved();state=freshState();save();render();}
-function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+/* Escape ANY data interpolated into innerHTML strings (names, notes, anything from an API). Text from the network goes in via textContent. */
+function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");}
 function posBadges(p){return p.map(function(x){return x;}).join("/");}
 function pickLabel(idx){var r=Math.floor(idx/TEAMS)+1;var w=idx%TEAMS+1;return "R"+r+" P"+w;}
 
