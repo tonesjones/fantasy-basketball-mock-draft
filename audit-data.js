@@ -6,7 +6,16 @@ function loadBundledData() {
 }
 if (require.main === module) {
   const { players, data, tags } = loadBundledData();
-  const report = health.audit(players, data, tags);
+  // Rank gaps are measured against each player's position in consensus order
+  // (consensus ADP values bunch up late, so position vs value overstates gaps).
+  const marketRank = require("./draft-core").marketRank;
+  const consensusPos = new Map(
+    players
+      .slice()
+      .sort((a, b) => marketRank(a) - marketRank(b))
+      .map((p, i) => [p.n, i + 1])
+  );
+  const report = health.audit(players, data, tags, (p) => consensusPos.get(p.n));
   if (process.argv.includes("--json")) console.log(JSON.stringify(report, null, 2));
   else {
     console.log(
@@ -41,10 +50,14 @@ if (require.main === module) {
           (report[key].length ? "\n  " + report[key].join(", ") : "")
       );
     });
-    console.log("Largest built-in rank / ADP gaps (40+ picks; review signals, not proven errors):");
+    console.log(
+      "Largest built-in rank / consensus-order gaps (40+ spots; review signals, not proven errors):"
+    );
     report.rankDivergence
       .slice(0, 15)
-      .forEach((p) => console.log(`  ${p.name}: rank ${p.rank}, ADP ${p.adp}, gap ${p.gap}`));
+      .forEach((p) =>
+        console.log(`  ${p.name}: rank ${p.rank}, consensus #${p.adp}, gap ${p.gap}`)
+      );
   }
   process.exitCode =
     report.errors.length || report.missingData.length || report.orphanData.length ? 1 : 0;
