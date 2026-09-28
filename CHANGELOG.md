@@ -1,5 +1,18 @@
 # Changelog
 
+## Pick coach: Clear / Close call cue (2026-09-28)
+- One cue under the verdict replaces the separate Jev line: **Close call**
+  when the best alternative is within 3 ranks of value or Jev is split /
+  disagrees; otherwise **Clear call**. Jev detail moves to the source tooltip.
+- The engine's best alternative (`PickSignals.evaluate().alternative`) is a
+  tappable `Compare: X ›` (close call) / `Better: X ›` (pass / wait).
+- "Coach: all 9 categories" is gone unless you've committed a punt; then it
+  becomes a warning that the verdict ignores the punt.
+
+## Mobile coach dock (2026-09-28)
+- Coach collapses to a compact strip on phones (More / Less), the list panel
+  scrolls as one, unfocused rows show one stats line. Desktop unchanged.
+
 ## Jev as an independent second opinion (2026-09-28)
 - **Jev returns no text.** TypeSafe System One answers with typed values,
   probabilities and confidence only. The worker used to synthesize a `why`

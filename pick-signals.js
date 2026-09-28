@@ -1,8 +1,8 @@
 /* pick-signals.js — deterministic pick-value signal engine (browser).
  *
  * Computes draft pick value from market data + curated signals, WITHOUT
- * asking Jev to guess. Jev (via /api/pick-quality) receives these signals
- * and explains them — it does not choose verdicts via confidence thresholds.
+ * asking Jev to guess. Jev (via /api/pick-quality) gets the engine's numbers
+ * and answers independently as a second opinion — it never sets the verdict.
  *
  * Core model:
  *   V(x) = true-value rank estimate (lower = better). Anchored on market
@@ -187,7 +187,7 @@
       return {
         verdict: "pass", V: 999, consensus: consensus(candidate), valueAtPick: -999,
         reasons: ["INJ — " + (candidate.inj.injury || "injured") + ", out for the season"],
-        edges: [], target: null
+        edges: [], target: null, alternative: null
       };
     }
 
@@ -276,7 +276,11 @@
 
     return {
       verdict: verdict, V: V, consensus: tv.consensus,
-      valueAtPick: valueAtPick, reasons: reasons, edges: tv.edges, target: target
+      valueAtPick: valueAtPick, reasons: reasons, edges: tv.edges, target: target,
+      // Best other available player by true value (what the reasons name as
+      // "better:" / "take X now"). Lets the UI link to him and judge how
+      // close the call is without parsing reason strings.
+      alternative: best ? { n: best.n, V: bestV, valueAtPick: bestValueAtPick } : null
     };
   }
 

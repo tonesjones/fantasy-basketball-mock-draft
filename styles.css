@@ -238,6 +238,14 @@ body{background:radial-gradient(ellipse at top right,#19352f66,transparent 55%),
 #md .prow .draftbtn{cursor:pointer}
 
 
+/* Clear / Close call cue + punt warning */
+#md .pick-coach .pc-call{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;margin:10px 0 8px;font-size:12px;line-height:1.45}
+#md .pick-coach .pc-call[hidden],#md .pick-coach .pc-call [hidden],#md .pick-coach .pc-basis[hidden]{display:none}
+#md .pick-coach .pc-call-label{font-weight:700;letter-spacing:.2px;color:var(--dl-text,var(--hatch-widget-text))}
+#md .pick-coach .pc-call[data-level="close"] .pc-call-label{color:var(--dl-amber,#ffd479)}
+#md .pick-coach .pc-call .pc-alt{font-size:12px;color:var(--dl-text,var(--hatch-widget-text))}
+#md .pick-coach .pc-basis{font-size:11.5px;margin:0 0 8px;padding:6px 8px;border-radius:6px;color:var(--dl-amber,#ffd479);background:var(--dl-amber-bg,#493a1c33);border:1px solid var(--dl-amber-line,#80652a)}
+
 /* Mobile Pick coach dock (≤900px): list + coach split; no page yo-yo on focus */
 /* coach-dock-mobile: distinctive marker for preview deploy verify */
 /* coach-dock-fix: overflow lock only on .cols — Room tabs stay clickable above dock */

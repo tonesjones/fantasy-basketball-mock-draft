@@ -608,7 +608,8 @@ chain = chain.then(function () {
   assert.ok(resPass.why.indexOf("-38 below value") >= 0, "pass reason preserved");
   assert.ok(resPass.why.indexOf("Legacy prose") < 0, "API why text never enters deterministic reasons");
   assert.strictEqual(resPass.jev.agrees, false, "Jev take vs engine pass is a disagreement");
-  assert.strictEqual(PC5.sourceLabel(resPass), "Jev disagrees: take · 93%", "disagreement surfaced, not hidden");
+  assert.strictEqual(PC5.jevOpinionLabel(resPass.jev), "Jev disagrees: take · 93%", "disagreement detail kept");
+  assert.strictEqual(PC5.callStrength(resPass).level, "close", "disagreement surfaces as a close call");
 
   // Deterministic pass + Jev "wait" is schema-level agreement: Jev's choice
   // schema has no "pass", and "wait" also means "don't take now".
@@ -618,14 +619,14 @@ chain = chain.then(function () {
   );
   assert.strictEqual(resPassWait.verdict, "pass", "pass verdict unchanged");
   assert.strictEqual(resPassWait.jev.agrees, true, "Jev wait agrees with engine pass");
-  assert.strictEqual(PC5.sourceLabel(resPassWait), "Jev agrees", "no probabilities -> no percent");
+  assert.strictEqual(PC5.jevOpinionLabel(resPassWait.jev), "Jev agrees", "no probabilities -> no percent");
   var resPassTake = PC5.normalizeApiResult(
     { score: 4, scoreConfidence: 0.9, choice: "take", choiceConfidence: 0.05, why: "", model: "jev-1.13.0" },
     { player: "Nikola Vucevic", pickNumber: 98, signals: sigPass }
   );
   assert.strictEqual(resPassTake.verdict, "pass", "verdict not swayed by Jev take");
   assert.strictEqual(resPassTake.jev.undecided, true, "low choice confidence -> undecided");
-  assert.strictEqual(PC5.sourceLabel(resPassTake), "Jev undecided", "undecided never shown as agree/disagree");
+  assert.strictEqual(PC5.jevOpinionLabel(resPassTake.jev), "Jev undecided", "undecided never shown as agree/disagree");
 
   // Deterministic verdict survives a Jev/API error — only the explanation degrades.
   var resErrTake = PC5.normalizeApiResult(
@@ -637,7 +638,35 @@ chain = chain.then(function () {
   assert.ok(resErrTake.error && /TYPESAFE_API_KEY/.test(resErrTake.error), "error preserved for labeling");
   assert.strictEqual(PC5.sourceLabel(resErrTake), "Deterministic · Jev unavailable");
   assert.strictEqual(resErrTake.jev, null, "no Jev opinion when Jev errored");
-  assert.strictEqual(PC5.sourceLabel(resTake), "Jev agrees · 60%", "healthy deterministic result shows Jev's opinion");
+  assert.strictEqual(PC5.sourceLabel(resTake), "Checked by Jev", "healthy deterministic result: Jev checked");
+  assert.strictEqual(PC5.jevOpinionLabel(resTake.jev), "Jev agrees · 60%", "detail label still available (tooltip)");
+
+  // --- Clear / Close call cue ---
+  function det(verdict, V, alt, jev) {
+    return { deterministic: true, signals: { verdict: verdict, V: V, alternative: alt }, jev: jev || null };
+  }
+  var clear = PC5.callStrength(det("take", 10, { n: "Alt", V: 20 }, { choice: "take", agrees: true, undecided: false }));
+  assert.strictEqual(clear.level, "clear", "big gap + Jev agrees -> clear");
+  assert.strictEqual(clear.alternative, null, "no alternative on a clear take");
+  assert.ok(/agrees/.test(clear.reason));
+  var gapClose = PC5.callStrength(det("take", 10, { n: "Alt", V: 12 }, null));
+  assert.strictEqual(gapClose.level, "close", "alternative within 3 spots -> close");
+  assert.strictEqual(gapClose.alternative.n, "Alt", "close call links the alternative");
+  assert.ok(/within 2 spots/.test(gapClose.reason), gapClose.reason);
+  var split = PC5.callStrength(det("take", 10, { n: "Alt", V: 30 }, { choice: "wait", agrees: false, undecided: true }));
+  assert.strictEqual(split.level, "close", "Jev undecided -> close");
+  assert.ok(/split/.test(split.reason));
+  assert.strictEqual(split.alternative, null, "far alternative not pushed on a take");
+  var dis = PC5.callStrength(det("take", 10, { n: "Alt", V: 30 }, { choice: "reach", agrees: false, undecided: false }));
+  assert.strictEqual(dis.level, "close");
+  assert.ok(/says reach/.test(dis.reason));
+  var passAlt = PC5.callStrength(det("pass", 40, { n: "Better Guy", V: 12 }, null));
+  assert.strictEqual(passAlt.level, "clear", "clear pass");
+  assert.strictEqual(passAlt.alternative.n, "Better Guy", "pass always links the better player");
+  var noJev = PC5.callStrength(det("take", 10, null, null));
+  assert.deepStrictEqual([noJev.level, noJev.reason], ["clear", ""], "no alternative, no Jev -> plain clear");
+  assert.strictEqual(PC5.callStrength(det("pass", 999, null, null)).alternative, null, "INJ pass: no alternative");
+  assert.strictEqual(PC5.callStrength({ deterministic: false }), null, "non-deterministic -> null");
 
   // wait and reach are native verdicts too (not lean/suggest).
   var resWait = PC5.normalizeApiResult(

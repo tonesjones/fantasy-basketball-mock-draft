@@ -70,7 +70,7 @@ function extractFn(name) {
 }
 ["pickCoachShellHtml", "pcShow", "moverWhyClause", "vacatedWhyClause",
  "appendMoverWhy", "appendVacatedWhy", "softAdpClause", "buildPickCoachWhy",
- "fillPickCoachBoard"].forEach(function (n) {
+ "fillPickCoachBoard", "renderCoachCall"].forEach(function (n) {
   vm.runInNewContext(extractFn(n), sandbox);
 });
 
@@ -98,6 +98,7 @@ vm.runInNewContext([
   "function playoffBadge(){return \"\";}",
   "function isUserTurn(){return true;}",
   "function updateCoachDockPeek(){}",
+  "var state={puntCategory:null};",
 ].join("\n"), sandbox);
 
 // ---- minimal DOM shim ----
@@ -203,11 +204,16 @@ t("wemby: why is the engine's reasons only", function () {
 });
 t("wemby: conf line hidden (deterministic)", function () { assert.ok(hid(sA, ".pc-suggest .pc-conf")); });
 t("wemby: target window hidden", function () { assert.ok(hid(sA, ".pc-target")); });
-t("wemby: source shows Jev agreeing", function () { assert.strictEqual(txt(sA, ".pc-source"), "Jev agrees · 77%"); });
-t("wemby: source tooltip keeps pinned model", function () {
+t("wemby: source says checked by Jev", function () { assert.strictEqual(txt(sA, ".pc-source"), "Checked by Jev"); });
+t("wemby: source tooltip keeps Jev detail + pinned model", function () {
   var n = sA.querySelector(".pc-source");
-  assert.strictEqual(n.title, "jev-1.13.0");
+  assert.strictEqual(n.title, "Jev agrees · 77% · jev-1.13.0");
 });
+t("wemby: call cue visible with a level", function () {
+  assert.ok(vis(sA, ".pc-call"));
+  assert.ok(/^(Clear|Close) call$/.test(txt(sA, ".pc-call-label")), txt(sA, ".pc-call-label"));
+});
+t("no punt: categories line hidden", function () { assert.ok(hid(sA, ".pc-basis")); });
 t("wemby: coach draft action targets the evaluated player", function () {
   var draft = sA.querySelector(".pc-draft");
   assert.strictEqual(draft.textContent, "Draft");
@@ -235,8 +241,16 @@ t("luka: chip reads Pass", function () {
 t("luka: API why text never rendered", function () {
   assert.ok(!/take Luka/.test(txt(sB, ".pc-pass .pc-why")), "why=" + txt(sB, ".pc-pass .pc-why"));
 });
-t("luka: Jev disagreement shown in source", function () {
-  assert.strictEqual(txt(sB, ".pc-source"), "Jev disagrees: take · 87%");
+t("luka: Jev disagreement makes it a close call", function () {
+  assert.strictEqual(txt(sB, ".pc-call-label"), "Close call");
+  assert.ok(/second opinion says take/.test(txt(sB, ".pc-call-why")), txt(sB, ".pc-call-why"));
+});
+t("luka pass: better alternative is a tappable player", function () {
+  var alt = sB.querySelector(".pc-alt");
+  assert.ok(!alt.hidden, "alt shown");
+  assert.ok(/^Better: .+ ›$/.test(alt.text), alt.text);
+  assert.ok(PLAYERS[+alt.dataset.pi], "alt resolves to a player index");
+  assert.strictEqual(alt.text, "Better: " + l.sig.alternative.n + " ›");
 });
 t("luka: deterministic numeric reasons present", function () {
   assert.ok(/below value/.test(txt(sB, ".pc-pass .pc-why")));
@@ -259,8 +273,15 @@ var resC = api(
   "Luka Doncic", 1, l.sig);
 var sC = paintCard(resC, l.pl, 1);
 t("luka pass + jev-wait: pass band still visible", function () { assert.ok(vis(sC, ".pc-pass")); });
-t("luka pass + jev-wait: source shows agreement", function () {
-  assert.strictEqual(txt(sC, ".pc-source"), "Jev agrees · 80%");
+t("luka pass + jev-wait: source says checked by Jev", function () {
+  assert.strictEqual(txt(sC, ".pc-source"), "Checked by Jev");
+});
+sandbox.state.puntCategory = "FT%";
+var sPunt = paintCard(resC, l.pl, 1);
+sandbox.state.puntCategory = null;
+t("punting: categories line becomes a punt warning", function () {
+  assert.ok(vis(sPunt, ".pc-basis"));
+  assert.ok(/punting FT%/.test(txt(sPunt, ".pc-basis")), txt(sPunt, ".pc-basis"));
 });
 
 // ---------- D. Real WAIT case at pick 40 ----------
