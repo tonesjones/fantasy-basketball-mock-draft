@@ -23,7 +23,7 @@ function loadInto(file) {
   vm.runInNewContext(fs.readFileSync(DIR + "/" + file, "utf8"), sandbox);
 }
 ["player-data.js", "movers-outlook.js", "vacated-usage.js",
- "playoff-data.js", "playoff-core.js", "pick-signals.js", "pick-coach.js"].forEach(loadInto);
+ "playoff-data.js", "playoff-core.js", "draft-core.js", "pick-signals.js", "pick-coach.js"].forEach(loadInto);
 
 loadInto("player-pool.js"); // real PLAYERS literal + PDATA enrichment
 
