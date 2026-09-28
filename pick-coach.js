@@ -512,13 +512,54 @@
     return op.agrees ? "Jev agrees" + pct : "Jev disagrees: " + op.choice + pct;
   }
 
+  /** Engine value gap (ranks) at or under which two players are a toss-up. */
+  var CLOSE_GAP = 3;
+
+  /**
+   * One cue for how firm the deterministic verdict is, for the user's actual
+   * decision (draft him now or not):
+   *   close — the best alternative is within CLOSE_GAP ranks of value, or
+   *           Jev (independent second opinion) is split or disagrees. The
+   *           verdict stands, but roster fit / taste can break the tie.
+   *   clear — neither of the above.
+   * alternative: the engine's best other player, returned when it's a real
+   * option (close call) or the engine's own recommendation (pass / wait).
+   * Returns null for non-deterministic results.
+   */
+  function callStrength(res) {
+    if (!res || !res.deterministic || !res.signals || !res.signals.verdict) return null;
+    var sig = res.signals;
+    var v = String(sig.verdict).toLowerCase();
+    var alt = sig.alternative && sig.alternative.n ? sig.alternative : null;
+    if (Number(sig.V) >= 999) return { level: "clear", reason: "", alternative: null, verdict: v };
+    var gap = alt ? Math.abs(Number(alt.V) - Number(sig.V)) : Infinity;
+    var engineClose = isFinite(gap) && gap <= CLOSE_GAP;
+    var jev = res.jev || null;
+    var reasons = [];
+    if (engineClose) {
+      reasons.push(
+        gap < 1
+          ? alt.n + " is equal value"
+          : alt.n + " is within " + Math.round(gap) + " spot" + (Math.round(gap) === 1 ? "" : "s") + " of value"
+      );
+    }
+    if (jev && jev.undecided) reasons.push("second opinion is split");
+    else if (jev && !jev.agrees) reasons.push("second opinion says " + jev.choice);
+    var level = reasons.length ? "close" : "clear";
+    if (level === "clear" && jev && jev.agrees) reasons.push("second opinion agrees");
+    var showAlt = alt && (engineClose || v === "pass" || v === "wait");
+    return { level: level, reason: reasons.join(" \u00b7 "), alternative: showAlt ? alt : null, verdict: v };
+  }
+
   /** Short UI label: "Jev" / "Stub" / "Stub · offline" / "Unavailable". */
   function sourceLabel(res) {
     if (!res) return "";
     // Deterministic verdicts stand even when Jev errored — label honestly.
     if (res.deterministic && res.error) return "Deterministic \u00b7 Jev unavailable";
     if (res.error) return "Unavailable";
-    if (res.deterministic && res.jev) return jevOpinionLabel(res.jev);
+    // Jev's agree/disagree now feeds the Clear/Close call cue; the source
+    // line just says it was checked (detail stays in the tooltip).
+    if (res.deterministic && res.jev) return "Checked by Jev";
     var m = String(res.model || "");
     if (m === "stub" || res.fallback) {
       // Preview soft-fail / fixture stub is QA-only — never look like Jev.
@@ -816,6 +857,8 @@
     sourceLabel: sourceLabel,
     jevOpinion: jevOpinion,
     jevOpinionLabel: jevOpinionLabel,
+    callStrength: callStrength,
+    CLOSE_GAP: CLOSE_GAP,
     JEV_UNDECIDED_CONF: JEV_UNDECIDED_CONF,
     normalizeApiResult: normalizeApiResult,
     uncertainResult: uncertainResult,

@@ -222,14 +222,27 @@ When the engine (`pick-signals.js`) produced a verdict, the worker sends its
 edges) plus precomputed `candidate.picks_past_adp` / `picks_past_rank`, but
 **not** the engine verdict or reason strings. Jev answers take/wait/reach
 independently. `PickCoach.jevOpinion()` compares it to the engine verdict (Jev
-`wait` vs engine `pass` counts as agreement) and the `.pc-source` label shows:
+`wait` vs engine `pass` counts as agreement). Jev never changes the verdict or
+the reasons text.
 
-- `Jev agrees · 77%` — same call; % is Jev's probability for its choice
-- `Jev disagrees: take · 87%` — different call; the engine verdict still stands
-- `Jev undecided` — choice confidence < `JEV_UNDECIDED_CONF` (0.15)
-- `Deterministic · Jev unavailable` — Jev errored / timed out / rate limited
+### Clear call / Close call (`.pc-call`)
 
-Jev never changes the verdict or the reasons text.
+`PickCoach.callStrength(res)` turns the engine margin and Jev's opinion into
+one cue under the verdict, answering "how firm is this?":
+
+- **Close call** — the engine's best alternative (`signals.alternative`) is
+  within `CLOSE_GAP` (3) ranks of value, **or** Jev is undecided (choice
+  confidence < `JEV_UNDECIDED_CONF`, 0.15) or disagrees. The verdict stands,
+  but roster fit / preference can break the tie.
+- **Clear call** — neither.
+
+The alternative is shown as a tappable link (loads him into the coach):
+`Compare: X ›` on a close call, `Better: X ›` on any pass / wait. `.pc-source`
+reads `Checked by Jev` (tooltip: `Jev agrees · 77%` / `Jev disagrees: take ·
+87%` / `Jev undecided` + model) or `Deterministic · Jev unavailable`.
+
+`.pc-basis` is hidden unless a punt is committed; then it warns that the
+verdict still counts all 9 categories.
 
 ### Legacy path (no engine signals)
 

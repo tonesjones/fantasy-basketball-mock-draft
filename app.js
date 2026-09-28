@@ -263,6 +263,14 @@ function evaluatePlayer(pi){
 }
 function revealFocusedRow(pi){
   var list=el("mdplist"),row=list&&list.querySelector('.prow[data-pi="'+pi+'"]');
+  /* Mobile coach dock: the whole .avail panel scrolls, not the list itself. */
+  var pane=list&&list.closest(".cols.coach-dock .avail");
+  if(row&&pane&&list.scrollHeight<=list.clientHeight+1){
+    var pr=pane.getBoundingClientRect(),rr=row.getBoundingClientRect();
+    if(rr.top<pr.top)pane.scrollTop+=rr.top-pr.top;
+    else if(rr.bottom>pr.bottom)pane.scrollTop+=rr.bottom-pr.bottom;
+    return;
+  }
   if(row){var r=row.getBoundingClientRect(),box=list.getBoundingClientRect(),meta=list.querySelector('.listmeta'),top=box.top+(meta?meta.getBoundingClientRect().height:0);if(r.height>=box.bottom-top||r.top<top)list.scrollTop+=r.top-top;else if(r.bottom>box.bottom)list.scrollTop+=r.bottom-box.bottom;}
 }
 function pickCoachShellHtml(){
@@ -272,11 +280,12 @@ function pickCoachShellHtml(){
     +'<p class="pc-loading muted" hidden>Evaluating…</p>'
     +'<div class="pc-card" hidden>'
     +'<div class="pc-head"><div class="pc-identity"><div class="pc-name"></div><div class="pc-meta muted"></div><div class="pc-source muted" hidden></div></div><button class="draftbtn pc-draft" type="button" disabled>Draft</button></div>'
-    +'<p class="pc-basis muted">Coach: all 9 categories</p>'
+    +'<p class="pc-basis" hidden></p>'
     +'<div class="pc-suggest"><div class="pc-choice"></div><p class="pc-why muted"></p><p class="pc-conf muted"></p><p class="pc-score-quiet muted" hidden></p><div class="pc-score" hidden></div></div>'
     +'<div class="pc-lean" hidden><div class="pc-choice pc-choice-lean"></div><p class="pc-lean-sub muted">Soft lean \u2014 mid confidence</p><p class="pc-why muted"></p><p class="pc-conf muted"></p></div>'
     +'<div class="pc-pass" hidden><div class="pc-choice pc-choice-pass">Pass</div><p class="pc-pass-sub muted">Below value at this pick</p><p class="pc-why muted"></p><p class="pc-conf muted" hidden></p></div>'
     +'<div class="pc-uncertain"><p class="pc-uncertain-title">Not sure enough to suggest</p><p class="pc-uncertain-sub muted">Low confidence \u2014 your call</p><p class="pc-uncertain-why muted" hidden></p><p class="pc-conf muted" hidden></p></div>'
+    +'<div class="pc-call" hidden><span class="pc-call-label"></span><span class="pc-call-why muted"></span><button type="button" class="pc-alt textlink" hidden></button></div>'
     +'<div class="pc-strengths" hidden></div>'
     +'<div class="pc-playoff muted" hidden></div>'
     +'<div class="pc-target muted" hidden></div>'
@@ -571,6 +580,37 @@ function fillPickCoachBoard(still, pl, payload){
     poEl.hidden=!badge;
   }
 }
+/* Clear/Close call cue + punt warning. Close call = the verdict is marginal
+ * (alternative within a few spots of value, or Jev split/disagrees), so the
+ * user's own roster preference can break the tie; the alternative is one tap. */
+function renderCoachCall(still,res){
+  var basis=still.querySelector(".pc-basis");
+  if(basis){
+    var punt=(typeof state!=="undefined"&&state&&state.puntCategory)||"";
+    basis.textContent=punt?("Heads up: you're punting "+punt+", but this verdict still counts all 9 categories"):"";
+    basis.hidden=!punt;
+  }
+  var box=still.querySelector(".pc-call");
+  if(!box)return;
+  var call=window.PickCoach&&window.PickCoach.callStrength?window.PickCoach.callStrength(res):null;
+  if(!call){box.hidden=true;return;}
+  box.hidden=false;
+  box.setAttribute("data-level",call.level);
+  var lab=box.querySelector(".pc-call-label"),why=box.querySelector(".pc-call-why"),alt=box.querySelector(".pc-alt");
+  if(lab)lab.textContent=call.level==="close"?"Close call":"Clear call";
+  if(why){why.textContent=call.reason;why.hidden=!call.reason;}
+  if(alt){
+    var api=-1;
+    if(call.alternative)for(var k=0;k<PLAYERS.length;k++)if(PLAYERS[k].n===call.alternative.n){api=k;break;}
+    if(api>=0){
+      var better=call.verdict==="pass"||call.verdict==="wait";
+      alt.textContent=(better?"Better: ":"Compare: ")+call.alternative.n+" \u203a";
+      alt.setAttribute("aria-label","Evaluate "+call.alternative.n+" in Pick coach");
+      alt.dataset.pi=String(api);
+      alt.hidden=false;
+    }else{alt.textContent="";alt.hidden=true;}
+  }
+}
 function refreshPickCoach(){
   var root=el("pick-coach");
   if(!root||typeof window.PickCoach==="undefined")return;
@@ -602,6 +642,7 @@ function refreshPickCoach(){
       metaEl.textContent=meta;
     }
     fillPickCoachBoard(still, pl, payload);
+    renderCoachCall(still,res);
     var srcEl=still.querySelector(".pc-source");
     if(srcEl){
       var src=(window.PickCoach.sourceLabel&&window.PickCoach.sourceLabel(res))||"";
@@ -613,7 +654,7 @@ function refreshPickCoach(){
       }
       srcEl.textContent=src;
       srcEl.hidden=!src;
-      srcEl.title=res.model?String(res.model):(res.error?String(res.error):"");
+      srcEl.title=(res.jev&&window.PickCoach.jevOpinionLabel?window.PickCoach.jevOpinionLabel(res.jev)+" \u00b7 ":"")+(res.model?String(res.model):(res.error?String(res.error):""));
     }
     var suggest=still.querySelector(".pc-suggest");
     var lean=still.querySelector(".pc-lean");
@@ -811,12 +852,27 @@ function sortLabel(s){
   return ({cons:"Consensus",rank:"Rank",adp:"ADP",last:"Last · PER",lastTotal:"Last · TOT",punt:"Punt value"})[s]||"Consensus";
 }
 
+/* Mobile dock: coach collapsed to a compact strip by default so the player
+ * list keeps most of the screen; the handle expands the full card. */
+var coachDockOpen=false;
+function setCoachDockOpen(open){
+  coachDockOpen=!!open;
+  var root=document.getElementById("md");
+  if(root)root.classList.toggle("coach-dock-open",coachDockOpen);
+  var h=document.getElementById("pc-dock-handle");
+  if(h){
+    h.setAttribute("aria-expanded",coachDockOpen?"true":"false");
+    var more=h.querySelector(".pc-dock-more");
+    if(more)more.textContent=coachDockOpen?"Less":"More";
+  }
+}
 function syncCoachDock(){
   var on=state.phase==="draft"&&state.view==="coach"&&isUserTurn();
   var root=document.getElementById("md");
   var cols=document.querySelector("#md .cols");
   if(root){
     root.classList.toggle("coach-dock-active",!!on);
+    root.classList.toggle("coach-dock-open",!!on&&coachDockOpen);
     if(!on)root.classList.remove("coach-dock-active");
   }
   if(cols){
@@ -949,7 +1005,9 @@ function myRoster(){
 function renderSide(){
   var s=el("mdside");if(!s)return;
   if(state.view==="coach"){
-    s.innerHTML='<div class="pc-dock-handle" id="pc-dock-handle"><span class="pc-dock-grip" aria-hidden="true"></span><span class="pc-dock-label">Pick coach</span></div><h3 class="pc-side-title">Pick coach</h3><p class="muted pc-advisory">Advice only. Drafting always takes a separate click.</p>'+pickCoachShellHtml()+renderPuntStrategy(draftGrades());
+    s.innerHTML='<button type="button" class="pc-dock-handle" id="pc-dock-handle" aria-controls="pick-coach" aria-expanded="'+(coachDockOpen?'true':'false')+'"><span class="pc-dock-grip" aria-hidden="true"></span><span class="pc-dock-label">Pick coach</span><span class="pc-dock-more muted">'+(coachDockOpen?'Less':'More')+'</span></button><h3 class="pc-side-title">Pick coach</h3><p class="muted pc-advisory">Advice only. Drafting always takes a separate click.</p>'+pickCoachShellHtml()+renderPuntStrategy(draftGrades());
+    s.querySelector('#pc-dock-handle').addEventListener('click',function(){setCoachDockOpen(!coachDockOpen);});
+    s.querySelector('.pc-alt').addEventListener('click',function(e){var pi=parseInt(e.currentTarget.dataset.pi,10);if(isFinite(pi))evaluatePlayer(pi);});
     s.querySelector('.pc-draft').addEventListener('click',function(e){var pi=parseInt(e.currentTarget.dataset.pi,10);if(isUserTurn()&&pi===resolveFocusPi())userDraft(pi);});
     wirePuntControls(s);
     refreshPickCoach();
