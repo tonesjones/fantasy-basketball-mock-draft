@@ -49,7 +49,8 @@ The layout collapses to a single column with compact two-line player rows; filte
 ## Files
 
 - `index.html` — page shell: loads `styles.css` and the scripts below in order.
-- `styles.css` — all styling.
+- `styles.css` — all styling; the final "Geist theme" layer sets the look (tokens at the top of that layer).
+- `fonts/` — self-hosted Geist Sans and Geist Mono (SIL OFL, see `fonts/OFL.txt`), so the app still needs no network.
 - `app.js` — UI: state, rendering, event wiring, save/restore.
 - `player-pool.js` — the player pool (rank order, positions, teams, category tags) merged with `player-data.js`.
 - `draft-analysis.js` — pure consensus rank, category replacement levels, draft grades and matchups (used by the app and tests).

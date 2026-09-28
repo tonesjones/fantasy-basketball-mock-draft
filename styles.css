@@ -302,3 +302,170 @@ body{background:radial-gradient(ellipse at top right,#19352f66,transparent 55%),
 #md h3{margin:12px 0 8px}
 #md.coach-dock-active .turnbar,#md.coach-dock-active .viewtabs,#md.coach-dock-active details.scarcity{margin-bottom:var(--space)}
 
+
+/* ==========================================================================
+   Geist theme (Next.js / Vercel-style): near-black canvas, neutral hairline
+   borders, white primary actions, Geist Sans + Geist Mono for numbers.
+   This layer only overrides earlier rules; markup and JS are unchanged.
+   Status colors: --dl-green (good/win/take), --dl-amber (ok/even/reach),
+   --dl-red (bad/loss/injured), --dl-blue (your-turn highlight).
+   ========================================================================== */
+@font-face{font-family:"Geist";src:url("fonts/Geist-Variable.woff2") format("woff2");font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:"Geist Mono";src:url("fonts/GeistMono-Variable.woff2") format("woff2");font-weight:100 900;font-style:normal;font-display:swap}
+:root{
+  --dl-bg:#0a0a0a;--dl-surface:#0a0a0a;--dl-raised:#111111;--dl-hover:#1a1a1a;
+  --dl-border:#262626;--dl-border-strong:#3a3a3a;--dl-text:#ededed;--dl-muted:#a1a1a1;--dl-faint:#737373;
+  --dl-green:#52d18a;--dl-green-bg:#52d18a14;--dl-green-line:#52d18a55;
+  --dl-amber:#f5b54a;--dl-amber-bg:#f5b54a14;--dl-amber-line:#f5b54a55;
+  --dl-red:#ff6b6b;--dl-red-bg:#ff6b6b14;--dl-red-line:#ff6b6b55;
+  --dl-blue:#52a8ff;--dl-blue-bg:#52a8ff14;
+  --dl-sans:"Geist",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  --dl-mono:"Geist Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --dl-radius:12px;--dl-radius-sm:8px;
+}
+html,body{background:var(--dl-bg)}
+body{
+  background:
+    radial-gradient(60rem 28rem at 50% -8rem,#ffffff12,transparent 70%),
+    linear-gradient(to right,#ffffff08 1px,transparent 1px) 0 0/64px 64px,
+    linear-gradient(to bottom,#ffffff08 1px,transparent 1px) 0 0/64px 64px,
+    var(--dl-bg);
+  background-attachment:fixed;
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+}
+#md{
+  --hatch-widget-text:var(--dl-text);--hatch-widget-muted:var(--dl-muted);
+  --hatch-widget-surface:var(--dl-surface);--hatch-widget-surface-muted:var(--dl-hover);
+  --hatch-widget-border:var(--dl-border);--hatch-widget-accent:var(--dl-text);--hatch-widget-on-accent:#0a0a0a;
+  font-family:var(--dl-sans);letter-spacing:-.01em;max-width:1400px;padding:0 32px 64px;
+}
+#md ::selection{background:#ffffff33}
+
+/* Header: sticky translucent bar */
+#md .brandbar{position:sticky;top:0;z-index:20;margin:0 -32px 24px;padding:14px 32px;border-bottom:1px solid var(--dl-border);
+  background:#0a0a0acc;backdrop-filter:saturate(180%) blur(12px);-webkit-backdrop-filter:saturate(180%) blur(12px)}
+#md .brand{font-size:15px;font-weight:600;letter-spacing:-.02em;gap:10px}
+#md .brandmark{width:26px;height:26px;border-radius:7px;background:var(--dl-text);color:#0a0a0a;font-size:15px}
+#md .season{font-family:var(--dl-mono);font-size:11px;letter-spacing:0;text-transform:none;color:var(--dl-muted);
+  border:1px solid var(--dl-border);border-radius:999px;padding:3px 10px;background:var(--dl-raised)}
+
+/* Type */
+#md h2{font-size:clamp(28px,4vw,44px);font-weight:600;letter-spacing:-.045em;line-height:1.08;
+  background:linear-gradient(180deg,#fff 30%,#a1a1a1);-webkit-background-clip:text;background-clip:text;color:transparent}
+#md h3{font-size:14px;font-weight:600;letter-spacing:-.01em}
+#md .muted{color:var(--dl-muted)}
+#md .prank,#md .catnum,#md .rpick,#md .nextpick b,#md table.board,#md .playofftable td,#md .vdelta,
+#md .prow .l2,#md .listmeta,#md .season{font-variant-numeric:tabular-nums}
+#md .prank,#md .rpick,#md .prow .l2>span:not(.mv-chip):not(.role-chip),#md .listmeta .muted,#md .catnum,#md .vdelta{font-family:var(--dl-mono)}
+
+/* Buttons: white primary, hairline secondary */
+#md button{transition:background .15s,border-color .15s,color .15s,box-shadow .15s}
+#md button:not(:disabled):hover{box-shadow:none}
+#md .bigbtn,#md .draftbtn{background:var(--dl-text);color:#0a0a0a;border:1px solid var(--dl-text);border-radius:var(--dl-radius-sm);font-weight:600}
+#md .bigbtn{padding:12px 22px;font-size:14px}
+#md .bigbtn:not(:disabled):hover,#md .draftbtn:not(:disabled):hover{background:#cccccc;border-color:#cccccc}
+#md .draftbtn{min-height:32px;padding:5px 14px;font-size:13px}
+#md .ghostbtn{background:var(--dl-surface);color:var(--dl-text);border:1px solid var(--dl-border);border-radius:var(--dl-radius-sm);font-weight:500;min-height:36px}
+#md .ghostbtn:not(:disabled):hover{background:var(--dl-hover);border-color:var(--dl-border-strong)}
+#md .posbtn{background:var(--dl-surface);border:1px solid var(--dl-border);border-radius:10px;font-family:var(--dl-mono);font-weight:500;font-size:16px;height:52px}
+#md .posbtn:not(:disabled):hover{border-color:var(--dl-border-strong);background:var(--dl-hover)}
+#md .posbtn.sel{background:var(--dl-text);color:#0a0a0a;border-color:var(--dl-text)}
+#md .fchip{background:transparent;border:1px solid var(--dl-border);border-radius:999px;font-weight:500;color:var(--dl-muted)}
+#md .fchip:not(:disabled):hover{color:var(--dl-text);border-color:var(--dl-border-strong)}
+#md .fchip.sel{background:var(--dl-text);color:#0a0a0a;border-color:var(--dl-text)}
+#md button:focus-visible,#md input:focus-visible,#md select:focus-visible,#md summary:focus-visible,#md .catchip:focus-visible,#md .prow:focus-visible{
+  outline:2px solid var(--dl-blue);outline-offset:2px}
+
+/* Inputs */
+#md input[type=text],#md select{background:var(--dl-surface);border:1px solid var(--dl-border);border-radius:var(--dl-radius-sm);color:var(--dl-text);font-family:var(--dl-sans)}
+#md input[type=text]{padding:11px 14px}
+#md input[type=text]::placeholder{color:var(--dl-faint)}
+#md input[type=text]:hover,#md select:hover{border-color:var(--dl-border-strong)}
+#md input[type=text]:focus{border-color:var(--dl-muted);box-shadow:0 0 0 3px #ffffff14;outline:none}
+
+/* Surfaces */
+#md .avail,#md .side{background:var(--dl-surface);border:1px solid var(--dl-border);border-radius:var(--dl-radius);box-shadow:0 1px 0 #ffffff08 inset,0 8px 30px #00000066}
+#md .listmeta{background:var(--dl-surface)}
+#md .turnbar{background:linear-gradient(90deg,var(--dl-blue-bg),transparent 60%),var(--dl-surface);border:1px solid var(--dl-border);border-left:1px solid var(--dl-border);
+  border-radius:var(--dl-radius);box-shadow:none;position:relative;overflow:hidden}
+#md .turnbar::before{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--dl-blue)}
+#md .turnbar .you{color:var(--dl-blue);font-family:var(--dl-mono);font-weight:600;font-size:11px;letter-spacing:.06em}
+#md .nextpick b{color:var(--dl-text)}
+#md .filters-disclose,#md .setup-details,#md .puntbox,#md .pick-coach .pc-card{background:var(--dl-surface);border-color:var(--dl-border);border-radius:var(--dl-radius-sm)}
+#md .filters-disclose>summary::before,#md details.scarcity>summary::before,#md .setup-details>summary::before{color:var(--dl-faint)}
+#md summary{color:var(--dl-muted)}
+
+/* Segmented view tabs, Vercel-style */
+#md .viewtabs.tabs{background:var(--dl-raised);border:1px solid var(--dl-border);border-radius:10px;padding:3px}
+#md .viewtabs .segtab{border-radius:7px;font-weight:500;color:var(--dl-muted)}
+#md .viewtabs .segtab:not(:disabled):hover{background:var(--dl-hover);color:var(--dl-text)}
+#md .viewtabs .segtab.sel,#md .viewtabs .segtab.sel:not(:disabled):hover{background:var(--dl-hover);color:var(--dl-text);font-weight:500;
+  box-shadow:0 0 0 1px var(--dl-border-strong) inset,0 1px 2px #0008}
+
+/* Player list */
+#md .prow{border-bottom:1px solid var(--dl-border);border-radius:0;padding:12px 8px}
+#md .prow:hover{background:var(--dl-raised)}
+#md .prow.pc-focus{background:var(--dl-hover);box-shadow:inset 2px 0 0 var(--dl-text)}
+#md .pname{font-weight:500;letter-spacing:-.01em}
+#md .prank{color:var(--dl-faint);font-size:12px}
+#md .prow .l2{color:var(--dl-muted);font-size:11.5px}
+#md .tierbreak{border-top:1px dashed var(--dl-border-strong)!important;background:none!important}
+#md .teamtag{background:transparent;border:1px solid var(--dl-border);color:var(--dl-muted);font-family:var(--dl-mono);font-size:10px;font-weight:500;letter-spacing:0;border-radius:5px;padding:0 5px}
+#md .injtag{background:var(--dl-red-bg);color:var(--dl-red);border:1px solid var(--dl-red-line);border-radius:5px;font-family:var(--dl-mono);font-weight:500}
+#md .injdetail{background:var(--dl-red-bg);border-color:var(--dl-red-line);color:#ffc9c9}
+#md .rrow{border-bottom-color:var(--dl-border)}
+#md .rlist{background:transparent;border-color:var(--dl-border)}
+#md .rpick{color:var(--dl-faint);font-weight:500;letter-spacing:0}
+
+/* Status colors */
+#md .playoffbadge.good,#md .catmu.win,#md .playofftable tr.good td:last-child{color:var(--dl-green)}
+#md .playoffbadge.ok,#md .catmu.even,#md .playofftable tr.ok td:last-child{color:var(--dl-amber)}
+#md .playoffbadge.bad,#md .catmu.loss,#md .playofftable tr.bad td:last-child{color:var(--dl-red)}
+#md .catdot.win{background:var(--dl-green)}#md .catdot.even{background:var(--dl-amber)}#md .catdot.loss{background:var(--dl-red)}
+#md .playoffnote a,#md .puntbox .punt-eval,#md .puntbox summary{color:var(--dl-text)}
+#md .mv-chip,#md .role-chip,#md .pick-coach .pc-chip.mv-chip{background:transparent;border-color:var(--dl-border);color:var(--dl-muted);font-weight:500}
+#md .role-chip.role-up,#md .pick-coach .pc-chip.role-up,#md .pick-coach .pc-chip{color:var(--dl-green);border-color:var(--dl-green-line);background:var(--dl-green-bg);font-weight:500}
+#md .role-chip.role-down,#md .pick-coach .pc-chip.role-down{color:var(--dl-amber);border-color:var(--dl-amber-line);background:var(--dl-amber-bg)}
+#md .pick-coach .pc-chip.mv-chip{color:var(--dl-muted);border-color:var(--dl-border);background:transparent}
+#md .pick-coach .pc-choice{font-family:var(--dl-mono);font-weight:500;font-size:11px;letter-spacing:0;border-radius:6px}
+#md .pick-coach .pc-choice-take{color:var(--dl-green);background:var(--dl-green-bg);border-color:var(--dl-green-line)}
+#md .pick-coach .pc-choice-wait{color:var(--dl-muted);background:var(--dl-raised);border-color:var(--dl-border)}
+#md .pick-coach .pc-choice-reach{color:var(--dl-amber);background:var(--dl-amber-bg);border-color:var(--dl-amber-line)}
+#md .pick-coach .pc-choice-pass{color:var(--dl-red);background:var(--dl-red-bg);border-color:var(--dl-red-line)}
+#md .pick-coach .pc-name{font-weight:600;letter-spacing:-.02em;font-size:17px}
+
+/* Scarcity + stat chips */
+#md .catchip{background:var(--dl-surface);border:1px solid var(--dl-border);border-radius:10px}
+#md .catchip:hover{border-color:var(--dl-border-strong)}
+#md .catchip.hot{box-shadow:none;border-color:var(--dl-red-line);background:var(--dl-red-bg)}
+#md .catchip[aria-expanded="true"]{box-shadow:0 0 0 1px var(--dl-text) inset}
+#md .catname{color:var(--dl-muted);font-family:var(--dl-mono);font-weight:500;letter-spacing:0}
+#md .catnum{font-weight:600;letter-spacing:-.04em}
+#md .catbar{background:var(--dl-border)}
+#md .setup-details .catchip{background:var(--dl-raised);border:1px solid var(--dl-border)}
+
+/* Tables */
+#md .boardwrap{border-color:var(--dl-border);border-radius:var(--dl-radius)}
+#md table.board th,#md table.board td{border-color:var(--dl-border)}
+#md table.board th,#md .playofftable th{background:var(--dl-raised);color:var(--dl-muted);font-weight:500;font-size:11px}
+#md table.board td.you{background:var(--dl-hover)}
+#md table.board td.future-you{box-shadow:inset 0 0 0 1px var(--dl-blue)}
+#md table.board tr:hover td{background:var(--dl-raised)}
+
+/* Scrollbars */
+#md *{scrollbar-width:thin;scrollbar-color:var(--dl-border-strong) transparent}
+
+@media(max-width:900px){#md{padding:0 18px 40px}#md .brandbar{margin:0 -18px 18px;padding:12px 18px}
+  #md .cols.coach-dock .pc-dock-handle{background:var(--dl-surface)}}
+@media(max-width:480px){#md{padding:0 12px 28px}#md .brandbar{margin:0 -12px 16px;padding:10px 12px}}
+/* Geist theme: polish */
+#md button,#md select,#md input,#md textarea{font-family:inherit}
+#md .posbtn{font-family:var(--dl-mono)}
+#md .season{display:inline-block;width:auto}
+#md .prow .l2>span:not(.mv-chip):not(.role-chip){font-family:var(--dl-sans)}
+#md .prow .l2>span:nth-child(-n+4):not(.mv-chip):not(.role-chip){font-family:var(--dl-mono);font-size:11px}
+@media(max-width:900px){
+  #md .viewtabs.tabs{display:flex;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;max-width:100%}
+  #md .viewtabs.tabs::-webkit-scrollbar{display:none}
+  #md .viewtabs .segtab{white-space:nowrap;flex-shrink:0}
+}
