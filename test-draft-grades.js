@@ -64,4 +64,19 @@ const user=userGrade=g.find(x=>x.team===5);
 assert(user,'user team must be in grades');
 assert(user.rank>=1&&user.rank<=12,'user rank must be 1-12');
 
+// Unrated players (no 2025-26 cv) count at market-implied value: the mean cv
+// of the 10 rated players nearest in consensus rank, not replacement level.
+const full=data.PLAYERS;
+const hali=full.findIndex(p=>p.n==='Tyrese Haliburton');
+assert(hali>=0&&!PDATA['Tyrese Haliburton'].cv,'sanity: Haliburton has no 2025-26 cv');
+const implied=Array.from(DA.impliedCv(full[hali],full,PDATA));
+const sum=a=>a.reduce((x,y)=>x+y,0);
+assert(sum(implied)>sum(repl)+3,'a consensus-17 pick must be worth far more than replacement: '+sum(implied).toFixed(2));
+const lone=DA.draftGrades({players:full,pdata:PDATA,log:[hali],teams:2,core,repl});
+const t0=lone.find(x=>x.team===0);
+assert.equal(t0.unrated,1,'Haliburton is flagged unrated');
+assert(Math.abs(t0.score-sum(implied))<1e-9,'unrated player scores his market-implied value');
+const late=DA.impliedCv({n:'Deep prospect',adp:null,adpF:null},full,PDATA);
+assert(sum(late)<sum(implied),'implied value falls with market rank');
+
 console.log('draft grades tests passed; user team rank '+user.rank+' ('+user.grade+'), scores '+g[0].score.toFixed(1)+' to '+g[11].score.toFixed(1));

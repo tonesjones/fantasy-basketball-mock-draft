@@ -6,7 +6,8 @@
  *
  * Core model:
  *   V(x) = true-value rank estimate (lower = better). Anchored on market
- *          consensus (Yahoo + Fantrax ADP), adjusted by damped edges:
+ *          consensus (DraftCore.marketRank: weighted Yahoo + Fantrax ADP),
+ *          adjusted by damped edges:
  *          - last-season actuals gap (produced better/worse than market)
  *          - role up/down (movers-outlook heuristic)
  *          - vacated usage, NETTED against incoming talent (a departure only
@@ -23,18 +24,16 @@
  *
  * INJ-tagged players are a hard pass.
  *
- * Globals used: PLAYERS, MOVES, VACATED_USAGE, window.PlayoffData,
- * window.PlayoffCore. Attach: window.PickSignals.
+ * Globals used: PLAYERS, MOVES, VACATED_USAGE, window.DraftCore,
+ * window.PlayoffData, window.PlayoffCore. Attach: window.PickSignals.
  */
 (function (root) {
   "use strict";
 
+  /* Consensus market rank: DraftCore's reliability-weighted Yahoo + Fantrax
+     ADP blend, shared with the CPU drafters and the Consensus sort. */
   function consensus(p) {
-    var a = p.adp, f = p.adpF;
-    if (a != null && f != null) return (a + f) / 2;
-    if (a != null) return a;
-    if (f != null) return f;
-    return p.r;
+    return root.DraftCore.marketRank(p);
   }
 
   /* Robust last-season actuals: median of totals-rank and per-game rank. */

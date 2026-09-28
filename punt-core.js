@@ -1,8 +1,11 @@
 (function (root, factory) {
-  var api = factory();
+  var core =
+    (root && root.DraftCore) ||
+    (typeof module !== "undefined" && module.exports ? require("./draft-core") : null);
+  var api = factory(core);
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   if (root) root.PuntCore = api;
-})(typeof window !== "undefined" ? window : null, function () {
+})(typeof window !== "undefined" ? window : null, function (core) {
   "use strict";
   var CATS = ["PTS", "REB", "AST", "STL", "BLK", "3PM", "FG%", "FT%", "TO"];
   function valid(cat) {
@@ -49,9 +52,7 @@
       });
   }
   function marketAdp(p) {
-    var a = p.adp,
-      f = p.adpF;
-    return a == null ? f : f == null ? a : (a + f) / 2;
+    return core.marketAdp(p);
   }
   function laterRisers(rows, players, pick, followingPick) {
     if (pick < 0 || followingPick < 0) return [];
