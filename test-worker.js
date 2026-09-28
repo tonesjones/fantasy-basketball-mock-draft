@@ -31,6 +31,12 @@ function req(opts) {
   r = await w.fetch(req({ origin: "https://evil.example" }), env);
   assert.strictEqual(r.status, 403, "foreign Origin rejected");
 
+  for (var o of ["https://tony-draft-lab-preview.pages.dev", "https://tony-draft-lab-yahoo.pages.dev",
+    "https://chore-repo-hygiene.tony-draft-lab.pages.dev", "http://localhost:8788"]) {
+    r = await w.fetch(req({ origin: o, ip: "9.9.9." + o.length }), env);
+    assert.strictEqual(r.status, 200, "allowed origin " + o);
+  }
+
   r = await w.fetch(req({ ip: "2.2.2.2", body: JSON.stringify({ player: { n: "x".repeat(20000) } }) }), env);
   assert.strictEqual(r.status, 413, "oversized body rejected");
 

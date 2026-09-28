@@ -52,6 +52,7 @@ var CHOICE_CRITERIA = {
 var ALLOWED_ORIGINS = [
   "https://tony-draft-lab-preview.pages.dev",
   "https://tony-draft-lab.pages.dev",
+  "https://tony-draft-lab-yahoo.pages.dev",
   "http://localhost:8788",
   "http://127.0.0.1:8788",
   "http://localhost:8799",
@@ -69,6 +70,8 @@ function isAllowedOrigin(origin) {
     if (host === "tony-draft-lab.pages.dev") return true;
     if (/\.tony-draft-lab-preview\.pages\.dev$/i.test(host)) return true;
     if (/\.tony-draft-lab\.pages\.dev$/i.test(host)) return true;
+    if (host === "tony-draft-lab-yahoo.pages.dev") return true;
+    if (/\.tony-draft-lab-yahoo\.pages\.dev$/i.test(host)) return true;
     if (host === "localhost" || host === "127.0.0.1") return true;
     return false;
   } catch (e) {
