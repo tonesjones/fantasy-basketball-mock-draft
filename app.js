@@ -87,7 +87,7 @@ var BASE_SLOTS=["PG","SG","G","SF","PF","F","C","C","Util","Util","BN","BN","BN"
 var DATA_VERSION="2026-09-20-vacated";
 var STORAGE_KEY="fantasy-basketball-mock-draft.v2";
 var HW=(typeof window!=="undefined"&&window.hatchWidget)?window.hatchWidget:null;
-var DEFAULTS={phase:"setup",draftPos:6,rounds:13,log:[],q:"",f:"All",view:"team",sort:"cons",puntCategory:null,playoffStart:20,page:0,seed:123456789,rngState:123456789,userTurns:[],filtersOpen:false,scarcityOpen:false,focusPi:null};
+var DEFAULTS={phase:"setup",draftPos:6,rounds:13,log:[],q:"",f:"All",view:"team",sort:"cons",puntCats:[],playoffStart:20,page:0,seed:123456789,rngState:123456789,userTurns:[],filtersOpen:false,scarcityOpen:false,focusPi:null};
 function freshState(){var seed=(Date.now()>>>0)||1;return Object.assign({},DEFAULTS,{seed:seed,rngState:seed,log:[],userTurns:[]});}
 function cleanState(raw){
   var out=Object.assign({},DEFAULTS,raw||{}), used={};
@@ -96,9 +96,10 @@ function cleanState(raw){
   out.log=Array.isArray(out.log)?out.log.filter(function(pi){if(!CORE.validPlayerIndex(PLAYERS,[],pi)||used[pi])return false;used[pi]=true;return true;}).slice(0,TEAMS*out.rounds):[];
   out.phase=out.log.length>=TEAMS*out.rounds?"done":(out.phase==="draft"?"draft":"setup");
   out.f=["All","PG","SG","SF","PF","C"].indexOf(out.f)>=0?out.f:"All";
-  out.puntCategory=PuntCore.valid(out.puntCategory)?out.puntCategory:null;
+  /* puntCats: up to PuntCore.MAX_PUNTS categories. Older saves stored one puntCategory string. */
+  var rawPunt=(raw||{});out.puntCats=PuntCore.normalize(Array.isArray(rawPunt.puntCats)?rawPunt.puntCats:rawPunt.puntCategory);delete out.puntCategory;
   out.sort=["cons","rank","adp","last","lastTotal","punt"].indexOf(out.sort)>=0?out.sort:"cons";
-  if(out.sort==="punt"&&!out.puntCategory)out.sort="cons";
+  if(out.sort==="punt"&&!out.puntCats.length)out.sort="cons";
   out.view=["team","board","grades","coach"].indexOf(out.view)>=0?out.view:"team";
   out.focusPi=(out.focusPi==null||out.focusPi==="")?null:(parseInt(out.focusPi,10)>=0?parseInt(out.focusPi,10):null);
   out.filtersOpen=!!out.filtersOpen;
@@ -212,7 +213,7 @@ function visibleCandidateIndexes(){
   var puntByPi={};
   if(srt==="punt"){
     var taken={};state.log.forEach(function(pi){taken[pi]=1;});
-    PuntCore.rankings(PLAYERS,PDATA,taken,state.puntCategory).forEach(function(row){puntByPi[row.pi]=row;});
+    PuntCore.rankings(PLAYERS,PDATA,taken,state.puntCats).forEach(function(row){puntByPi[row.pi]=row;});
   }
   function skey(x){return x==null?1e9:x;}
   if(srt==="punt")cands.sort(function(a,b){return (puntByPi[a]?puntByPi[a].puntRank:1e9)-(puntByPi[b]?puntByPi[b].puntRank:1e9)||consRank(PLAYERS[a])-consRank(PLAYERS[b]);});
@@ -860,7 +861,7 @@ function renderDraft(){
   ["All","PG","SG","SF","PF","C"].forEach(function(f){h+='<button class="fchip'+(state.f===f?' sel':'')+'" data-f="'+f+'">'+f+'</button>';});
   h+='</div><div class="filters"><span class="muted">Sort:</span>';
   var sorts=[["cons","Consensus","Average of Yahoo and Fantrax ADP"],["rank","Rank","Built-in preseason rank (sim order)"],["adp","ADP","Yahoo ADP via Hashtag Basketball (14 Sep 2026)"],["last","Last · PER","2025-26 nine-category per-game rank (Basketball Monster / Hashtag)"],["lastTotal","Last · TOT","2025-26 nine-category TOTALS rank — derived from Basketball-Reference season totals, not a published rank"]];
-  if(state.puntCategory)sorts.push(["punt","Punt value","Historical eight-category value, excluding "+state.puntCategory]);
+  if(state.puntCats.length)sorts.push(["punt","Punt value","Historical "+puntCatCount()+"-category value, excluding "+puntLabel()]);
   sorts.forEach(function(s){h+='<button class="fchip'+((state.sort||"cons")===s[0]?' sel':'')+'" data-sort="'+s[0]+'" title="'+s[2]+'">'+s[1]+'</button>';});
   h+='</div></details><div class="plist" id="mdplist"></div><div id="mdpager"></div></div>';
   h+='<div class="side" id="mdside"></div></div>';
@@ -885,7 +886,7 @@ function renderDraft(){
 }
 function renderList(){
   var taken={},i;for(i=0;i<state.log.length;i++)taken[state.log[i]]=1;
-  var puntRows=state.puntCategory?PuntCore.rankings(PLAYERS,PDATA,taken,state.puntCategory):[];
+  var puntRows=state.puntCats.length?PuntCore.rankings(PLAYERS,PDATA,taken,state.puntCats):[];
   var puntByPi={};puntRows.forEach(function(row){puntByPi[row.pi]=row;});
   var q=state.q.toLowerCase(),f=state.f,ut=isUserTurn(),cands=[];
   for(i=0;i<PLAYERS.length;i++){
@@ -916,7 +917,7 @@ function renderList(){
     var sub='<span>ADP '+disp(pl2.adp)+'</span><span>Last '+disp(pl2.last)+'</span><span>Tot '+disp(pl2.lastTotal)+'</span><span>MPG '+(pl2.mpg==null?'—':pl2.mpg.toFixed(1))+'</span><span>'+posBadges(pl2.p)+'</span>'+playoffBadge(pl2);
     var mvRow=moverRoleChipHtml(pl2, false);if(mvRow)sub+=mvRow;
     if(pl2.c.length)sub+='<span>'+pl2.c.slice(0,4).join(" · ")+'</span>';
-    if(state.puntCategory)sub+=pr?'<span title="Historical available-player ranks, nine-category vs excluding '+state.puntCategory+'">Punt '+state.puntCategory+': #'+pr.baseRank+' → #'+pr.puntRank+(pr.gain>0?' (+'+pr.gain+')':'')+'</span>':'<span>Punt value: unknown (no 2025-26 category data)</span>';
+    if(state.puntCats.length)sub+=pr?'<span title="Historical available-player ranks, nine-category vs excluding '+puntLabel()+'">Punt '+state.puntCats.join('+')+': #'+pr.baseRank+' → #'+pr.puntRank+(pr.gain>0?' (+'+pr.gain+')':'')+'</span>':'<span>Punt value: unknown (no 2025-26 category data)</span>';
     var focusCls=(focusNow===i)?' pc-focus':'';
     rows.push('<div class="prow'+focusCls+'" data-pi="'+i+'" role="button" tabindex="0" aria-label="Evaluate '+esc(pl2.n)+'" aria-pressed="'+(focusNow===i?'true':'false')+'"><div class="l1"><span class="prank">'+rlabel+'</span><span class="pname">'+esc(pl2.n)+' <span class="teamtag">'+esc(pl2.t)+'</span>'+injBadge(pl2)+'</span><button class="draftbtn" data-pi="'+i+'" aria-label="Draft '+esc(pl2.n)+'"'+(ut?'':' disabled')+'>Draft</button></div><div class="l2">'+sub+'</div></div>');
   }
@@ -1020,27 +1021,42 @@ function renderGrades(){
   h+='</tbody></table></div><p class="muted"><span class="unrated">&#8224;N</span> = N rostered players had no 2025-26 category data (injured stars, prospects) and were counted at replacement level. Bench and starters weighted equally; playoff schedule, injuries, and projected 2026-27 role changes are not factored in.</p>';
   return h;
 }
-function renderPuntStrategy(grades,previewCat,expanded){
+function puntLabel(cats){return PuntCore.label(cats||state.puntCats);}
+function puntCatCount(cats){return 9-PuntCore.normalize(cats||state.puntCats).length;}
+function sameCats(a,b){return PuntCore.normalize(a).join()===PuntCore.normalize(b).join();}
+/* previewCats: the chip selection being explored (not yet committed). */
+function renderPuntStrategy(grades,previewCats,expanded){
   var taken={};state.log.forEach(function(pi){taken[pi]=1;});
-  var next=nextUserPickIdx(),following=next<0?-1:followingUserPickIdx(next),choice=PuntCore.suggest(grades,userTeam(),PLAYERS,PDATA,taken,next,following);
-  var cat=PuntCore.valid(previewCat)?previewCat:(state.puntCategory||choice&&choice.cat);
+  var have=state.puntCats,full=have.length>=PuntCore.MAX_PUNTS;
+  var next=nextUserPickIdx(),following=next<0?-1:followingUserPickIdx(next);
+  var choice=PuntCore.suggest(grades,userTeam(),PLAYERS,PDATA,taken,next,following,have);
+  var cats=previewCats!=null?PuntCore.normalize(previewCats):(have.length?have.slice():(choice?[choice.cat]:[]));
+  var previewing=previewCats!=null&&!sameCats(cats,have);
   var h='<section class="puntbox"><h3>Punt advice</h3>';
-  if(state.puntCategory&&cat!==state.puntCategory)h+='<p><b>Previewing '+cat+'.</b> Your committed punt is still '+state.puntCategory+' until you select Change punt.</p>';
-  else if(state.puntCategory)h+='<p><b>Punting '+state.puntCategory+'.</b> The player board can now sort by eight-category value. Your regular grade and Pick Coach verdicts remain nine-category.</p>';
-  else if(choice)h+='<p><b>Consider punting '+choice.cat+'.</b> Your per-pick value trails '+choice.below+' of '+choice.peers+' comparable teams.'+(choice.missing?' '+choice.missing+' of your picks lack category data, so treat this as tentative.':'')+' This is advice, not an automatic commitment.</p>';
-  else h+='<p class="muted">No punt recommendation yet. It needs three picks, category data for at least two of yours, and a weak category against other teams.</p>';
-  h+='<details'+(expanded?' open':'')+'><summary>Explore punt values and choices</summary><p class="muted">Based on 2025-26 per-game values, not a 2026-27 projection. TO cannot be punted.</p>';
-  h+='<div class="puntcontrols"><label for="mdpunt">Explore:</label><select id="mdpunt"><option value="">Choose a category</option>';
-  PuntCore.CATS.slice(0,8).forEach(function(c){h+='<option value="'+c+'"'+(cat===c?' selected':'')+'>'+c+'</option>';});
-  h+='</select><button class="ghostbtn" id="mdpuntcommit">'+(state.puntCategory?'Change punt':'Commit to punt')+'</button>';
-  if(state.puntCategory)h+='<button class="ghostbtn" id="mdpuntclear">Clear punt</button>';
+  if(have.length)h+='<p><b>Punting '+esc(puntLabel())+'.</b> The player board can sort by '+puntCatCount()+'-category value. Your regular grade and Pick Coach verdicts remain nine-category.</p>';
+  if(previewing&&cats.length)h+='<p><b>Previewing '+esc(puntLabel(cats))+'.</b> '+(have.length?'Your committed punt is still '+esc(puntLabel())+' until you select Update punt.':'Nothing is committed until you select Commit punt.')+'</p>';
+  if(choice&&!previewing){
+    var alsoTxt=choice.also&&choice.also.length?' Also trailing: '+choice.also.slice(0,2).join(', ')+'.':'';
+    h+='<p><b>'+(have.length?'Consider also punting ':'Consider punting ')+choice.cat+'.</b> Your per-pick value trails '+choice.below+' of '+choice.peers+' comparable teams.'+(choice.missing?' '+choice.missing+' of your picks lack category data, so treat this as tentative.':'')+alsoTxt+' This is advice, not an automatic commitment.</p>';
+  }else if(!have.length&&!choice&&!cats.length)h+='<p class="muted">No punt recommendation yet. It needs three picks, category data for at least two of yours, and a weak category against other teams.</p>';
+  else if(have.length&&!choice&&!previewing&&!full)h+='<p class="muted">No additional punt stands out: you are not trailing most teams in another category.</p>';
+  h+='<details'+(expanded?' open':'')+'><summary>Explore punt values and choices</summary><p class="muted">Based on 2025-26 per-game values, not a 2026-27 projection. Pick up to '+PuntCore.MAX_PUNTS+' categories. TO is scored so fewer turnovers rate higher, so punting TO lifts high-usage players.</p>';
+  h+='<div class="filters puntchips" role="group" aria-label="Categories to punt">';
+  PuntCore.CATS.forEach(function(c){
+    var on=cats.indexOf(c)>=0,blocked=!on&&cats.length>=PuntCore.MAX_PUNTS;
+    h+='<button type="button" class="fchip'+(on?' sel':'')+'" data-punt-cat="'+c+'" aria-pressed="'+on+'"'+(blocked?' disabled title="Up to '+PuntCore.MAX_PUNTS+' punts"':'')+'>'+c+'</button>';
+  });
+  h+='</div><div class="puntcontrols">';
+  h+='<button class="ghostbtn" id="mdpuntcommit"'+(cats.length&&!sameCats(cats,have)?'':' disabled')+'>'+(have.length?'Update punt':'Commit punt')+'</button>';
+  if(have.length)h+='<button class="ghostbtn" id="mdpuntclear">Clear punt</button>';
   h+='</div>';
-  if(cat){
-    var rows=PuntCore.rankings(PLAYERS,PDATA,taken,cat);
+  if(cats.length===PuntCore.MAX_PUNTS)h+='<p class="muted">With '+cats.length+' punts you still need to win 5 of the remaining '+(9-cats.length)+' categories each week.</p>';
+  if(cats.length){
+    var lbl=puntLabel(cats),rows=PuntCore.rankings(PLAYERS,PDATA,taken,cats);
     var near=PuntCore.nearTermRisers(rows,PLAYERS,next,following);
     var later=PuntCore.laterRisers(rows,PLAYERS,next,following);
-    h+='<p class="muted">Punt '+cat+': historical 8-category value. Coach advice above still uses all 9 categories.</p>';
-    h+='<b>'+(next<0?'Draft complete':'Consider at pick #'+(next+1)+' if you punt '+cat)+'</b>';
+    h+='<p class="muted">Punt '+esc(lbl)+': historical '+puntCatCount(cats)+'-category value. Coach advice above still uses all 9 categories.</p>';
+    h+='<b>'+(next<0?'Draft complete':'Consider at pick #'+(next+1)+' if you punt '+esc(lbl))+'</b>';
     if(!near.length&&next>=0)h+='<p class="muted">No available punt risers look urgent for this pick. The watches below are for later, not for this turn.</p>';
     if(near.length||later.length){
       var groups=PuntCore.groupRisers(near,PLAYERS,2);
@@ -1057,11 +1073,19 @@ function renderPuntStrategy(grades,previewCat,expanded){
   return h+'</details></section>';
 }
 function wirePuntControls(root){
-  var select=root.querySelector('#mdpunt'),commit=root.querySelector('#mdpuntcommit'),clear=root.querySelector('#mdpuntclear');
-  select.addEventListener('change',function(){var selected=select.value;root.querySelector('.puntbox').outerHTML=renderPuntStrategy(draftGrades(),selected,true);wirePuntControls(root);});
-  commit.addEventListener('click',function(){if(PuntCore.valid(select.value))setState({puntCategory:select.value});});
-  if(clear)clear.addEventListener('click',function(){setState({puntCategory:null,sort:state.sort==='punt'?'cons':state.sort});});
-  root.querySelectorAll('[data-punt-eval]').forEach(function(b){b.addEventListener('click',function(){evaluatePlayer(parseInt(b.getAttribute('data-punt-eval'),10));});});
+  var box=root.querySelector('.puntbox');if(!box)return;
+  function selected(){return Array.prototype.map.call(box.querySelectorAll('[data-punt-cat].sel'),function(b){return b.getAttribute('data-punt-cat');});}
+  box.querySelectorAll('[data-punt-cat]').forEach(function(b){b.addEventListener('click',function(){
+    var cat=b.getAttribute('data-punt-cat'),sel=selected(),i=sel.indexOf(cat);
+    if(i>=0)sel.splice(i,1);else if(sel.length<PuntCore.MAX_PUNTS)sel.push(cat);
+    box.outerHTML=renderPuntStrategy(draftGrades(),sel,true);
+    wirePuntControls(root);
+    var again=root.querySelector('[data-punt-cat="'+cat+'"]');if(again)again.focus();
+  });});
+  var commit=box.querySelector('#mdpuntcommit'),clear=box.querySelector('#mdpuntclear');
+  if(commit)commit.addEventListener('click',function(){var sel=PuntCore.normalize(selected());if(sel.length)setState({puntCats:sel});});
+  if(clear)clear.addEventListener('click',function(){setState({puntCats:[],sort:state.sort==='punt'?'cons':state.sort});});
+  box.querySelectorAll('[data-punt-eval]').forEach(function(b){b.addEventListener('click',function(){evaluatePlayer(parseInt(b.getAttribute('data-punt-eval'),10));});});
 }
 function renderDone(){
   cancelPickCoach();

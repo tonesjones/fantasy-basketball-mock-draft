@@ -5,12 +5,39 @@
 })(typeof window !== "undefined" ? window : null, function () {
   "use strict";
   var CATS = ["PTS", "REB", "AST", "STL", "BLK", "3PM", "FG%", "FT%", "TO"];
+  /* Up to three punts: at three you must still win 5 of the remaining 6
+     categories each week, so more than that stops being a strategy. */
+  var MAX_PUNTS = 3;
+  /* Any of the nine categories can be punted. TO values are stored inverted
+     (positive = fewer turnovers), so punting TO simply drops that term and
+     lifts high-usage players who turn the ball over. */
   function valid(cat) {
-    return CATS.indexOf(cat) >= 0 && cat !== "TO";
+    return CATS.indexOf(cat) >= 0;
   }
-  function rankings(players, pdata, taken, cat) {
-    if (!valid(cat)) return [];
-    var omit = CATS.indexOf(cat),
+  /* Accepts one category or a list. Returns the unique valid categories in
+     CATS order, or [] when the input is invalid or has more than MAX_PUNTS. */
+  function normalize(cats) {
+    if (cats == null || cats === "") return [];
+    var list = Array.isArray(cats) ? cats : [cats];
+    var seen = {};
+    for (var i = 0; i < list.length; i++) {
+      if (!valid(list[i])) return [];
+      seen[list[i]] = true;
+    }
+    var out = CATS.filter(function (c) {
+      return seen[c];
+    });
+    return out.length <= MAX_PUNTS ? out : [];
+  }
+  function label(cats) {
+    return normalize(cats).join(" + ");
+  }
+  function rankings(players, pdata, taken, cats) {
+    var set = normalize(cats);
+    if (!set.length) return [];
+    var omit = set.map(function (c) {
+        return CATS.indexOf(c);
+      }),
       rows = [];
     players.forEach(function (p, pi) {
       if (taken[pi]) return;
@@ -19,7 +46,11 @@
       var base = cv.reduce(function (a, b) {
         return a + b;
       }, 0);
-      rows.push({ pi: pi, base: base, punt: base - cv[omit], gain: 0 });
+      var punt = base;
+      omit.forEach(function (ci) {
+        punt -= cv[ci];
+      });
+      rows.push({ pi: pi, base: base, punt: punt, gain: 0 });
     });
     rows.sort(function (a, b) {
       return b.base - a.base || a.pi - b.pi;
@@ -80,7 +111,14 @@
     });
     return groups;
   }
-  function suggest(teams, userTeam, players, pdata, taken, nextPick, followingPick) {
+  /* Suggest the next category to punt. `committed` (optional) is the punt set
+     already chosen: those categories are skipped and near-term risers are
+     measured for the combined set. Returns the best choice plus `also`, the
+     other qualifying categories, or null when nothing qualifies or the punt
+     set is already full. */
+  function suggest(teams, userTeam, players, pdata, taken, nextPick, followingPick, committed) {
+    var have = normalize(committed);
+    if (have.length >= MAX_PUNTS) return null;
     var me = teams.filter(function (t) {
       return t.team === userTeam;
     })[0];
@@ -90,13 +128,14 @@
     });
     if (peers.length < 3) return null;
     var choices = [];
-    CATS.slice(0, 8).forEach(function (cat, ci) {
+    CATS.forEach(function (cat, ci) {
+      if (have.indexOf(cat) >= 0) return;
       var mine = me.cats[ci] / me.rated;
       var below = peers.filter(function (t) {
         return t.cats[ci] / t.rated > mine;
       }).length;
       if (below <= peers.length / 2) return;
-      var rows = rankings(players, pdata, taken, cat);
+      var rows = rankings(players, pdata, taken, have.concat([cat]));
       var useful = nearTermRisers(rows, players, nextPick, followingPick);
       choices.push({
         cat: cat,
@@ -109,11 +148,19 @@
     choices.sort(function (a, b) {
       return b.below - a.below || b.risers - a.risers || CATS.indexOf(a.cat) - CATS.indexOf(b.cat);
     });
-    return choices[0] || null;
+    if (!choices.length) return null;
+    var best = choices[0];
+    best.also = choices.slice(1).map(function (c) {
+      return c.cat;
+    });
+    return best;
   }
   return {
     CATS: CATS,
+    MAX_PUNTS: MAX_PUNTS,
     valid: valid,
+    normalize: normalize,
+    label: label,
     rankings: rankings,
     nearTermRisers: nearTermRisers,
     laterRisers: laterRisers,
