@@ -41,7 +41,8 @@ assert.ok(fs.readFileSync('index.html', 'utf8').includes('vacated-usage.js'));
 assert.ok(html.includes('vacatedWhyClause'));
 assert.ok(html.includes('appendVacatedWhy'));
 assert.ok(/Vacates usage/.test(html));
-assert.ok(html.includes('2026-09-20-vacated'));
+const dataVersion = (html.match(/var DATA_VERSION="([^"]+)"/) || [])[1];
+assert.ok(dataVersion && dataVersion >= '2026-09-20-vacated', 'DATA_VERSION predates vacated-usage data: ' + dataVersion);
 
 const m = html.match(/function vacatedWhyClause\(pl\)\{[\s\S]*?\n\}/);
 assert.ok(m, 'vacatedWhyClause missing');
