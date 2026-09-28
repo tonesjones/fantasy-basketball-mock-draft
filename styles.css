@@ -268,6 +268,38 @@ body{background:radial-gradient(ellipse at top right,#19352f66,transparent 55%),
   #md .pc-dock-handle{display:none}
 }
 
+/* Mobile dock, compact by default: list gets the screen, coach is a strip
+   (name, Jev line, Draft, verdict chip). Tap the handle to expand. */
+@media(max-width:900px){
+  #md .cols.coach-dock .pc-dock-handle{width:100%;border:0;box-shadow:none;border-radius:0;cursor:pointer;text-align:left;font:inherit;font-size:12px;font-weight:700;min-height:0}
+  #md .cols.coach-dock .pc-dock-handle:not(:disabled):hover{background:var(--hatch-widget-surface);box-shadow:none;border-color:transparent}
+  #md .cols.coach-dock .pc-dock-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #md .cols.coach-dock .pc-dock-more{font-size:11px;font-weight:500;flex-shrink:0}
+  #md .cols.coach-dock .pc-dock-more::after{content:" \25B4"}
+  #md.coach-dock-open .cols.coach-dock .pc-dock-more::after{content:" \25BE"}
+  #md .cols.coach-dock .avail>h3{display:none}
+  /* Whole list panel scrolls as one, so search / filters / pager scroll
+     out of the way instead of permanently eating the list's height. */
+  #md .cols.coach-dock .avail{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;display:block}
+  #md .cols.coach-dock .plist{overflow:visible;max-height:none;flex:none}
+  #md:not(.coach-dock-open) .cols.coach-dock .pick-coach .pc-meta{display:none}
+  /* Sticky list header covers the panel's top padding so rows don't peek above it */
+  #md .cols.coach-dock .listmeta{box-shadow:0 -14px 0 var(--dl-surface,var(--hatch-widget-surface))}
+  /* Compact rows: one stats line; the focused row keeps full detail */
+  #md .cols.coach-dock .prow:not(.pc-focus) .l2{max-height:18px;overflow:hidden}
+  /* Collapsed */
+  #md:not(.coach-dock-open) .cols.coach-dock .avail{flex:1 1 0}
+  #md:not(.coach-dock-open) .cols.coach-dock .side{flex:0 0 auto;max-height:45%;padding-top:6px}
+  #md:not(.coach-dock-open) .cols.coach-dock .side>:not(.pc-dock-handle):not(#pick-coach){display:none}
+  #md:not(.coach-dock-open) .cols.coach-dock .pick-coach :is(.pc-basis,.pc-why,.pc-conf,.pc-lean-sub,.pc-pass-sub,.pc-uncertain-sub,.pc-uncertain-why,.pc-strengths,.pc-playoff,.pc-target,.pc-score-quiet,.pc-score){display:none}
+  #md:not(.coach-dock-open) .cols.coach-dock .pick-coach .pc-card{margin-top:0;padding:10px 12px}
+  #md:not(.coach-dock-open) .cols.coach-dock .pick-coach .pc-head{margin-bottom:6px;align-items:center}
+  #md:not(.coach-dock-open) .cols.coach-dock .pick-coach .pc-uncertain-title{margin:0;font-size:13px}
+  /* Expanded: coach gets more room, list still visible above */
+  #md.coach-dock-open .cols.coach-dock .avail{flex:1 1 0}
+  #md.coach-dock-open .cols.coach-dock .side{flex:1.6 1 0}
+}
+
 
 /* Hierarchy pass: one surface rhythm, ~8px tokens, segmented Room nav */
 #md{--space:8px}

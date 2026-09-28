@@ -263,6 +263,14 @@ function evaluatePlayer(pi){
 }
 function revealFocusedRow(pi){
   var list=el("mdplist"),row=list&&list.querySelector('.prow[data-pi="'+pi+'"]');
+  /* Mobile coach dock: the whole .avail panel scrolls, not the list itself. */
+  var pane=list&&list.closest(".cols.coach-dock .avail");
+  if(row&&pane&&list.scrollHeight<=list.clientHeight+1){
+    var pr=pane.getBoundingClientRect(),rr=row.getBoundingClientRect();
+    if(rr.top<pr.top)pane.scrollTop+=rr.top-pr.top;
+    else if(rr.bottom>pr.bottom)pane.scrollTop+=rr.bottom-pr.bottom;
+    return;
+  }
   if(row){var r=row.getBoundingClientRect(),box=list.getBoundingClientRect(),meta=list.querySelector('.listmeta'),top=box.top+(meta?meta.getBoundingClientRect().height:0);if(r.height>=box.bottom-top||r.top<top)list.scrollTop+=r.top-top;else if(r.bottom>box.bottom)list.scrollTop+=r.bottom-box.bottom;}
 }
 function pickCoachShellHtml(){
@@ -811,12 +819,27 @@ function sortLabel(s){
   return ({cons:"Consensus",rank:"Rank",adp:"ADP",last:"Last · PER",lastTotal:"Last · TOT",punt:"Punt value"})[s]||"Consensus";
 }
 
+/* Mobile dock: coach collapsed to a compact strip by default so the player
+ * list keeps most of the screen; the handle expands the full card. */
+var coachDockOpen=false;
+function setCoachDockOpen(open){
+  coachDockOpen=!!open;
+  var root=document.getElementById("md");
+  if(root)root.classList.toggle("coach-dock-open",coachDockOpen);
+  var h=document.getElementById("pc-dock-handle");
+  if(h){
+    h.setAttribute("aria-expanded",coachDockOpen?"true":"false");
+    var more=h.querySelector(".pc-dock-more");
+    if(more)more.textContent=coachDockOpen?"Less":"More";
+  }
+}
 function syncCoachDock(){
   var on=state.phase==="draft"&&state.view==="coach"&&isUserTurn();
   var root=document.getElementById("md");
   var cols=document.querySelector("#md .cols");
   if(root){
     root.classList.toggle("coach-dock-active",!!on);
+    root.classList.toggle("coach-dock-open",!!on&&coachDockOpen);
     if(!on)root.classList.remove("coach-dock-active");
   }
   if(cols){
@@ -949,7 +972,8 @@ function myRoster(){
 function renderSide(){
   var s=el("mdside");if(!s)return;
   if(state.view==="coach"){
-    s.innerHTML='<div class="pc-dock-handle" id="pc-dock-handle"><span class="pc-dock-grip" aria-hidden="true"></span><span class="pc-dock-label">Pick coach</span></div><h3 class="pc-side-title">Pick coach</h3><p class="muted pc-advisory">Advice only. Drafting always takes a separate click.</p>'+pickCoachShellHtml()+renderPuntStrategy(draftGrades());
+    s.innerHTML='<button type="button" class="pc-dock-handle" id="pc-dock-handle" aria-controls="pick-coach" aria-expanded="'+(coachDockOpen?'true':'false')+'"><span class="pc-dock-grip" aria-hidden="true"></span><span class="pc-dock-label">Pick coach</span><span class="pc-dock-more muted">'+(coachDockOpen?'Less':'More')+'</span></button><h3 class="pc-side-title">Pick coach</h3><p class="muted pc-advisory">Advice only. Drafting always takes a separate click.</p>'+pickCoachShellHtml()+renderPuntStrategy(draftGrades());
+    s.querySelector('#pc-dock-handle').addEventListener('click',function(){setCoachDockOpen(!coachDockOpen);});
     s.querySelector('.pc-draft').addEventListener('click',function(e){var pi=parseInt(e.currentTarget.dataset.pi,10);if(isUserTurn()&&pi===resolveFocusPi())userDraft(pi);});
     wirePuntControls(s);
     refreshPickCoach();
