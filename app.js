@@ -84,7 +84,7 @@ function wireScarcityToggles(root){
 var TEAMS=12;
 var CORE=window.DraftCore;
 var BASE_SLOTS=["PG","SG","G","SF","PF","F","C","C","Util","Util","BN","BN","BN"];
-var DATA_VERSION="2026-09-20-vacated";
+var DATA_VERSION="2026-09-28";
 var STORAGE_KEY="fantasy-basketball-mock-draft.v2";
 var HW=(typeof window!=="undefined"&&window.hatchWidget)?window.hatchWidget:null;
 var DEFAULTS={phase:"setup",draftPos:6,rounds:13,log:[],q:"",f:"All",view:"team",sort:"cons",puntCategory:null,playoffStart:20,page:0,seed:123456789,rngState:123456789,userTurns:[],filtersOpen:false,scarcityOpen:false,focusPi:null};
@@ -1051,7 +1051,7 @@ function renderDraft(){
   h+='<div class="filters">';
   ["All","PG","SG","SF","PF","C"].forEach(function(f){h+='<button class="fchip'+(state.f===f?' sel':'')+'" data-f="'+f+'">'+f+'</button>';});
   h+='</div><div class="filters"><span class="muted">Sort:</span>';
-  var sorts=[["cons","Consensus","Average of Yahoo and Fantrax ADP"],["rank","Rank","Built-in preseason rank (sim order)"],["adp","ADP","Yahoo ADP via Hashtag Basketball (14 Sep 2026)"],["last","Last · PER","2025-26 nine-category per-game rank (Basketball Monster / Hashtag)"],["lastTotal","Last · TOT","2025-26 nine-category TOTALS rank — derived from Basketball-Reference season totals, not a published rank"]];
+  var sorts=[["cons","Consensus","Yahoo + Fantrax ADP blend (each platform's thin late-draft tail counts less); what CPU teams draft from"],["rank","Rank","Draft Lab rank: consensus ADP nudged toward 2025-26 nine-cat production (up to 20 spots)"],["adp","ADP","Yahoo ADP via Hashtag Basketball (17 Sep 2026)"],["last","Last · PER","2025-26 nine-category per-game rank (Basketball Monster / Hashtag)"],["lastTotal","Last · TOT","2025-26 nine-category TOTALS rank — derived from Basketball-Reference season totals, not a published rank"]];
   if(state.puntCategory)sorts.push(["punt","Punt value","Historical eight-category value, excluding "+state.puntCategory]);
   sorts.forEach(function(s){h+='<button class="fchip'+((state.sort||"cons")===s[0]?' sel':'')+'" data-sort="'+s[0]+'" title="'+s[2]+'">'+s[1]+'</button>';});
   h+='</div></details><div class="plist" id="mdplist"></div><div id="mdpager"></div></div>';
@@ -1196,7 +1196,7 @@ function renderGrades(){
   h+='<div class="boardwrap"><table class="board"><thead><tr><th>#</th><th>Team</th><th>Score</th><th>Grade</th><th>Category matchup</th></tr></thead><tbody>';
   g.forEach(function(x){
     var you=x.team===userTeam();
-    var unrated=x.unrated>0?' <span class="unrated" title="'+x.unrated+' player(s) without 2025-26 category data, counted at replacement level (mean of consensus ranks 150-170)">&#8224;'+x.unrated+'</span>':'';
+    var unrated=x.unrated>0?' <span class="unrated" title="'+x.unrated+' player(s) without 2025-26 category data, counted at market-implied value (mean of the 10 rated players nearest in consensus ADP)">&#8224;'+x.unrated+'</span>':'';
     h+='<tr'+(you?' class="you"':'')+'><td><b>'+x.rank+'</b></td><td>'+esc(teamName(x.team))+(you?' (you)':'')+'</td><td>'+x.score.toFixed(1)+unrated+'</td><td><b class="gradebadge g-'+x.grade.charAt(0)+'">'+x.grade+'</b></td><td>';
     if(!you&&me){
       var mu=catMatchup(me.cats,x.cats);
@@ -1212,7 +1212,7 @@ function renderGrades(){
     }
     h+='</td></tr>';
   });
-  h+='</tbody></table></div><p class="muted"><span class="unrated">&#8224;N</span> = N rostered players had no 2025-26 category data (injured stars, prospects) and were counted at replacement level. Bench and starters weighted equally; playoff schedule, injuries, and projected 2026-27 role changes are not factored in.</p>';
+  h+='</tbody></table></div><p class="muted"><span class="unrated">&#8224;N</span> = N rostered players had no 2025-26 category data (injured stars, prospects) and were counted at market-implied value: the average of the 10 rated players nearest them in consensus ADP. Bench and starters weighted equally; playoff schedule, injuries, and projected 2026-27 role changes are not factored in.</p>';
   return h;
 }
 function renderPuntStrategy(grades,previewCat,expanded){
