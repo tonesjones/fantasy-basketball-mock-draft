@@ -147,6 +147,9 @@ populated by players the market actually drafts there.
 
 ## 6. Data refresh
 
+> **Update (later 2026-09-28):** with network access enabled, the refresh was
+> done from Hashtag's 25 Sep table. See `docs/adp-refresh-2026-09-28.md`.
+
 **A fresh ADP pull was not possible from this session.** The environment's
 network policy blocks hashtagbasketball.com, basketball-reference.com,
 basketballmonster.com, fantasypros.com and yahoo.com. The bundled ADP is from

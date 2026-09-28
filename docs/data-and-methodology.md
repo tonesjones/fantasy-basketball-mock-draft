@@ -12,7 +12,7 @@ The category-scarcity panel shows, for each of the nine categories, the share of
 
 - **Consensus ADP** (`DraftCore.marketRank`, used by the CPU drafters, the Consensus sort, scarcity replacement level, Pick coach and punt advice): the mean of Yahoo and Fantrax ADP where both are in their reliable range. Each platform saturates late — Yahoo's list stops near 125 with ~80 players from 100 up, and Fantrax's rarely-drafted tail piles up at 200–244 — so a value's weight fades to 0.25 across its platform's saturated band (Yahoo 100–125, Fantrax 150–200) and Fantrax values past 200 are compressed (200 + excess/4). Players neither platform lists sort after all listed players, by last-season rank.
 - **Built-in Rank** (the PLAYERS order): consensus ADP − 0.4 × clamp(consensus − last-season rank, ±50), i.e. nudged up to 20 spots toward 2025-26 production; no nudge for INJ players, players without 2025-26 data, or unlisted players. Regenerate with `node scripts/rebuild-rank.js`; `test-rank-order.js` fails if it is stale.
-- **Refreshing ADP**: save Hashtag's table as CSV, run `node scripts/refresh-adp.js table.csv` for the report and `--apply` to write it, then rebuild the rank and bump `DATA_VERSION`.
+- **Refreshing ADP**: see `docs/adp-refresh-2026-09-28.md` for the exact commands (save the page, `hashtag-adp-to-csv.js`, `refresh-adp.js`, `generate-movers.js`, `rebuild-rank.js`, bump `DATA_VERSION`). **Never use ESPN ADP or rankings** (including blended columns that include ESPN).
 
 Full rationale and evidence: `docs/adp-rankings-review-2026-09-28.md`.
 
@@ -38,7 +38,7 @@ Live at **[tony-draft-lab-preview.pages.dev](https://tony-draft-lab-preview.page
 
 The setup and draft screens include a **Data health** disclosure with coverage counts and limitations. Hovering a scarcity category chip lists the top three remaining contributors in that category.
 
-A red **INJ** badge next to a player's name marks the 9 players currently injured (as of 12 September 2026, from current reporting). Hovering the badge shows the injury, evidence/context, expected return date, and source.
+A red **INJ** badge next to a player's name marks the 9 players currently injured (as of 28 September 2026, from the CBS Sports injury report cross-checked with team reports). Hovering the badge shows the injury, evidence/context, expected return date, and source.
 
 ```bash
 node audit-data.js

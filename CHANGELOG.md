@@ -1,5 +1,26 @@
 # Changelog
 
+## ADP, team and injury refresh (2026-09-28)
+Details: `docs/adp-refresh-2026-09-28.md`. Provenance:
+`scripts/data-provenance/2026-09-28-adp-refresh/`.
+- **ADP** from Hashtag's 25 Sep table, Yahoo + Fantrax only (**never ESPN**):
+  409 values changed. The Yahoo outliers from the ranking review moved toward
+  Fantrax (Nesmith 75 → 107, Lopez 78 → 104, AJ Green 79 → 103); Yahoo dropped
+  10 players (Kornet, Hunter, McConnell…), now Fantrax-tail only.
+- **Teams (each verified):** Vucevic BOS → ORL, Prince MIL → DET, Devin Carter
+  ATL → BOS, Whitmore FA → DEN, Finney-Smith CHA → ATL (the earlier CHA was
+  wrong); Moody gains SF/PF. Hield CHI / Dillingham CHA kept (newer than the table).
+- **Injuries:** Haliburton removed (cleared for camp, Sep 25); Whitmore updated.
+  Knueppel's hamstring still not added: the coach's INJ hard pass needs fixing first.
+- **Tooling:** `scripts/hashtag-adp-to-csv.js` turns the saved page into the
+  refresh CSV (tested to never read ESPN/blend). `scripts/generate-movers.js`
+  replaces the Sep 20 generator (read the pre-split `index.html`; now uses
+  consensus ADP), and 42 role flags followed the new ADP. `refresh-adp.js --apply`
+  fixed for PDATA entries whose first field is `adp` (Haliburton-style rows).
+- Tests that pinned specific ADP values now pick players by property, so they
+  survive refreshes.
+- Rank rebuilt; `DATA_VERSION` → `2026-09-28b`.
+
 ## ADP / ranking review: consensus blend, CPU variance, generated Rank (2026-09-28)
 Full write-up with grades and evidence: `docs/adp-rankings-review-2026-09-28.md`.
 - **Consensus ADP fixed and unified.** One `DraftCore.marketAdp` / `marketRank`
