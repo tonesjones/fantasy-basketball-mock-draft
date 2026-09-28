@@ -1,12 +1,13 @@
 /* pick-signals.js — deterministic pick-value signal engine (browser).
  *
  * Computes draft pick value from market data + curated signals, WITHOUT
- * asking Jev to guess. Jev (via /api/pick-quality) receives these signals
- * and explains them — it does not choose verdicts via confidence thresholds.
+ * asking Jev to guess. Jev (via /api/pick-quality) gets the engine's numbers
+ * and answers independently as a second opinion — it never sets the verdict.
  *
  * Core model:
  *   V(x) = true-value rank estimate (lower = better). Anchored on market
- *          consensus (Yahoo + Fantrax ADP), adjusted by damped edges:
+ *          consensus (DraftCore.marketRank: weighted Yahoo + Fantrax ADP),
+ *          adjusted by damped edges:
  *          - last-season actuals gap (produced better/worse than market)
  *          - role up/down (movers-outlook heuristic)
  *          - vacated usage, NETTED against incoming talent (a departure only
@@ -23,18 +24,16 @@
  *
  * INJ-tagged players are a hard pass.
  *
- * Globals used: PLAYERS, MOVES, VACATED_USAGE, window.PlayoffData,
- * window.PlayoffCore. Attach: window.PickSignals.
+ * Globals used: PLAYERS, MOVES, VACATED_USAGE, window.DraftCore,
+ * window.PlayoffData, window.PlayoffCore. Attach: window.PickSignals.
  */
 (function (root) {
   "use strict";
 
+  /* Consensus market rank: DraftCore's reliability-weighted Yahoo + Fantrax
+     ADP blend, shared with the CPU drafters and the Consensus sort. */
   function consensus(p) {
-    var a = p.adp, f = p.adpF;
-    if (a != null && f != null) return (a + f) / 2;
-    if (a != null) return a;
-    if (f != null) return f;
-    return p.r;
+    return root.DraftCore.marketRank(p);
   }
 
   /* Robust last-season actuals: median of totals-rank and per-game rank. */
@@ -187,7 +186,7 @@
       return {
         verdict: "pass", V: 999, consensus: consensus(candidate), valueAtPick: -999,
         reasons: ["INJ — " + (candidate.inj.injury || "injured") + ", out for the season"],
-        edges: [], target: null
+        edges: [], target: null, alternative: null
       };
     }
 
@@ -276,7 +275,11 @@
 
     return {
       verdict: verdict, V: V, consensus: tv.consensus,
-      valueAtPick: valueAtPick, reasons: reasons, edges: tv.edges, target: target
+      valueAtPick: valueAtPick, reasons: reasons, edges: tv.edges, target: target,
+      // Best other available player by true value (what the reasons name as
+      // "better:" / "take X now"). Lets the UI link to him and judge how
+      // close the call is without parsing reason strings.
+      alternative: best ? { n: best.n, V: bestV, valueAtPick: bestValueAtPick } : null
     };
   }
 

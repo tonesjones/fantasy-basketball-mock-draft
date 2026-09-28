@@ -2,19 +2,20 @@
    consensus rank, category replacement levels, draft grades and
    category matchups. No DOM, no app state - everything is passed in. */
 (function (root, factory) {
-  var api = factory();
+  var core =
+    root.DraftCore ||
+    (typeof module !== "undefined" && module.exports ? require("./draft-core") : null);
+  var api = factory(core);
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   root.DraftAnalysis = api;
-})(typeof globalThis !== "undefined" ? globalThis : this, function () {
+})(typeof globalThis !== "undefined" ? globalThis : this, function (core) {
   "use strict";
   var ZERO9 = [0, 0, 0, 0, 0, 0, 0, 0, 0];
 
-  /* Consensus market rank: mean of Yahoo and Fantrax ADP when both exist,
-     whichever one exists otherwise, else the built-in rank. */
+  /* Consensus market rank: DraftCore's reliability-weighted Yahoo + Fantrax
+     ADP blend (the same number the CPU drafts from). */
   function consRank(p) {
-    var a = p.adp,
-      f = p.adpF;
-    return a == null ? (f == null ? p.r : f) : f == null ? a : (a + f) / 2;
+    return core.marketRank(p);
   }
 
   /* BM-style category baseline. Replacement level per category = mean value of
@@ -50,13 +51,55 @@
     return { idx: idx, repl: repl, start: start };
   }
 
+  /* Market-implied category values for a player with no 2025-26 data
+     (injured stars, rookies): the mean cv of the IMPLIED_K rated players
+     nearest him in consensus rank. The neutral assumption is that he is worth
+     what the market pays; replacement level would grade a Haliburton pick at
+     16.8 as a ~6 z-point hole. `rated` is the pool's rated players sorted by
+     consensus rank (see ratedByConsensus). Returns null if none are rated. */
+  var IMPLIED_K = 10;
+  function ratedByConsensus(players, pdata) {
+    return players
+      .filter(function (p) {
+        return pdata[p.n] && pdata[p.n].cv;
+      })
+      .map(function (p) {
+        return { cons: consRank(p), cv: pdata[p.n].cv };
+      })
+      .sort(function (a, b) {
+        return a.cons - b.cons;
+      });
+  }
+  function impliedCv(player, rated) {
+    if (!rated.length) return null;
+    var target = consRank(player),
+      lo = 0;
+    while (lo < rated.length && rated[lo].cons < target) lo++;
+    var hi = lo,
+      out = ZERO9.slice(),
+      n = 0;
+    lo--;
+    /* Two-pointer walk outward from the insertion point, nearest first. */
+    while (n < IMPLIED_K && (lo >= 0 || hi < rated.length)) {
+      var pickLo =
+        hi >= rated.length || (lo >= 0 && target - rated[lo].cons <= rated[hi].cons - target);
+      var cv = pickLo ? rated[lo--].cv : rated[hi++].cv;
+      for (var c = 0; c < 9; c++) out[c] += cv[c];
+      n++;
+    }
+    for (var c2 = 0; c2 < 9; c2++) out[c2] /= n;
+    return out;
+  }
+
   /* Grade every team: sum of 2025-26 per-game category values across the full
-     roster (players without data count at replacement level), letter grade by
-     z-score of team totals. Returns teams sorted best-first with rank 1..N.
+     roster (players without data count at their market-implied value, else
+     replacement level), letter grade by z-score of team totals. Returns teams
+     sorted best-first with rank 1..N.
      opts: { players, pdata, log, teams, core (DraftCore), repl (9 numbers) } */
   function draftGrades(opts) {
     var repl = opts.repl || ZERO9,
       pdata = opts.pdata || {},
+      ratedPool = ratedByConsensus(opts.players, pdata),
       teams = [];
     for (var t = 0; t < opts.teams; t++) {
       var entries = opts.core.teamEntries(opts.players, opts.log, t, opts.teams);
@@ -66,7 +109,7 @@
         cats = ZERO9.slice();
       entries.forEach(function (e) {
         var d = pdata[e.player.n] || null;
-        var cv = (d && d.cv) || repl;
+        var cv = (d && d.cv) || impliedCv(e.player, ratedPool) || repl;
         if (d && d.cv) rated++;
         else unrated++;
         for (var c = 0; c < 9; c++) {
@@ -128,6 +171,9 @@
   return {
     consRank: consRank,
     scarcityBase: scarcityBase,
+    impliedCv: function (player, players, pdata) {
+      return impliedCv(player, ratedByConsensus(players, pdata || {}));
+    },
     draftGrades: draftGrades,
     catMatchup: catMatchup,
   };

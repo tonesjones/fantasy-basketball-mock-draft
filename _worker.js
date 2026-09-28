@@ -20,7 +20,7 @@
  *   npx wrangler pages secret put TYPESAFE_API_KEY --project-name tony-draft-lab
  */
 
-/** API suggest hint only; client TEMPORARY gates (0.45/0.25) reclassify lean. */
+/** Legacy (no-signals) suggest hint only; client gates reclassify lean. */
 var CONF_GATE = 0.7;
 /** Pin versioned id (aliases like jev-latest may move). */
 var MODEL = "jev-1.13.0";
@@ -237,6 +237,8 @@ function buildState(body) {
   if (scarcity && typeof scarcity === "object") {
     board.scarcity_rem_pct = scarcity;
   }
+  var adpNum = body.adp != null && body.adp !== "" ? Number(body.adp) : null;
+  var rankNum = body.rank != null && body.rank !== "" ? Number(body.rank) : null;
   var out = {
     league: {
       format: "9-category H2H (PTS REB AST STL BLK 3PM FG% FT% TO)",
@@ -253,98 +255,80 @@ function buildState(body) {
       name: body.player || "",
       positions: Array.isArray(body.positions) ? body.positions : [],
       team: body.team != null ? body.team : null,
-      built_in_rank: body.rank != null && body.rank !== "" ? Number(body.rank) : null,
-      yahoo_adp: body.adp != null && body.adp !== "" ? Number(body.adp) : null,
+      built_in_rank: rankNum,
+      yahoo_adp: adpNum,
+      // Precomputed so Jev never does arithmetic (a documented weak spot).
+      // Positive = the player has fallen past the market; negative = early.
+      picks_past_adp: adpNum != null && isFinite(adpNum) ? Math.round(pickNumber - adpNum) : null,
+      picks_past_rank:
+        rankNum != null && isFinite(rankNum) ? Math.round(pickNumber - rankNum) : null,
     },
     roster_needs: rn,
     board_context: board,
   };
-  // Deterministic signals: computed client-side from market data + curated
-  // edges. Jev's job is to EXPLAIN these numbers in natural language, not to
-  // re-derive a verdict via confidence thresholds.
+  // Engine numbers (market + curated edges) as context. The engine's own
+  // verdict and reason strings are deliberately NOT sent: Jev is an
+  // independent second opinion, and the client compares its choice against
+  // the engine verdict. Feeding the answer in would make Jev an echo.
+  // (Jev returns typed answers only - no prose - so it cannot "explain".)
   if (body.signals && typeof body.signals === "object") {
-    out.deterministic_signals = {
-      verdict: body.signals.verdict || null,
+    out.engine_numbers = {
       true_value_rank: body.signals.V != null ? Number(body.signals.V) : null,
       market_consensus_rank:
         body.signals.consensus != null ? Math.round(Number(body.signals.consensus)) : null,
       value_at_pick: body.signals.valueAtPick != null ? Number(body.signals.valueAtPick) : null,
-      reasons: Array.isArray(body.signals.reasons) ? body.signals.reasons : [],
       edges: Array.isArray(body.signals.edges)
         ? body.signals.edges.map(function (e) {
             return { signal: e.k, impact: e.v, note: e.note };
           })
         : [],
-      target_window: body.signals.target || null,
     };
   }
   return out;
 }
 
-function buildQuestions(hasSignals) {
-  var scoreInstructions =
-    "How good is drafting `candidate` at this pick right now, given " +
-    "`roster_needs`, ADP/rank vs `draft.pick_number`, and `board_context`? " +
-    "Use the ordered levels in criteria (lowest to highest). ";
-  var choiceInstructions =
-    "Should the user take this player now, wait for a later pick, or " +
-    "treat drafting them now as a reach? Consider ADP vs pick number, " +
-    "positional/category needs, and who else is available. ";
-  if (hasSignals) {
-    var grounding =
-      "IMPORTANT — deterministic signals provided: `deterministic_signals` " +
-      "contains a precomputed verdict (take/wait/pass/reach), true_value_rank, " +
-      "value_at_pick, and the specific signal edges (actuals, role, vacated " +
-      "usage, playoff schedule). Your job is to EXPLAIN these numbers, not to " +
-      "re-derive the verdict. Reference the concrete numbers (e.g. 'our #28 " +
-      "vs market #70, +42 value'). Keep confidence calibrated to how clear " +
-      "the numbers are, not to the player's star power.";
-    scoreInstructions += grounding;
-    choiceInstructions +=
-      grounding +
-      " HARD RULE — stay consistent with " +
-      "the deterministic verdict: verdict take → choose take; wait → wait; " +
-      "reach → reach; pass → choose wait (do not take now). Never recommend " +
-      "a different action than the deterministic verdict, and never " +
-      "contradict it in your explanation.";
-  } else {
-    scoreInstructions +=
-      "IMPORTANT — calibrated confidence: report how clear the ranking is vs " +
-      "ADP and the remaining board, NOT how elite the player is. Average or " +
-      "Good market picks should still carry moderate-to-high confidence " +
-      "(roughly 0.45–0.85) when the grade is clear relative to ADP/alternatives. " +
-      "Reserve near-zero confidence only when evidence is contradictory or sparse. " +
-      "Do not collapse score confidence toward 0 just because the pick is Average.";
-    choiceInstructions +=
-      "IMPORTANT — calibrated confidence: confidence reflects clarity of the " +
-      "take/wait/reach decision given ADP and board context, not star power. " +
-      "Clear market-rate decisions (including wait on Average picks) should " +
-      "keep moderate confidence; use very low confidence only when take vs " +
-      "wait vs reach is genuinely ambiguous.";
-  }
+/*
+ * Neutral questions. Jev's confidence is derived from its own probability
+ * distribution, so the instructions don't try to steer it - a low
+ * confidence means "genuinely split", which is information the client uses.
+ */
+function buildQuestions(hasEngineNumbers) {
+  var context =
+    "Use `candidate.picks_past_adp` (positive = fallen past market ADP, " +
+    "negative = early), `roster_needs`" +
+    (hasEngineNumbers ? ", `board_context` and `engine_numbers`." : " and `board_context`.");
   return {
     score: {
       type: "score",
-      instructions: scoreInstructions,
+      instructions:
+        "How good a pick is `candidate` at `draft.pick_number` for this roster? " + context,
       criteria: SCORE_CRITERIA,
     },
     choice: {
       type: "choice",
-      instructions: choiceInstructions,
+      instructions:
+        "Should the user draft `candidate` now, wait for their next pick " +
+        "(`draft.picks_until_user_next` picks away), or is drafting them now a reach? " +
+        context,
       criteria: CHOICE_CRITERIA,
     },
   };
 }
 
-function buildWhy(scoreAns, choiceAns, score, choice) {
-  var label = scoreLabel(score);
-  var parts = ["Jev pick quality " + Number(score).toFixed(2) + " ≈ " + label, "choice " + choice];
-  var sc = Number(scoreAns && scoreAns.confidence);
-  var cc = Number(choiceAns && choiceAns.confidence);
-  if (isFinite(sc) && isFinite(cc)) {
-    parts.push("conf score " + sc.toFixed(2) + " / choice " + cc.toFixed(2));
+/** Pass Jev's probability map through as plain {label: number}, or null. */
+function cleanProbabilities(p) {
+  if (!p || typeof p !== "object") return null;
+  var out = {};
+  var any = false;
+  for (var k in p) {
+    if (!Object.prototype.hasOwnProperty.call(p, k)) continue;
+    var v = Number(p[k]);
+    if (isFinite(v)) {
+      out[k] = v;
+      any = true;
+    }
   }
-  return parts.join("; ") + ".";
+  return any ? out : null;
 }
 
 async function handlePickQuality(request, env) {
@@ -394,11 +378,10 @@ async function handlePickQuality(request, env) {
   }
 
   var state = buildState(body);
-  var hasSignals = !!(state.deterministic_signals && state.deterministic_signals.verdict);
   var payload = {
     state: state,
     model: MODEL,
-    questions: buildQuestions(hasSignals),
+    questions: buildQuestions(!!state.engine_numbers),
   };
 
   var controller = new AbortController();
@@ -478,7 +461,11 @@ async function handlePickQuality(request, env) {
       scoreConfidence: scoreConf,
       choice: choice,
       choiceConfidence: choiceConf,
-      why: buildWhy(scoreAns, choiceAns, score, choice),
+      scoreProbabilities: cleanProbabilities(scoreAns.probabilities),
+      choiceProbabilities: cleanProbabilities(choiceAns.probabilities),
+      // Jev returns typed answers only; there is no prose to pass through.
+      // The client builds any wording from the fields above.
+      why: "",
       verdict: verdict,
       model: modelUsed,
       scoreLabel: label,

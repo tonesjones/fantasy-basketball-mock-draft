@@ -9,7 +9,9 @@
   function positive(value) {
     return typeof value === "number" && isFinite(value) && value > 0;
   }
-  function audit(players, data, tags) {
+  /* market (optional): player -> market ADP for the rank-gap check, e.g.
+     DraftCore.marketRank. Defaults to Yahoo ADP. */
+  function audit(players, data, tags, market) {
     data = data || {};
     tags = tags || {};
     var out = {
@@ -105,12 +107,14 @@
           new Set(cats).size !== cats.length)
       )
         out.errors.push("Invalid or duplicate category tag: " + name);
-      if (d && positive(d.adp) && Math.abs(rank - d.adp) >= 40)
+      var listed = d && (positive(d.adp) || positive(d.adpF));
+      var mk = listed && market ? market(p) : d && positive(d.adp) ? d.adp : null;
+      if (mk != null && Math.abs(rank - mk) >= 40)
         out.rankDivergence.push({
           name: name,
           rank: rank,
-          adp: d.adp,
-          gap: Math.round((rank - d.adp) * 10) / 10,
+          adp: Math.round(mk * 10) / 10,
+          gap: Math.round((rank - mk) * 10) / 10,
         });
       // Movers / outlook coverage (optional fields; missing proj is expected in v1)
       var mover = d && d.mover;

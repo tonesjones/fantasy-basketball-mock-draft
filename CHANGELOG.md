@@ -1,5 +1,74 @@
 # Changelog
 
+## ADP / ranking review: consensus blend, CPU variance, generated Rank (2026-09-28)
+Full write-up with grades and evidence: `docs/adp-rankings-review-2026-09-28.md`.
+- **Consensus ADP fixed and unified.** One `DraftCore.marketAdp` / `marketRank`
+  replaces four copies (`consRank`, `marketRank`, `pick-signals.consensus`,
+  `punt-core.marketAdp`). Still Yahoo + Fantrax only and the plain mean where
+  both are reliable, but each platform's saturated tail is down-weighted
+  (Yahoo 100–125, Fantrax 150–200 → weight 0.25; Fantrax past 200 compressed
+  to 200 + excess/4). The plain mean read Fantrax's 238–244 tail as literal
+  picks: 18 players Yahoo drafts at 79–110 (AJ Green 79.2 → consensus 160.4)
+  went undrafted in 200/200 simulated 13-round drafts. Now every consensus
+  top-120 player is drafted in every sim. Unlisted players sort last by
+  last-season rank; the built-in rank no longer feeds the market.
+- **CPU noise scales with ADP** (±20%, min ±1.5 picks) instead of a fixed
+  ±2..8 window. Draft-slot SD for a market 61–100 player: 2.2 → 4.8 picks.
+  `cpuPickIndex` computes the roster baseline once per pick and stops scanning
+  once no candidate can win (200 drafts: >120 s → 16 s).
+- **Grades:** players without 2025-26 data count at market-implied value (mean
+  `cv` of the 10 rated players nearest in consensus ADP) instead of
+  replacement level; a round-2 Haliburton no longer reads as a ~6 z-point hole.
+- **Built-in Rank is generated** by `scripts/rebuild-rank.js`: consensus ADP
+  nudged up to 20 spots toward 2025-26 production (no nudge for INJ). Mean gap
+  to consensus order in the top 150: 21.8 → 12.1; players 40+ off: 50 → 3.
+  `test-rank-order.js` fails if the order goes stale. The audit's rank-gap
+  check now compares with the consensus order.
+- **Data:** Buddy Hield ATL → CHI and Rob Dillingham CHI → CHA (Sep 26 trade);
+  Moses Moody `GSW` → `GS`. Stale "14 Sep" ADP labels corrected to 17 Sep.
+  Kon Knueppel's hamstring strain is documented but not added to INJ (the Pick
+  coach would hard-pass him as "out for the season"). A fresh ADP pull was
+  blocked by this environment's network policy.
+- **Tooling:** `scripts/refresh-adp.js` diffs a saved Hashtag ADP table CSV
+  against the bundled data and `--apply` writes it (tested); replaces the
+  uncommitted local diff script used for the Sep 18 refresh.
+- `DATA_VERSION` → `2026-09-28` (resets saved drafts).
+
+## Pick coach: Clear / Close call cue (2026-09-28)
+- One cue under the verdict replaces the separate Jev line: **Close call**
+  when the best alternative is within 3 ranks of value or Jev is split /
+  disagrees; otherwise **Clear call**. Jev detail moves to the source tooltip.
+- The engine's best alternative (`PickSignals.evaluate().alternative`) is a
+  tappable `Compare: X ›` (close call) / `Better: X ›` (pass / wait).
+- "Coach: all 9 categories" is gone unless you've committed a punt; then it
+  becomes a warning that the verdict ignores the punt.
+
+## Mobile coach dock (2026-09-28)
+- Coach collapses to a compact strip on phones (More / Less), the list panel
+  scrolls as one, unfocused rows show one stats line. Desktop unchanged.
+
+## Jev as an independent second opinion (2026-09-28)
+- **Jev returns no text.** TypeSafe System One answers with typed values,
+  probabilities and confidence only. The worker used to synthesize a `why`
+  like "Jev pick quality 2.00 ≈ Average; choice take; conf …" which the
+  client then appended to the deterministic reasons as if it were prose.
+  `why` is now `""`; `buildWhy` is gone.
+- **No more forced agreement.** The choice prompt's HARD RULE (echo the
+  engine verdict) and the "explain these numbers" instructions are removed —
+  they had no effect on a model that can't write, and forcing the answer made
+  the choice question pure cost. The engine verdict and reason strings are no
+  longer sent; its numbers are (`engine_numbers`).
+- **No arithmetic for Jev.** `candidate.picks_past_adp` / `picks_past_rank`
+  are precomputed in the worker.
+- **Confidence left alone.** Removed prompt text that tried to talk Jev out of
+  low confidence; its confidence is derived from its own probabilities.
+- **Probabilities passed through** (`scoreProbabilities`,
+  `choiceProbabilities`).
+- **UI:** `.pc-source` shows `Jev agrees · N%` / `Jev disagrees: <choice> · N%`
+  / `Jev undecided`. The deterministic verdict and reasons are unchanged.
+- Tests: worker contract test with a mocked TypeSafe response; coach/render
+  tests no longer mock prose the API cannot produce.
+
 ## _worker.js replaces functions/ (2026-09-20)
 - `wrangler pages deploy` compiled `functions/` locally but the resulting
   worker intermittently failed to route (empty 405 on `POST /api/pick-quality`

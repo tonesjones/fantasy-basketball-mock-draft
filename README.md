@@ -14,12 +14,12 @@ On the setup screen, choose:
 - **Rounds** — roster size, 10–15 rounds.
 - **Playoff window** — the three Yahoo weeks your league's fantasy playoffs cover (W18–20 through W21–23; W20–22 is Yahoo's public-league default). This drives the per-player playoff schedule badges and your roster's playoff-games summary.
 
-Press **Start draft**. Your picks are marked; the 11 CPU teams draft automatically between your turns using Yahoo ADP as their market signal, with a small seeded variation so no two drafts are identical.
+Press **Start draft**. Your picks are marked; the 11 CPU teams draft automatically between your turns from consensus ADP (a Yahoo + Fantrax blend), with seeded variation that grows with ADP so no two drafts are identical.
 
 ### During the draft
 
 - **Available players** — search stays primary. Position filters and sort chips (Rank, ADP, last season, MPG, scarcity, Consensus) sit behind a progressive-disclosure panel so the list stays calm; pages of 50 with an honest filtered count.
-- Each row shows the player's **MPG** (2025-26 minutes per game), Yahoo ADP, built-in rank, last-season nine-cat rank, position eligibility, team, a red **INJ** badge if currently injured (tap or hover for details), and a color-coded **playoff badge** (bad/ok/good) for games in your selected playoff window.
+- Each row shows the player's **MPG** (2025-26 minutes per game), Yahoo ADP, Draft Lab rank, last-season nine-cat rank, position eligibility, team, a red **INJ** badge if currently injured (tap or hover for details), and a color-coded **playoff badge** (bad/ok/good) for games in your selected playoff window.
 - **Preview only** ([tony-draft-lab-preview](https://tony-draft-lab-preview.pages.dev)): quiet **NEW** (team change) and **↑ role** / **↓ role** chips. Role chips are a heuristic (Yahoo/Fantrax ADP vs last-season rank), not projections — see `docs/movers-outlook.md`. **Not** on prod.
 - **Vacated usage (preview / branch):** for ~22 high-ADP movers, Pick coach shows one quiet line naming who on the old team likely gains touches/minutes (`docs/vacated-usage.md`). Curated — not a BM scrape. **Not** on prod.
 - Click a player on your turn to draft them. **Undo my last pick** reverses your most recent decision. An aria-live region announces your pick, CPU batches, and draft complete.
@@ -30,7 +30,7 @@ Press **Start draft**. Your picks are marked; the 11 CPU teams draft automatical
 
 - **My team** — your roster in Yahoo-style slots, your playoff-games summary, and a per-player playoff schedule table for your chosen window.
 - **Draft board** — the full board with the value/reach legend underneath (same tab you can open mid-draft).
-- **Grades** — all 12 teams scored by summing 2025-26 per-game category values across the full roster (players without 2025-26 data count at replacement level, marked †N), ranked 1–12 with letter grades (A+ to F). The **Category matchup** column shows your historical category-value tally against each CPU team (e.g. **7-2**) plus each category (FG% FT% 3PM PTS REB AST STL BLK TO) colored green (you win it), yellow (even), or red (they win it); hover for the exact values. This is a comparison of 2025-26 z-scores, not projected category totals.
+- **Grades** — all 12 teams scored by summing 2025-26 per-game category values across the full roster (players without 2025-26 data count at market-implied value, marked †N), ranked 1–12 with letter grades (A+ to F). The **Category matchup** column shows your historical category-value tally against each CPU team (e.g. **7-2**) plus each category (FG% FT% 3PM PTS REB AST STL BLK TO) colored green (you win it), yellow (even), or red (they win it); hover for the exact values. This is a comparison of 2025-26 z-scores, not projected category totals.
 
 ### On mobile
 
@@ -39,7 +39,8 @@ The layout collapses to a single column with compact two-line player rows; filte
 ## What it does
 
 - Runs a 12-team snake draft with 10–15 rounds and a selectable draft position.
-- Uses the bundled Yahoo ADP as the CPU market signal, falling back to the app’s built-in rank when an ADP is missing. Small seeded variation keeps drafts from being identical while making a saved draft replayable.
+- CPU teams draft from consensus ADP (`DraftCore.marketRank`): the mean of Yahoo and Fantrax ADP, with each platform's thin late-draft tail down-weighted so a Fantrax 240 can't drag a Yahoo 79 to pick 160. Seeded noise of ±20% of ADP (at least ±1.5 picks) keeps drafts varied while making a saved draft replayable.
+- The **Rank** column is generated, not curated: consensus ADP nudged toward 2025-26 nine-cat production by up to 20 spots (`scripts/rebuild-rank.js`).
 - Rejects duplicate or invalid draft selections in the engine.
 - Assigns each roster with position-aware matching and reassignment, so eligible players fill the most specific open slot first. Any player beyond the configured slots appears under **Overflow** rather than disappearing.
 - Shows the full available pool through 50-player pages, including an honest filtered result count.
@@ -66,7 +67,7 @@ The layout collapses to a single column with compact two-line player rows; filte
 - `audit-data.js` — reproducible audit of the actual bundled player, category, and ADP data.
 - `test-*.js` — automated checks; run them all with `npm test`. `test-worker.js` covers the `/api/pick-quality` abuse guard.
 - `run-tests.js`, `package.json` — test runner and `npm test` / `npm run format` scripts; `.github/workflows/test.yml` runs them in CI.
-- `scripts/` — `load-data.js` (loads the bundled data in Node for tests/audit), `build-widget.py` (rebuilds the standalone in-chat widget), `build-playoff-data.py` and `import-playoff-schedule.py` (playoff schedule refresh).
+- `scripts/` — `load-data.js` (loads the bundled data in Node for tests/audit), `refresh-adp.js` (diff/apply a saved Hashtag ADP table CSV), `rebuild-rank.js` (regenerates the built-in Rank order), `build-widget.py` (rebuilds the standalone in-chat widget), `build-playoff-data.py` and `import-playoff-schedule.py` (playoff schedule refresh).
 - `CHANGELOG.md` — dated change log. `OPEN-ME.txt` — desktop handoff notes.
 
 ## Pick coach
@@ -76,7 +77,7 @@ Advisory-only **Pick coach** side tab (your turn only). Code is on `main`.
 
 Confidence bands (TEMPORARY client gates): **suggest** ≥ 0.45; **lean** ≥ 0.25 (outline `Lean take|wait|reach`); below that “Not sure enough…”. SoftFail stays uncertain. QA on preview/local hosts: `?leanDemo=1`. Details: `docs/pick-coach.md`.
 
-- Source labels: **Jev** | **Stub** (preview soft-fail QA) | **Stub · offline** (`file://`) | **Unavailable**
+- Source labels: **Jev agrees / disagrees / undecided** (Jev's independent take vs the engine verdict) | **Jev** (legacy path) | **Stub** (preview soft-fail QA) | **Stub · offline** (`file://`) | **Unavailable**
 - Soft-fail / unavailable still shows mover/role why when applicable; preview soft-fails may use labeled stub (never as Jev)
 - Never auto-drafts; never runs for CPU picks
 
@@ -86,7 +87,7 @@ See **`docs/pick-coach.md`** for secret setup (Production vs Preview), pinned mo
 
 Primary: **[https://tony-draft-lab.pages.dev](https://tony-draft-lab.pages.dev)** (deploys from `main`).
 
-Local: open `index.html` directly, or serve this folder with any static server. Draft state is stored only in the browser that created it. A `DATA_VERSION` bump (most recently `2026-09-20`, when built-in ranks were reconciled to Yahoo ADP for buried outliers — see `CHANGELOG.md`) invalidates older saved drafts.
+Local: open `index.html` directly, or serve this folder with any static server. Draft state is stored only in the browser that created it. A `DATA_VERSION` bump (most recently `2026-09-28`, when consensus ADP and the built-in Rank were rebuilt — see `CHANGELOG.md` and `docs/adp-rankings-review-2026-09-28.md`) invalidates older saved drafts.
 
 Run every logic check with:
 
@@ -99,6 +100,7 @@ Format the engine modules with `npm run format`. GitHub Actions runs a format ch
 ## More docs
 
 - `docs/data-and-methodology.md` — category values, scarcity math, grades, data-health audit and refresh history
+- `docs/adp-rankings-review-2026-09-28.md` — graded review of the ADP / ranking pipeline and how to refresh it
 - `docs/pick-coach.md` — Pick coach design, secrets, rate limiting
 - `docs/movers-outlook.md`, `docs/vacated-usage.md`, `docs/punt-strategy-plan.md` — feature designs
 - `CHANGELOG.md` — dated change log

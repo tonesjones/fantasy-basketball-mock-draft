@@ -23,7 +23,7 @@ var sandbox = { console: console };
 sandbox.globalThis = sandbox;
 sandbox.window = sandbox;
 ["player-data.js", "movers-outlook.js", "vacated-usage.js",
- "playoff-data.js", "playoff-core.js", "pick-signals.js"].forEach(function (f) {
+ "playoff-data.js", "playoff-core.js", "draft-core.js", "pick-signals.js"].forEach(function (f) {
   loadInto(sandbox, f);
 });
 
@@ -62,8 +62,12 @@ function availAt(pick) {
 
 // --- consensus ---
 t("consensus blends Yahoo+Fantrax", function () {
-  var v = S.consensus(P("Nikola Vucevic")); // adp 111.9, adpF 199
-  assert.ok(Math.abs(v - 155.4) < 1, "got " + v);
+  var v = S.consensus(P("Mikal Bridges")); // adp 75.8, adpF 72.4: both reliable
+  assert.ok(Math.abs(v - 74.1) < 0.05, "got " + v);
+});
+t("consensus matches DraftCore market rank", function () {
+  var p = P("Nikola Vucevic"); // adp 111.9 (Yahoo saturated band), adpF 199
+  assert.strictEqual(S.consensus(p), sandbox.DraftCore.marketRank(p));
 });
 t("consensus falls back to one source", function () {
   var v = S.consensus(P("Tre Jones")); // adp null, adpF 155.3
