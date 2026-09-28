@@ -411,7 +411,7 @@
     };
     // Deterministic signals (from PickSignals.evaluate): the verdict comes
     // from computed value, NOT from Jev's confidence thresholds. Jev's role
-    // is to explain the numbers, not to vote via uncalibrated confidences.
+    // is an independent second opinion, not a vote via confidences.
     var sig = s.signals || null;
     var verdict, choice, deterministic = false;
     if (sig && sig.verdict) {
@@ -425,20 +425,12 @@
       verdict = dv;
       choice = dv;
       var detWhy = (sig.reasons || []).join(" · ");
-      // Jev explains; it must not contradict. Append Jev's prose only when
-      // its stated choice agrees with the deterministic verdict — otherwise
-      // the deterministic numbers stand alone.
-      var jevWhy = data.why || "";
-      var jevChoice = data.choice ? String(data.choice).toLowerCase() : null;
+      // Jev returns typed answers only (no prose), and it is asked the choice
+      // question independently — the engine verdict is not sent. Its answer
+      // becomes a second opinion (agrees / disagrees / undecided), shown in
+      // the source label. It never changes the verdict or the reasons.
       var why = detWhy;
-      // Jev's choice schema has no "pass"; the API prompt maps deterministic
-      // pass -> Jev "wait" (do not take now). A Jev "wait" against a
-      // deterministic "pass" is agreement, not contradiction. Jev "take"
-      // or "reach" against any non-matching verdict is still dropped.
-      var jevAgrees = jevChoice === dv || (dv === "pass" && jevChoice === "wait");
-      if (jevWhy && jevAgrees && jevWhy.indexOf(detWhy.slice(0, 40)) < 0) {
-        why = detWhy + (detWhy ? " · " : "") + jevWhy;
-      }
+      var jev = jevOpinion(data, dv);
       var model = data.model || PINNED_MODEL;
       return {
         score: score,
@@ -453,6 +445,7 @@
         stale: false,
         deterministic: true,
         signals: sig,
+        jev: jev,
       };
     }
     // Fallback: legacy confidence-gate path (no signals computed).
@@ -482,12 +475,50 @@
     };
   }
 
+  /**
+   * Below this choice confidence Jev is treated as undecided. Jev's
+   * confidence is (n*peak - 1)/(n - 1) over its probabilities, so for the
+   * 3-way take/wait/reach choice 0.15 is a top option under ~43%.
+   */
+  var JEV_UNDECIDED_CONF = 0.15;
+
+  /**
+   * Jev's independent take/wait/reach answer compared against the
+   * deterministic verdict. Jev's schema has no "pass"; a Jev "wait" against
+   * an engine "pass" (don't take now) counts as agreement.
+   * Returns null when Jev errored or gave no choice.
+   */
+  function jevOpinion(data, engineVerdict) {
+    if (!data || data.error || !data.choice) return null;
+    var choice = String(data.choice).toLowerCase();
+    var conf = Number(data.choiceConfidence);
+    var probs = data.choiceProbabilities;
+    var p = probs && typeof probs === "object" ? Number(probs[choice]) : NaN;
+    var dv = String(engineVerdict || "").toLowerCase();
+    return {
+      choice: choice,
+      confidence: isFinite(conf) ? conf : null,
+      probability: isFinite(p) ? p : null,
+      agrees: choice === dv || (dv === "pass" && choice === "wait"),
+      undecided: isFinite(conf) ? conf < JEV_UNDECIDED_CONF : false,
+    };
+  }
+
+  /** "Jev agrees · 72%" / "Jev disagrees: take · 64%" / "Jev undecided". */
+  function jevOpinionLabel(op) {
+    if (!op) return "Jev";
+    if (op.undecided) return "Jev undecided";
+    var pct = op.probability != null ? " · " + Math.round(op.probability * 100) + "%" : "";
+    return op.agrees ? "Jev agrees" + pct : "Jev disagrees: " + op.choice + pct;
+  }
+
   /** Short UI label: "Jev" / "Stub" / "Stub · offline" / "Unavailable". */
   function sourceLabel(res) {
     if (!res) return "";
     // Deterministic verdicts stand even when Jev errored — label honestly.
     if (res.deterministic && res.error) return "Deterministic \u00b7 Jev unavailable";
     if (res.error) return "Unavailable";
+    if (res.deterministic && res.jev) return jevOpinionLabel(res.jev);
     var m = String(res.model || "");
     if (m === "stub" || res.fallback) {
       // Preview soft-fail / fixture stub is QA-only — never look like Jev.
@@ -783,6 +814,9 @@
     clearCache: clearCache,
     fingerprint: fingerprint,
     sourceLabel: sourceLabel,
+    jevOpinion: jevOpinion,
+    jevOpinionLabel: jevOpinionLabel,
+    JEV_UNDECIDED_CONF: JEV_UNDECIDED_CONF,
     normalizeApiResult: normalizeApiResult,
     uncertainResult: uncertainResult,
     isPreviewPagesHost: isPreviewPagesHost,

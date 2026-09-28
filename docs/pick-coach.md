@@ -203,12 +203,35 @@ Board context feeds Jev (`notable_available` / `recently_taken` / optional
   "choice": "wait",
   "choiceConfidence": 0.32,
   "verdict": "uncertain",
-  "why": "…",
+  "choiceProbabilities": { "take": 0.3, "wait": 0.6, "reach": 0.1 },
+  "scoreProbabilities": { "0": 0.05, "1": 0.1, "2": 0.3, "3": 0.35, "4": 0.2 },
+  "why": "",
   "model": "jev-1.13.0",
   "scoreLabel": "Average",
   "error": "optional soft-fail string"
 }
 ```
+
+`why` is always `""` from the live API: Jev (System One) returns typed answers,
+probabilities and confidence only — no prose. All wording is built client-side.
+
+### Jev as a second opinion (deterministic path)
+
+When the engine (`pick-signals.js`) produced a verdict, the worker sends its
+**numbers** (`engine_numbers`: true value rank, consensus rank, value at pick,
+edges) plus precomputed `candidate.picks_past_adp` / `picks_past_rank`, but
+**not** the engine verdict or reason strings. Jev answers take/wait/reach
+independently. `PickCoach.jevOpinion()` compares it to the engine verdict (Jev
+`wait` vs engine `pass` counts as agreement) and the `.pc-source` label shows:
+
+- `Jev agrees · 77%` — same call; % is Jev's probability for its choice
+- `Jev disagrees: take · 87%` — different call; the engine verdict still stands
+- `Jev undecided` — choice confidence < `JEV_UNDECIDED_CONF` (0.15)
+- `Deterministic · Jev unavailable` — Jev errored / timed out / rate limited
+
+Jev never changes the verdict or the reasons text.
+
+### Legacy path (no engine signals)
 
 `verdict` from normalize / UI is `"suggest" | "lean" | "uncertain"`. The Pages
 Function may still return only `suggest|uncertain`; the client reclassifies lean

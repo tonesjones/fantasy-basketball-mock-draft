@@ -1,5 +1,27 @@
 # Changelog
 
+## Jev as an independent second opinion (2026-09-28)
+- **Jev returns no text.** TypeSafe System One answers with typed values,
+  probabilities and confidence only. The worker used to synthesize a `why`
+  like "Jev pick quality 2.00 ≈ Average; choice take; conf …" which the
+  client then appended to the deterministic reasons as if it were prose.
+  `why` is now `""`; `buildWhy` is gone.
+- **No more forced agreement.** The choice prompt's HARD RULE (echo the
+  engine verdict) and the "explain these numbers" instructions are removed —
+  they had no effect on a model that can't write, and forcing the answer made
+  the choice question pure cost. The engine verdict and reason strings are no
+  longer sent; its numbers are (`engine_numbers`).
+- **No arithmetic for Jev.** `candidate.picks_past_adp` / `picks_past_rank`
+  are precomputed in the worker.
+- **Confidence left alone.** Removed prompt text that tried to talk Jev out of
+  low confidence; its confidence is derived from its own probabilities.
+- **Probabilities passed through** (`scoreProbabilities`,
+  `choiceProbabilities`).
+- **UI:** `.pc-source` shows `Jev agrees · N%` / `Jev disagrees: <choice> · N%`
+  / `Jev undecided`. The deterministic verdict and reasons are unchanged.
+- Tests: worker contract test with a mocked TypeSafe response; coach/render
+  tests no longer mock prose the API cannot produce.
+
 ## _worker.js replaces functions/ (2026-09-20)
 - `wrangler pages deploy` compiled `functions/` locally but the resulting
   worker intermittently failed to route (empty 405 on `POST /api/pick-quality`

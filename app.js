@@ -350,7 +350,7 @@ function buildPickCoachPayload(pi){
   };
 }
 /* Deterministic pick signals for the coach. Computed locally from market data
- * + curated edges — Jev explains these, it doesn't vote via confidence. */
+ * + curated edges — Jev gives an independent second opinion, it doesn't vote. */
 function buildPickSignals(pl, pickNumber, nextPick, openSlots, taken) {
   try {
     if (typeof window.PickSignals === "undefined") return null;
@@ -628,7 +628,7 @@ function refreshPickCoach(){
     var isDet=!!(res.deterministic&&res.signals&&res.signals.verdict);
     var detVerdict=isDet?String(res.signals.verdict).toLowerCase():null;
     // Deterministic: verdict already computed from signals — honor it directly,
-    // never reclassify via confidence gates. Jev explains; it doesn't vote.
+    // never reclassify via confidence gates. Jev's opinion is shown separately.
     // Fixture / leanDemo / forceConf: honor res.verdict — NEVER reclassify via confs
     // (confs can classify differently than the forced Soft lean / suggest paint).
     // Live: PickCoach.classifyVerdict uses TEMP max(scoreConf,choiceConf) + score/ADP floors.
@@ -695,7 +695,7 @@ function refreshPickCoach(){
         choiceEl.textContent=choiceKind==="take"?"Take":choiceKind==="reach"?"Reach":"Wait";
         choiceEl.hidden=false;
       }
-      // Deterministic: the engine's reasons (+ agreeing Jev prose) render
+      // Deterministic: the engine's reasons render
       // verbatim. The legacy board-vocab blender would misfire its overlap
       // filter on the deterministic text (e.g. "ADP" in the reasons) and eat
       // the explanation.
