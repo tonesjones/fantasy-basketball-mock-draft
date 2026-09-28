@@ -83,8 +83,9 @@
   function teamEntries(players, log, team, teams) {
     var out = [];
     log.forEach(function (pi, index) {
-      if (teamForPick(index, teams) === team)
-        out.push({ player: players[pi], pi: pi, index: index });
+      /* pi may be -1 in Yahoo live mode (a pick outside the bundled pool) */
+      var pl = players[pi];
+      if (pl && teamForPick(index, teams) === team) out.push({ player: pl, pi: pi, index: index });
     });
     return out;
   }

@@ -1,0 +1,9 @@
+{
+  "name": "yahoo-draft-copilot-worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node test-worker.mjs",
+    "check": "npx --yes wrangler deploy --dry-run"
+  }
+}

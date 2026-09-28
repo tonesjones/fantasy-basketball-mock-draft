@@ -96,9 +96,14 @@ npm test        # or: node run-tests.js
 
 Format the engine modules with `npm run format`. GitHub Actions runs a format check, the test suite and `audit-data.js` on every push to `main` and every pull request.
 
+## Yahoo live draft
+
+Connect a Yahoo mock or live draft from the setup screen: Draft Lab mirrors the board through the `yahoo-draft-copilot` Cloudflare Worker (`tools/yahoo-copilot/worker/`) and gives advice while you pick in Yahoo. See `docs/yahoo-worker-plan.md` and `tools/yahoo-copilot/README.md`.
+
 ## More docs
 
 - `docs/data-and-methodology.md` — category values, scarcity math, grades, data-health audit and refresh history
 - `docs/pick-coach.md` — Pick coach design, secrets, rate limiting
+- `docs/yahoo-worker-plan.md`, `docs/yahoo-draft-copilot-approach.md` — Yahoo live-draft design
 - `docs/movers-outlook.md`, `docs/vacated-usage.md`, `docs/punt-strategy-plan.md` — feature designs
 - `CHANGELOG.md` — dated change log
