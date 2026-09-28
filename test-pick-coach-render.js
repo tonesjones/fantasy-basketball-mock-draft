@@ -23,7 +23,7 @@ function loadInto(file) {
   vm.runInNewContext(fs.readFileSync(DIR + "/" + file, "utf8"), sandbox);
 }
 ["player-data.js", "movers-outlook.js", "vacated-usage.js",
- "playoff-data.js", "playoff-core.js", "draft-core.js", "pick-signals.js", "pick-coach.js"].forEach(loadInto);
+ "playoff-data.js", "playoff-core.js", "draft-core.js", "punt-core.js", "pick-signals.js", "pick-coach.js"].forEach(loadInto);
 
 loadInto("player-pool.js"); // real PLAYERS literal + PDATA enrichment
 
@@ -98,7 +98,7 @@ vm.runInNewContext([
   "function playoffBadge(){return \"\";}",
   "function isUserTurn(){return true;}",
   "function updateCoachDockPeek(){}",
-  "var state={puntCategory:null};",
+  "var state={puntCats:[]};",
 ].join("\n"), sandbox);
 
 // ---- minimal DOM shim ----
@@ -276,9 +276,9 @@ t("luka pass + jev-wait: pass band still visible", function () { assert.ok(vis(s
 t("luka pass + jev-wait: source says checked by Jev", function () {
   assert.strictEqual(txt(sC, ".pc-source"), "Checked by Jev");
 });
-sandbox.state.puntCategory = "FT%";
+sandbox.state.puntCats = ["FT%"];
 var sPunt = paintCard(resC, l.pl, 1);
-sandbox.state.puntCategory = null;
+sandbox.state.puntCats = [];
 t("punting: categories line becomes a punt warning", function () {
   assert.ok(vis(sPunt, ".pc-basis"));
   assert.ok(/punting FT%/.test(txt(sPunt, ".pc-basis")), txt(sPunt, ".pc-basis"));

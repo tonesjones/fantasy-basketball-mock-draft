@@ -13,9 +13,33 @@ const pdata = {
   Steady:{cv:[2,0,0,0,0,0,0,0,0]},
   'Weak PTS':{cv:[-4,2,2,2,0,0,0,0,0]},
 };
-assert.equal(Punt.valid('TO'),false);
+assert.equal(Punt.valid('TO'),true,'TO can be punted');
 assert.equal(Punt.valid('PTS'),true);
-assert.deepEqual(Punt.rankings(players,pdata,{},'TO'),[]);
+assert.equal(Punt.valid('XYZ'),false);
+assert.deepEqual(Punt.rankings(players,pdata,{},'XYZ'),[]);
+assert.deepEqual(Punt.rankings(players,pdata,{},[]),[]);
+
+// Multi-punt: normalize + label
+assert.deepEqual(Punt.normalize(['TO','FT%']),['FT%','TO'],'CATS order');
+assert.deepEqual(Punt.normalize('FG%'),['FG%'],'single string still accepted (saved drafts)');
+assert.deepEqual(Punt.normalize(['PTS','PTS']),['PTS'],'duplicates collapse');
+assert.deepEqual(Punt.normalize(['PTS','bogus']),[],'any invalid entry rejects the set');
+assert.deepEqual(Punt.normalize(['PTS','REB','AST','STL']),[],'more than MAX_PUNTS rejected');
+assert.equal(Punt.MAX_PUNTS,3);
+assert.equal(Punt.label(['TO','FG%']),'FG% + TO');
+
+// Multi-punt ranking removes every punted category.
+// Scorer: base 3-2-2 = -1; punt FT% -> 1; punt FT%+TO -> 3.  Glue: base 3 throughout.
+{
+  const mp=[{n:'Scorer'},{n:'Glue'}];
+  const md={Scorer:{cv:[3,0,0,0,0,0,0,-2,-2]},Glue:{cv:[0,1,1,1,0,0,0,0,0]}};
+  const one=Punt.rankings(mp,md,{},'FT%'), two=Punt.rankings(mp,md,{},['TO','FT%']);
+  const S1=one.find(r=>r.pi===0), S2=two.find(r=>r.pi===0);
+  assert.equal(S1.base,-1); assert.equal(S1.punt,1); assert.equal(S1.baseRank,2); assert.equal(S1.puntRank,2);
+  assert.equal(S2.punt,3); assert.equal(S2.puntRank,1,'double punt lifts the scorer to #1 (tie broken by pool order)');
+  assert.equal(S2.gain,1);
+  assert.equal(Punt.rankings(mp,md,{},'TO').find(r=>r.pi===0).punt,1,'punting TO alone drops the inverted TO term');
+}
 const rows = Punt.rankings(players,pdata,{},'PTS');
 assert.equal(rows.length,2,'missing category data must remain unknown');
 assert.equal(rows[0].pi,1);
@@ -72,5 +96,15 @@ const actualTeams=Array.from({length:12},(_,team)=>{
 });
 const realChoice=Punt.suggest(actualTeams,5,pool,dataCtx.PDATA,Object.fromEntries(log.map(pi=>[pi,true])),60);
 assert(realChoice,'the actual five-round mock should surface a punt suggestion');
-assert.notEqual(realChoice.cat,'TO');
+assert(Punt.valid(realChoice.cat),'suggestion is a real category (TO allowed)');
+// Suggest can now pick TO, skips committed punts, and stops when the set is full.
+{
+  const t=Array.from({length:5},(_,team)=>({team,rated:3,unrated:0,cats:team===0?[-9,0,0,0,0,0,0,0,-9]:[9,0,0,0,0,0,0,0,9]}));
+  const first=Punt.suggest(t,0,players,pdata,{},10);
+  assert.equal(first.cat,'PTS'); assert.deepEqual(first.also,['TO'],'TO is offered as another weak category');
+  const second=Punt.suggest(t,0,players,pdata,{},10,-1,['PTS']);
+  assert.equal(second.cat,'TO','with PTS committed, the next suggestion is TO');
+  assert.equal(Punt.suggest(t,0,players,pdata,{},10,-1,['PTS','TO']),null,'no other weak category left');
+  assert.equal(Punt.suggest(t,0,players,pdata,{},10,-1,['REB','AST','STL']),null,'punt set already full');
+}
 console.log('punt core passed');
