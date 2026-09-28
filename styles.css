@@ -469,3 +469,107 @@ body{
   #md .viewtabs.tabs::-webkit-scrollbar{display:none}
   #md .viewtabs .segtab{white-space:nowrap;flex-shrink:0}
 }
+
+/* ==========================================================================
+   Geist theme: motion & glow. Ambient only - nothing animates on re-render,
+   so drafting stays calm. All motion is off under prefers-reduced-motion.
+   ========================================================================== */
+@property --dl-angle{syntax:"<angle>";initial-value:0deg;inherits:false}
+
+/* Aurora: slow drifting color blobs behind the grid */
+.aurora{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none;
+  -webkit-mask-image:radial-gradient(ellipse 80% 60% at 50% 0%,#000 40%,transparent 100%);mask-image:radial-gradient(ellipse 80% 60% at 50% 0%,#000 40%,transparent 100%)}
+.aurora i{position:absolute;width:46vw;height:46vw;border-radius:50%;filter:blur(90px);opacity:.28;mix-blend-mode:screen}
+.aurora i:nth-child(1){background:#2f6bff;top:-22vw;left:8vw;animation:dl-drift1 22s ease-in-out infinite alternate}
+.aurora i:nth-child(2){background:#7c3aed;top:-26vw;left:38vw;animation:dl-drift2 26s ease-in-out infinite alternate}
+.aurora i:nth-child(3){background:#10b981;top:-24vw;right:4vw;opacity:.18;animation:dl-drift3 30s ease-in-out infinite alternate}
+@keyframes dl-drift1{to{transform:translate(12vw,6vw) scale(1.15)}}
+@keyframes dl-drift2{to{transform:translate(-10vw,8vw) scale(.9)}}
+@keyframes dl-drift3{to{transform:translate(-14vw,4vw) scale(1.2)}}
+body{position:relative}
+
+/* Brand */
+#md .brandmark{background:conic-gradient(from 180deg,#52a8ff,#a78bfa,#52d18a,#52a8ff);color:#fff;box-shadow:0 0 18px #52a8ff55}
+
+/* Hero */
+#md h2 .grad{background:linear-gradient(90deg,#52a8ff,#a78bfa 45%,#52d18a 90%);background-size:200% 100%;
+  -webkit-background-clip:text;background-clip:text;color:transparent;animation:dl-shimmer 8s ease-in-out infinite alternate}
+@keyframes dl-shimmer{to{background-position:100% 0}}
+#md .bigbtn{position:relative;box-shadow:0 0 0 1px #ffffff22,0 8px 28px #52a8ff40}
+#md .bigbtn:not(:disabled):hover{box-shadow:0 0 0 1px #ffffff44,0 10px 36px #52a8ff66;transform:translateY(-1px)}
+
+/* Spotlight cards (fx.js sets --mx/--my) */
+#md .avail,#md .side,#md .turnbar,#md .catchip,#md .posbtn,#md .pick-coach .pc-card,#md .puntbox,#md .setup-details,#md .boardwrap{position:relative;isolation:isolate}
+#md .avail::after,#md .side::after,#md .catchip::after,#md .posbtn::after,#md .pick-coach .pc-card::after,#md .puntbox::after,#md .setup-details::after,#md .boardwrap::after{
+  content:"";position:absolute;inset:-1px;border-radius:inherit;pointer-events:none;opacity:0;transition:opacity .3s;z-index:-1;
+  background:radial-gradient(420px circle at var(--mx,50%) var(--my,50%),#ffffff0f,transparent 45%)}
+#md .fx-lit::after{opacity:1}
+/* Border glow that follows the cursor */
+#md .avail::before,#md .side::before,#md .catchip::before,#md .posbtn::before,#md .pick-coach .pc-card::before,#md .setup-details::before{
+  content:"";position:absolute;inset:-1px;border-radius:inherit;padding:1px;pointer-events:none;opacity:0;transition:opacity .3s;
+  background:radial-gradient(260px circle at var(--mx,50%) var(--my,50%),#52a8ffcc,#a78bfa66 35%,transparent 60%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+#md .fx-lit::before{opacity:1}
+
+/* Your pick: rotating gradient border + live dot */
+#md .turnbar:has(.you){border-color:transparent;
+  background:linear-gradient(90deg,#52a8ff14,transparent 55%) padding-box,linear-gradient(var(--dl-surface),var(--dl-surface)) padding-box,
+    conic-gradient(from var(--dl-angle),#52a8ff,#a78bfa,#52d18a,#52a8ff00 40%,#52a8ff00 60%,#52a8ff) border-box;
+  border:1px solid transparent;animation:dl-spin 5s linear infinite;box-shadow:0 0 40px -12px #52a8ff66}
+#md .turnbar:has(.you)::before{display:none}
+@keyframes dl-spin{to{--dl-angle:360deg}}
+#md .turnbar .you{display:inline-flex;align-items:center;gap:8px}
+#md .turnbar .you::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--dl-blue);box-shadow:0 0 0 0 #52a8ffaa;animation:dl-ping 1.8s cubic-bezier(0,0,.2,1) infinite}
+@keyframes dl-ping{70%{box-shadow:0 0 0 7px #52a8ff00}100%{box-shadow:0 0 0 0 #52a8ff00}}
+
+/* Draft buttons: shine sweep */
+#md .draftbtn{position:relative;overflow:hidden}
+#md .draftbtn::after{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 30%,#ffffffcc 50%,transparent 70%);transform:translateX(-120%);transition:none}
+#md .draftbtn:not(:disabled):hover::after{transform:translateX(120%);transition:transform .6s ease}
+#md .prow:hover .pname{color:#fff}
+
+/* Selected tab glow */
+#md .viewtabs .segtab.sel{box-shadow:0 0 0 1px var(--dl-border-strong) inset,0 0 18px -6px #52a8ff88}
+
+/* Scarcity bars: gradient + glow, depleting categories pulse gently */
+#md .catbar{height:4px;background:#ffffff10}
+#md .catbar i{box-shadow:0 0 10px currentColor;border-radius:inherit}
+#md .catchip.hot .catnum{text-shadow:0 0 18px #ff6b6b88}
+#md .catchip.hot{animation:dl-breathe 3.2s ease-in-out infinite}
+@keyframes dl-breathe{50%{border-color:#ff6b6b99;box-shadow:0 0 22px -8px #ff6b6b88}}
+
+/* Grade badges */
+#md .gradebadge{display:inline-grid;place-items:center;min-width:34px;height:24px;padding:0 7px;border-radius:6px;font-family:var(--dl-mono);font-size:12px;font-weight:600;border:1px solid}
+#md .gradebadge.g-A{color:var(--dl-green);background:var(--dl-green-bg);border-color:var(--dl-green-line);box-shadow:0 0 16px -6px var(--dl-green)}
+#md .gradebadge.g-B{color:var(--dl-blue);background:var(--dl-blue-bg);border-color:#52a8ff55}
+#md .gradebadge.g-C{color:var(--dl-amber);background:var(--dl-amber-bg);border-color:var(--dl-amber-line)}
+#md .gradebadge.g-D,#md .gradebadge.g-F{color:var(--dl-red);background:var(--dl-red-bg);border-color:var(--dl-red-line)}
+#md table.board tr.you td,#md tr.you td{background:#52a8ff0d}
+#md tr.you td:first-child{box-shadow:inset 2px 0 0 var(--dl-blue)}
+
+@media(prefers-reduced-motion:reduce){
+  .aurora i,#md h2 .grad,#md .turnbar:has(.you),#md .turnbar .you::before,#md .catchip.hot{animation:none}
+  #md .draftbtn:not(:disabled):hover::after{transition:none;transform:translateX(-120%)}
+  #md .bigbtn:not(:disabled):hover{transform:none}
+}
+/* Layering: canvas on html, aurora above it, app on top */
+html{background:
+    radial-gradient(60rem 28rem at 50% -8rem,#ffffff10,transparent 70%),
+    linear-gradient(to right,#ffffff07 1px,transparent 1px) 0 0/64px 64px,
+    linear-gradient(to bottom,#ffffff07 1px,transparent 1px) 0 0/64px 64px,
+    var(--dl-bg);background-attachment:fixed}
+body{background:transparent!important}
+.aurora{z-index:0}
+.aurora i{opacity:.42}.aurora i:nth-child(3){opacity:.26}
+#md{position:relative;z-index:1}
+
+/* Setup screen as a centered hero */
+#mdapp:has(#mdstart){max-width:880px;margin:7vh auto 0;text-align:center}
+#mdapp:has(#mdstart) h2{font-size:clamp(40px,7vw,76px);margin:18px 0 14px}
+#mdapp:has(#mdstart) h2+.muted{font-size:15px;max-width:560px;margin:0 auto 34px}
+#mdapp:has(#mdstart) .setup-pos{margin:12px auto 22px}
+#mdapp:has(#mdstart) select{margin:0 auto}
+#mdapp:has(#mdstart) .bigbtn{padding:14px 34px;font-size:15px;margin-top:22px}
+#mdapp:has(#mdstart) .setup-details{text-align:left}
+#mdapp:has(#mdstart) h3{margin-top:22px;color:var(--dl-muted);font-weight:500;font-size:13px}
+@media(max-width:900px){#mdapp:has(#mdstart){margin-top:3vh}}

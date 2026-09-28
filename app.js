@@ -777,7 +777,7 @@ function refreshPickCoach(){
 
 function renderSetup(){
   clearPlayoffHost();
-  var h='<div class="season">Your draft room</div><h2>Build your next contender.</h2>';
+  var h='<div class="season">Your draft room</div><h2>Build your next <span class="grad">contender.</span></h2>';
   h+='<div class="muted">12 teams, snake draft. 270-player pool from early 2026-27 preseason rankings. You draft your slot; the other 11 teams auto-pick.</div>';
   h+='<h3>Your draft position</h3><div class="setup-pos">';
   for(var i=1;i<=12;i++)h+='<button class="posbtn'+(state.draftPos===i?' sel':'')+'" data-pos="'+i+'">'+i+'</button>';
@@ -1002,7 +1002,7 @@ function renderGrades(){
   g.forEach(function(x){
     var you=x.team===userTeam();
     var unrated=x.unrated>0?' <span class="unrated" title="'+x.unrated+' player(s) without 2025-26 category data, counted at replacement level (mean of consensus ranks 150-170)">&#8224;'+x.unrated+'</span>':'';
-    h+='<tr'+(you?' class="you"':'')+'><td><b>'+x.rank+'</b></td><td>'+esc(teamName(x.team))+(you?' (you)':'')+'</td><td>'+x.score.toFixed(1)+unrated+'</td><td><b>'+x.grade+'</b></td><td>';
+    h+='<tr'+(you?' class="you"':'')+'><td><b>'+x.rank+'</b></td><td>'+esc(teamName(x.team))+(you?' (you)':'')+'</td><td>'+x.score.toFixed(1)+unrated+'</td><td><b class="gradebadge g-'+x.grade.charAt(0)+'">'+x.grade+'</b></td><td>';
     if(!you&&me){
       var mu=catMatchup(me.cats,x.cats);
       var w=0,l=0;

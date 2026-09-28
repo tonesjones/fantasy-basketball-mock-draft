@@ -52,6 +52,7 @@ The layout collapses to a single column with compact two-line player rows; filte
 - `styles.css` — all styling; the final "Geist theme" layer sets the look (tokens at the top of that layer).
 - `fonts/` — self-hosted Geist Sans and Geist Mono (SIL OFL, see `fonts/OFL.txt`), so the app still needs no network.
 - `app.js` — UI: state, rendering, event wiring, save/restore.
+- `fx.js` — optional pointer-spotlight effect (visual only; off for reduced motion and touch).
 - `player-pool.js` — the player pool (rank order, positions, teams, category tags) merged with `player-data.js`.
 - `draft-analysis.js` — pure consensus rank, category replacement levels, draft grades and matchups (used by the app and tests).
 - `draft-core.js` — dependency-free validation, roster matching, seeded random source, and CPU selection. It is also usable from Node for tests.
