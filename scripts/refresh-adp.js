@@ -8,7 +8,9 @@
      Yahoo    "yahoo" | "yahoo adp" | "adp"           (required)
      Fantrax  "fantrax" | "fantrax adp" | "adpf"      (optional)
      team     "team", position "pos" | "position"     (optional; reported only)
-   Blank cells mean "no ADP published". ESPN / blend columns are ignored.
+   Blank cells mean "no ADP published". ESPN ADP is never used (standing
+   rule), and neither is any blend that includes it. Make the CSV from the
+   saved page with scripts/hashtag-adp-to-csv.js.
 
    Usage:
      node scripts/refresh-adp.js table.csv            report only
@@ -205,7 +207,7 @@ function apply(src, changes) {
     tail = cut < 0 ? "" : src.slice(cut);
   changes.forEach(function (c) {
     var esc = c.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    var re = new RegExp('^("' + esc + '":\\{[^\\n]*?[{,]' + c.field + ":)(null|[\\d.]+)", "m");
+    var re = new RegExp('^("' + esc + '":\\{(?:[^\\n]*?,)?' + c.field + ":)(null|[\\d.]+)", "m");
     if (!re.test(head)) throw new Error("No " + c.field + " field for " + c.name + " in PDATA");
     head = head.replace(re, "$1" + fmt(c.to));
   });

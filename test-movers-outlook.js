@@ -13,8 +13,9 @@ assert.ok(ctx.PDATA['Giannis Antetokounmpo'].mover === true);
 assert.equal(ctx.PDATA['Giannis Antetokounmpo'].teamPrev, 'MIL');
 assert.equal(ctx.PDATA['Giannis Antetokounmpo'].teamCurr, 'MIA');
 assert.ok(['up','down','flat','unknown'].includes(ctx.PDATA['Giannis Antetokounmpo'].roleDelta));
-assert.equal(ctx.PDATA['Nikola Vucevic'].mover, false);
+assert.equal(ctx.PDATA['Nikola Vucevic'].mover, true, 'Vucevic: BOS -> ORL (1-yr deal, Jul 2026)');
 assert.equal(ctx.PDATA['Nikola Vucevic'].teamPrev, 'BOS');
+assert.equal(ctx.PDATA['Nikola Vucevic'].teamCurr, 'ORL');
 assert.equal(ctx.PDATA['Stephen Curry'].mover, false);
 assert.ok(!('projMpg' in ctx.PDATA['Nikola Jokic']) || ctx.PDATA['Nikola Jokic'].projMpg == null);
 
