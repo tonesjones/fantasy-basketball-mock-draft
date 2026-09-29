@@ -1485,6 +1485,7 @@ function wirePlayoffSettings(root){
 }
 function render(){
   clearPlayoffHost();
+  document.body.classList.toggle("dl-on-clock",state.phase==="draft"&&isUserTurn());
   if(state.phase==="setup")renderSetup();
   else if(state.phase==="done")renderDone();
   else renderDraft();
