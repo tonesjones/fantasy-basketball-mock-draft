@@ -572,6 +572,20 @@ body{position:relative}
 #md .viewtabs .segtab.sel{box-shadow:0 0 0 1px var(--dl-border-strong) inset,0 0 18px -6px #52a8ff88}
 
 /* Scarcity bars: gradient + glow, depleting categories pulse gently */
+#md .catprofile{padding:12px 0 14px;border-bottom:1px solid var(--dl-border)}
+#md .catpool{padding-top:12px}
+#md .catprofile h3,#md .catpool h3{margin:0 0 4px;font-size:13px}
+#md .catprofile p,#md .catpool p{margin:4px 0 10px}
+#md .catprofile-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+#md .catprofile-row{display:grid;grid-template-columns:auto auto;gap:2px 8px;align-content:start;padding:9px 10px;border:1px solid var(--dl-border);border-radius:9px;background:var(--dl-surface);min-width:0}
+#md .catprofile-row>b{font-family:var(--dl-mono);font-size:12px}
+#md .catprofile-rank{justify-self:end;font-family:var(--dl-mono);color:var(--dl-muted)}
+#md .catprofile-status{grid-column:1/-1;font-weight:600;color:var(--dl-muted)}
+#md .catprofile-row.strong .catprofile-status,#md .catprofile-row.surplus .catprofile-status{color:var(--dl-green)}
+#md .catprofile-row.weak .catprofile-status{color:var(--dl-amber)}
+#md .catprofile-detail{grid-column:1/-1;color:var(--dl-muted);line-height:1.5;overflow-wrap:anywhere}
+@media(max-width:700px){#md .catprofile-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:440px){#md .catprofile-list{grid-template-columns:1fr}}
 #md .catbar{height:4px;background:#ffffff10}
 #md .catbar i{box-shadow:0 0 10px currentColor;border-radius:inherit}
 #md .catchip.hot .catnum{text-shadow:0 0 18px #ff6b6b88}
