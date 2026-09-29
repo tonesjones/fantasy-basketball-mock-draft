@@ -164,6 +164,25 @@ body{background:radial-gradient(ellipse at top right,#19352f66,transparent 55%),
 body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;background:radial-gradient(circle at 75% 15%,var(--dl-blue,#85e5bc),transparent 50%);opacity:0;transition:opacity .8s}
 body.dl-on-clock::after{opacity:.075}
 @media(prefers-reduced-motion:reduce){.pick-moment{animation:none}body::after{transition:none}}
+#md .board-scene-panel{margin:10px 0 14px;border:1px solid var(--dl-border,var(--hatch-widget-border));border-radius:10px;padding:10px;background:var(--dl-surface,var(--hatch-widget-surface))}
+#md .board-scene-panel summary{cursor:pointer;font-size:12px;font-weight:700}
+#md .board-scene{min-height:240px;width:100%}
+#md .board-scene canvas{display:block;width:100%}
+#md .board-team-buttons{display:flex;gap:5px;overflow-x:auto;padding:4px 0}
+#md .board-team-buttons .fchip{white-space:nowrap}
+#md .board-team-roster{font-size:11px;color:var(--dl-muted,var(--hatch-widget-muted));padding:7px 0}
+#md .boardwrap td.scene-selected{box-shadow:inset 0 0 0 1px var(--dl-blue,var(--hatch-widget-accent))}
+#md .value-field{position:relative;width:100%;aspect-ratio:5/3;border:1px solid var(--dl-border,var(--hatch-widget-border));border-radius:10px;background:var(--dl-surface,var(--hatch-widget-surface));overflow:hidden}
+#md .value-field svg{display:block;width:100%;height:100%}
+#md .value-field svg circle{fill:var(--dl-blue,var(--hatch-widget-accent));opacity:.7}
+#md .value-field svg circle.late{fill:var(--dl-green,var(--hatch-widget-accent));opacity:1}
+#md .value-field .value-canvas{position:absolute;inset:0;pointer-events:auto}
+#md .value-field .value-canvas canvas{display:block;width:100%;height:100%}
+#md .value-field .field-axis-x,#md .value-field .field-axis-y{position:absolute;z-index:2;color:var(--dl-muted,var(--hatch-widget-muted));font:10px var(--dl-mono,monospace);pointer-events:none}
+#md .value-field .field-axis-x{bottom:8px;left:50%;transform:translateX(-50%);white-space:nowrap}
+#md .value-field .field-axis-y{top:8px;left:9px}
+#md .value-field.is-3d svg{display:none}
+#md .value-leaders{font-size:12px;line-height:1.7;padding-left:22px}
 #md .puntbox details{border-top:1px solid var(--hatch-widget-border);padding-top:7px}
 #md .puntbox summary{font-size:12px;font-weight:700;color:var(--hatch-widget-accent)}
 #md .catdot{display:inline-block;width:10px;height:10px;border-radius:50%;margin:0 2px;vertical-align:middle}

@@ -161,7 +161,7 @@ function cleanState(raw){
   var rawPunt=(raw||{});out.puntCats=PuntCore.normalize(Array.isArray(rawPunt.puntCats)?rawPunt.puntCats:rawPunt.puntCategory);delete out.puntCategory;
   out.sort=["cons","rank","adp","last","lastTotal","punt"].indexOf(out.sort)>=0?out.sort:"cons";
   if(out.sort==="punt"&&!out.puntCats.length)out.sort="cons";
-  out.view=["team","board","grades","coach"].indexOf(out.view)>=0?out.view:"team";
+  out.view=["team","board","grades","coach","explore"].indexOf(out.view)>=0?out.view:"team";
   out.focusPi=(out.focusPi==null||out.focusPi==="")?null:(parseInt(out.focusPi,10)>=0?parseInt(out.focusPi,10):null);
   out.filtersOpen=!!out.filtersOpen;
   out.scarcityOpen=!!out.scarcityOpen;
@@ -267,7 +267,7 @@ function renderDataHealth(){
 
 var _pcEvalSeq=0;
 function viewTabsHtml(){
-  var views=[["team","My team"],["board","Draft board"],["grades","Grades"],["coach","Pick coach"]];
+  var views=[["team","My team"],["board","Draft board"],["grades","Grades"],["coach","Pick coach"],["explore","Value field"]];
   var h='<div class="viewtabs tabs" role="tablist" aria-label="Draft room views"><span class="muted">Room</span>';
   views.forEach(function(v){
     h+='<button class="segtab'+(state.view===v[0]?' sel':'')+'" data-view="'+v[0]+'" role="tab" aria-selected="'+(state.view===v[0]?'true':'false')+'">'+v[1]+'</button>';
@@ -1155,7 +1155,7 @@ function renderDraft(){
   if(state.yahooLive&&state.phase!=="done")h+='<details class="yhsync"><summary>Sync board</summary><div class="muted" id="yhsyncstatus" role="status">'+(state.yahooLive.worker?'Yahoo auto-sync is on.':'Manual sync mode.')+'</div><div class="yhrow"><textarea id="yhcode2" rows="2" placeholder="Manual fallback: paste a yh1 sync code" aria-label="Manual sync code"></textarea><button class="ghostbtn" id="yhsync">Sync</button></div></details>';
   h+=renderScarcity();
   h+=viewTabsHtml();
-  var glance=state.view==="board"||state.view==="grades"||state.view==="coach";
+  var glance=state.view==="board"||state.view==="grades"||state.view==="coach"||state.view==="explore";
   h+='<div class="cols'+(glance?' glance':'')+'"><div class="avail">';
   h+='<h3>Available players</h3><p class="muted list-hint">'+(state.yahooLive?'Select a player for advice. Make your picks in Yahoo; this board follows along.':'Select a player for advice. Draft adds them to your team.')+'</p><input type="text" id="mdq" aria-label="Search available players" placeholder="Search players..." value="'+esc(state.q)+'">';
   var filterSummary=(state.f==="All"?"All positions":state.f)+" · "+sortLabel(state.sort||"cons");
@@ -1266,8 +1266,11 @@ function renderSide(){
     return;
   }
   if(state.view==="grades"){s.innerHTML=renderGrades();wireInjToggles(s);return;}
+  if(state.view==="explore"){s.innerHTML=renderValueField();return;}
   if(state.view==="board"){
-    var h='<h3>Draft board</h3><div class="boardwrap"><table class="board"><tr><th>Rd</th>';
+    var h='<h3>Draft board</h3><details class="board-scene-panel"'+(window.matchMedia('(min-width: 641px)').matches?' open':'')+'><summary>3D board view</summary><div class="board-scene" aria-hidden="true"></div><div class="board-team-buttons" role="group" aria-label="Inspect a team roster">';
+    for(var bt=0;bt<TEAMS;bt++)h+='<button type="button" class="fchip" data-board-team="'+bt+'">'+esc(teamName(bt))+'</button>';
+    h+='</div><div class="board-team-roster" role="status"></div></details><div class="boardwrap"><table class="board"><tr><th>Rd</th>';
     for(var t=0;t<TEAMS;t++)h+='<th>'+esc(teamName(t))+'</th>';
     h+='</tr>';
     for(var r=0;r<state.rounds;r++){
@@ -1277,7 +1280,7 @@ function renderSide(){
         var cell='&nbsp;',cls=(t===userTeam()?'you':'');
         if(idx<state.log.length){var piB=state.log[idx];if(piB>=0){var pl=PLAYERS[piB];cell=esc(pl.n)+' <span class="teamtag">'+esc(pl.t)+'</span>'+injBadge(pl)+vBadge(piB,idx);}else{cell='<span class="muted">'+esc((state.yahooNames&&state.yahooNames[idx])||"off-board")+'</span>';}}
         else if(t===userTeam()){cls+=' future-you';}
-        h+='<td class="'+cls+'">'+cell+'</td>';
+        h+='<td class="'+cls+(idx===state.log.length-1?' latest-pick':'')+'">'+cell+'</td>';
       }
       h+='</tr>';
     }
@@ -1300,6 +1303,25 @@ function renderSide(){
     s.innerHTML=h2;
   }
   wireInjToggles(s);
+}
+function renderValueField(){
+  var taken={};state.log.forEach(function(pi){taken[pi]=true;});
+  var repl=scarcityBase().repl;
+  var rows=PLAYERS.map(function(p,pi){
+    var cv=PDATA[p.n]&&PDATA[p.n].cv,adp=consRank(p);
+    if(taken[pi]||!Array.isArray(cv)||cv.length!==9||!isFinite(adp))return null;
+    var value=cv.reduce(function(sum,n){return sum+n;},0);
+    var scarce=cv.filter(function(n,i){return n>repl[i];}).length;
+    return {name:p.n,adp:Math.round(adp*10)/10,value:Math.round(value*10)/10,scarce:scarce,late:Math.round(state.log.length+1-adp)};
+  }).filter(Boolean);
+  var best=rows.filter(function(r){return r.late>0;}).sort(function(a,b){return b.value-a.value;}).slice(0,8);
+  var h='<h3>Player value field</h3><p class="muted">Available players by consensus ADP, 2025–26 nine-category value, and categories above replacement. A glowing point is still on the board after its ADP. Historical value is not a 2026–27 projection.</p>';
+  h+='<div class="value-field" data-players="'+esc(JSON.stringify(rows))+'"><div class="value-canvas" aria-hidden="true"></div><span class="field-axis-y">↑ historical value</span><span class="field-axis-x">Earlier ADP ← → Later ADP</span><svg viewBox="0 0 400 240" role="img" aria-label="Available player value versus consensus ADP">';
+  rows.forEach(function(r){var x=28+Math.min(1,r.adp/270)*350,y=205-Math.max(0,Math.min(1,(r.value+15)/45))*170;h+='<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="2.5" class="'+(r.late>0?'late':'')+'"><title>'+esc(r.name)+' · ADP '+r.adp+' · value '+r.value+'</title></circle>';});
+  h+='</svg></div><p class="muted">Left to right: earlier to later ADP. Higher points: stronger historical value. Hover or focus the list for names.</p><h4>Past ADP and still available</h4>';
+  if(best.length)h+='<ol class="value-leaders">'+best.map(function(r){return '<li>'+esc(r.name)+' · ADP '+r.adp+' · value '+r.value.toFixed(1)+'</li>';}).join('')+'</ol>';
+  else h+='<p class="muted">No players past ADP yet.</p>';
+  return h;
 }
 function draftGrades(){return DA.draftGrades({players:PLAYERS,pdata:typeof PDATA!=="undefined"?PDATA:{},log:state.log,teams:TEAMS,core:CORE,repl:scarcityBase().repl});}
 function catMatchup(u,o){return DA.catMatchup(u,o);}
