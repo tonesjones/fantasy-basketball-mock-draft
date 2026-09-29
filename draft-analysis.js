@@ -175,46 +175,69 @@
      available now whose market ADP fits the next two pick windows. */
   function categoryOutlook(opts) {
     var grades = opts.grades || [],
-      me = grades.filter(function (g) { return g.team === opts.userTeam; })[0],
+      me = grades.filter(function (g) {
+        return g.team === opts.userTeam;
+      })[0],
       log = opts.log || [],
       totalMine = 0,
       mappedMine = 0,
       mappedRoom = 0,
       taken = {};
     log.forEach(function (pi, pick) {
-      if (pi >= 0) { mappedRoom++; taken[pi] = true; }
+      if (pi >= 0) {
+        mappedRoom++;
+        taken[pi] = true;
+      }
       if (core.teamForPick(pick, grades.length) === opts.userTeam) {
         totalMine++;
         if (pi >= 0) mappedMine++;
       }
     });
     var count = me ? me.rated + me.unrated : 0;
-    var peers = grades.filter(function (g) { return g.team !== opts.userTeam && g.rated + g.unrated > 0; });
-    var ready = count >= 3 && peers.length >= 5 && totalMine > 0 &&
-      mappedMine / totalMine >= 0.8 && mappedRoom / log.length >= 0.8;
+    var peers = grades.filter(function (g) {
+      return g.team !== opts.userTeam && g.rated + g.unrated > 0;
+    });
+    var ready =
+      count >= 3 &&
+      peers.length >= 5 &&
+      totalMine > 0 &&
+      mappedMine / totalMine >= 0.8 &&
+      mappedRoom / log.length >= 0.8;
     var nextPick = opts.nextPick == null ? -1 : opts.nextPick;
     var followingPick = opts.followingPick == null ? -1 : opts.followingPick;
-    var nearCutoff = followingPick > nextPick
-      ? Math.floor((nextPick + followingPick + 2) / 2)
-      : nextPick + 13;
+    var nearCutoff =
+      followingPick > nextPick ? Math.floor((nextPick + followingPick + 2) / 2) : nextPick + 13;
     var laterCutoff = followingPick > nextPick ? followingPick + 13 : nearCutoff;
     var available = [];
-    if (nextPick >= 0) (opts.players || []).forEach(function (p, pi) {
-      var cv = opts.pdata && opts.pdata[p.n] && opts.pdata[p.n].cv;
-      var adp = core.marketAdp(p);
-      if (!taken[pi] && !p.inj && cv && adp != null && adp <= laterCutoff) {
-        available.push({ name: p.n, cv: cv, adp: adp });
-      }
-    });
+    if (nextPick >= 0)
+      (opts.players || []).forEach(function (p, pi) {
+        var cv = opts.pdata && opts.pdata[p.n] && opts.pdata[p.n].cv;
+        var adp = core.marketAdp(p);
+        if (!taken[pi] && !p.inj && cv && adp != null && adp <= laterCutoff) {
+          available.push({ name: p.n, cv: cv, adp: adp });
+        }
+      });
     var rows = [];
     for (var c = 0; c < 9; c++) {
       var avg = count ? me.cats[c] / count : 0;
-      var peerAvgs = peers.map(function (g) { return g.cats[c] / (g.rated + g.unrated); })
-        .sort(function (a, b) { return a - b; });
+      var peerAvgs = peers
+        .map(function (g) {
+          return g.cats[c] / (g.rated + g.unrated);
+        })
+        .sort(function (a, b) {
+          return a - b;
+        });
       var mid = Math.floor(peerAvgs.length / 2);
-      var median = peerAvgs.length ? (peerAvgs.length % 2
-        ? peerAvgs[mid] : (peerAvgs[mid - 1] + peerAvgs[mid]) / 2) : 0;
-      var rank = 1 + peerAvgs.filter(function (v) { return v > avg + 1e-9; }).length;
+      var median = peerAvgs.length
+        ? peerAvgs.length % 2
+          ? peerAvgs[mid]
+          : (peerAvgs[mid - 1] + peerAvgs[mid]) / 2
+        : 0;
+      var rank =
+        1 +
+        peerAvgs.filter(function (v) {
+          return v > avg + 1e-9;
+        }).length;
       var gap = median - avg;
       var status = "early";
       if (ready) {
@@ -223,28 +246,60 @@
         else if (rank >= 9 && gap >= 0.2) status = "weak";
         else status = "in-mix";
       }
-      var near = available.filter(function (p) { return p.adp <= nearCutoff && p.cv[c] > median; })
-        .sort(function (a, b) { return b.cv[c] - a.cv[c] || a.adp - b.adp; });
-      var later = available.filter(function (p) { return p.cv[c] > median; })
-        .sort(function (a, b) { return b.cv[c] - a.cv[c] || a.adp - b.adp; });
+      var near = available
+        .filter(function (p) {
+          return p.adp <= nearCutoff && p.cv[c] > median;
+        })
+        .sort(function (a, b) {
+          return b.cv[c] - a.cv[c] || a.adp - b.adp;
+        });
+      var later = available
+        .filter(function (p) {
+          return p.cv[c] > median;
+        })
+        .sort(function (a, b) {
+          return b.cv[c] - a.cv[c] || a.adp - b.adp;
+        });
       var first = near[0];
-      var second = later.filter(function (p) { return !first || p.name !== first.name; })[0];
+      var second = later.filter(function (p) {
+        return !first || p.name !== first.name;
+      })[0];
       var debt = Math.max(0, gap * count);
       var catchup = null;
       if (status === "weak") {
         if (nextPick < 0) catchup = "no-picks";
         else if (first && first.cv[c] - median >= debt) catchup = "one-pick";
-        else if (followingPick > nextPick && first && second &&
-          first.cv[c] + second.cv[c] - 2 * median >= debt) catchup = "two-pick";
+        else if (
+          followingPick > nextPick &&
+          first &&
+          second &&
+          first.cv[c] + second.cv[c] - 2 * median >= debt
+        )
+          catchup = "two-pick";
         else catchup = "hard-climb";
       }
-      rows.push({ ci: c, avg: avg, median: median, gap: gap, rank: rank,
-        status: status, catchup: catchup,
-        near: near.slice(0, 3).map(function (p) { return { name: p.name, lift: p.cv[c] - median }; }),
-        second: second ? second.name : null });
+      rows.push({
+        ci: c,
+        avg: avg,
+        median: median,
+        gap: gap,
+        rank: rank,
+        status: status,
+        catchup: catchup,
+        near: near.slice(0, 3).map(function (p) {
+          return { name: p.name, lift: p.cv[c] - median };
+        }),
+        second: second ? second.name : null,
+      });
     }
-    return { ready: ready, knownPicks: count, draftedPicks: totalMine,
-      mappedRoom: mappedRoom, roomPicks: log.length, rows: rows };
+    return {
+      ready: ready,
+      knownPicks: count,
+      draftedPicks: totalMine,
+      mappedRoom: mappedRoom,
+      roomPicks: log.length,
+      rows: rows,
+    };
   }
 
   return {
