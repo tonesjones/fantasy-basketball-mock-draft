@@ -161,7 +161,7 @@ function cleanState(raw){
   var rawPunt=(raw||{});out.puntCats=PuntCore.normalize(Array.isArray(rawPunt.puntCats)?rawPunt.puntCats:rawPunt.puntCategory);delete out.puntCategory;
   out.sort=["cons","rank","adp","last","lastTotal","punt"].indexOf(out.sort)>=0?out.sort:"cons";
   if(out.sort==="punt"&&!out.puntCats.length)out.sort="cons";
-  out.view=["team","board","grades","coach","explore"].indexOf(out.view)>=0?out.view:"team";
+  out.view=["team","board","grades","coach"].indexOf(out.view)>=0?out.view:(out.view==="explore"?"coach":"team");
   out.focusPi=(out.focusPi==null||out.focusPi==="")?null:(parseInt(out.focusPi,10)>=0?parseInt(out.focusPi,10):null);
   out.filtersOpen=!!out.filtersOpen;
   out.scarcityOpen=!!out.scarcityOpen;
@@ -267,7 +267,7 @@ function renderDataHealth(){
 
 var _pcEvalSeq=0;
 function viewTabsHtml(){
-  var views=[["team","My team"],["board","Draft board"],["grades","Grades"],["coach","Pick coach"],["explore","Value field"]];
+  var views=[["team","My team"],["board","Draft board"],["grades","Grades"],["coach","Pick coach"]];
   var h='<div class="viewtabs tabs" role="tablist" aria-label="Draft room views"><span class="muted">Room</span>';
   views.forEach(function(v){
     h+='<button class="segtab'+(state.view===v[0]?' sel':'')+'" data-view="'+v[0]+'" role="tab" aria-selected="'+(state.view===v[0]?'true':'false')+'">'+v[1]+'</button>';
@@ -1155,7 +1155,7 @@ function renderDraft(){
   if(state.yahooLive&&state.phase!=="done")h+='<details class="yhsync"><summary>Sync board</summary><div class="muted" id="yhsyncstatus" role="status">'+(state.yahooLive.worker?'Yahoo auto-sync is on.':'Manual sync mode.')+'</div><div class="yhrow"><textarea id="yhcode2" rows="2" placeholder="Manual fallback: paste a yh1 sync code" aria-label="Manual sync code"></textarea><button class="ghostbtn" id="yhsync">Sync</button></div></details>';
   h+=renderScarcity();
   h+=viewTabsHtml();
-  var glance=state.view==="board"||state.view==="grades"||state.view==="coach"||state.view==="explore";
+  var glance=state.view==="board"||state.view==="grades"||state.view==="coach";
   h+='<div class="cols'+(glance?' glance':'')+'"><div class="avail">';
   h+='<h3>Available players</h3><p class="muted list-hint">'+(state.yahooLive?'Select a player for advice. Make your picks in Yahoo; this board follows along.':'Select a player for advice. Draft adds them to your team.')+'</p><input type="text" id="mdq" aria-label="Search available players" placeholder="Search players..." value="'+esc(state.q)+'">';
   var filterSummary=(state.f==="All"?"All positions":state.f)+" · "+sortLabel(state.sort||"cons");
@@ -1257,7 +1257,7 @@ function myRoster(){
 function renderSide(){
   var s=el("mdside");if(!s)return;
   if(state.view==="coach"){
-    s.innerHTML='<button type="button" class="pc-dock-handle" id="pc-dock-handle" aria-controls="pick-coach" aria-expanded="'+(coachDockOpen?'true':'false')+'"><span class="pc-dock-grip" aria-hidden="true"></span><span class="pc-dock-label">Pick coach</span><span class="pc-dock-more muted">'+(coachDockOpen?'Less':'More')+'</span></button><h3 class="pc-side-title">Pick coach</h3><p class="muted pc-advisory">Advice only. Drafting always takes a separate click.</p>'+pickCoachShellHtml()+renderPuntStrategy(draftGrades());
+    s.innerHTML='<button type="button" class="pc-dock-handle" id="pc-dock-handle" aria-controls="pick-coach" aria-expanded="'+(coachDockOpen?'true':'false')+'"><span class="pc-dock-grip" aria-hidden="true"></span><span class="pc-dock-label">Pick coach</span><span class="pc-dock-more muted">'+(coachDockOpen?'Less':'More')+'</span></button><h3 class="pc-side-title">Pick coach</h3><p class="muted pc-advisory">Advice only. Drafting always takes a separate click.</p>'+pickCoachShellHtml()+renderPastAdp()+renderPuntStrategy(draftGrades());
     s.querySelector('#pc-dock-handle').addEventListener('click',function(){setCoachDockOpen(!coachDockOpen);});
     s.querySelector('.pc-alt').addEventListener('click',function(e){var pi=parseInt(e.currentTarget.dataset.pi,10);if(isFinite(pi))evaluatePlayer(pi);});
     s.querySelector('.pc-draft').addEventListener('click',function(e){var pi=parseInt(e.currentTarget.dataset.pi,10);if(isUserTurn()&&pi===resolveFocusPi())userDraft(pi);});
@@ -1266,11 +1266,8 @@ function renderSide(){
     return;
   }
   if(state.view==="grades"){s.innerHTML=renderGrades();wireInjToggles(s);return;}
-  if(state.view==="explore"){s.innerHTML=renderValueField();return;}
   if(state.view==="board"){
-    var h='<h3>Draft board</h3><details class="board-scene-panel"'+(window.matchMedia('(min-width: 641px)').matches?' open':'')+'><summary>3D board view</summary><div class="board-scene" aria-hidden="true"></div><div class="board-team-buttons" role="group" aria-label="Inspect a team roster">';
-    for(var bt=0;bt<TEAMS;bt++)h+='<button type="button" class="fchip" data-board-team="'+bt+'">'+esc(teamName(bt))+'</button>';
-    h+='</div><div class="board-team-roster" role="status"></div></details><div class="boardwrap"><table class="board"><tr><th>Rd</th>';
+    var h='<h3>Draft board</h3><div class="boardwrap"><table class="board"><tr><th>Rd</th>';
     for(var t=0;t<TEAMS;t++)h+='<th>'+esc(teamName(t))+'</th>';
     h+='</tr>';
     for(var r=0;r<state.rounds;r++){
@@ -1304,24 +1301,19 @@ function renderSide(){
   }
   wireInjToggles(s);
 }
-function renderValueField(){
+function renderPastAdp(){
   var taken={};state.log.forEach(function(pi){taken[pi]=true;});
-  var repl=scarcityBase().repl;
   var rows=PLAYERS.map(function(p,pi){
     var cv=PDATA[p.n]&&PDATA[p.n].cv,adp=consRank(p);
     if(taken[pi]||!Array.isArray(cv)||cv.length!==9||!isFinite(adp))return null;
     var value=cv.reduce(function(sum,n){return sum+n;},0);
-    var scarce=cv.filter(function(n,i){return n>repl[i];}).length;
-    return {name:p.n,adp:Math.round(adp*10)/10,value:Math.round(value*10)/10,scarce:scarce,late:Math.round(state.log.length+1-adp)};
+    return {name:p.n,adp:Math.round(adp*10)/10,value:Math.round(value*10)/10,late:state.log.length+1>adp};
   }).filter(Boolean);
-  var best=rows.filter(function(r){return r.late>0;}).sort(function(a,b){return b.value-a.value;}).slice(0,8);
-  var h='<h3>Player value field</h3><p class="muted">Available players by consensus ADP, 2025–26 nine-category value, and categories above replacement. A glowing point is still on the board after its ADP. Historical value is not a 2026–27 projection.</p>';
-  h+='<div class="value-field" data-players="'+esc(JSON.stringify(rows))+'"><div class="value-canvas" aria-hidden="true"></div><span class="field-axis-y">↑ historical value</span><span class="field-axis-x">Earlier ADP ← → Later ADP</span><svg viewBox="0 0 400 240" role="img" aria-label="Available player value versus consensus ADP">';
-  rows.forEach(function(r){var x=28+Math.min(1,r.adp/270)*350,y=205-Math.max(0,Math.min(1,(r.value+15)/45))*170;h+='<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="2.5" class="'+(r.late>0?'late':'')+'"><title>'+esc(r.name)+' · ADP '+r.adp+' · value '+r.value+'</title></circle>';});
-  h+='</svg></div><p class="muted">Left to right: earlier to later ADP. Higher points: stronger historical value. Hover or focus the list for names.</p><h4>Past ADP and still available</h4>';
+  var best=rows.filter(function(r){return r.late;}).sort(function(a,b){return b.value-a.value;}).slice(0,8);
+  var h='<section class="past-adp"><h3>Past ADP and still available</h3><p class="muted">Available players whose consensus ADP is behind the current pick, ranked by 2025–26 nine-category value. Historical value is not a 2026–27 projection.</p>';
   if(best.length)h+='<ol class="value-leaders">'+best.map(function(r){return '<li>'+esc(r.name)+' · ADP '+r.adp+' · value '+r.value.toFixed(1)+'</li>';}).join('')+'</ol>';
   else h+='<p class="muted">No players past ADP yet.</p>';
-  return h;
+  return h+'</section>';
 }
 function draftGrades(){return DA.draftGrades({players:PLAYERS,pdata:typeof PDATA!=="undefined"?PDATA:{},log:state.log,teams:TEAMS,core:CORE,repl:scarcityBase().repl});}
 function catMatchup(u,o){return DA.catMatchup(u,o);}
@@ -1415,9 +1407,12 @@ function puntRadarHtml(grades,cats){
     return peers.length?(0.18+0.78*below/peers.length):0.5;
   });
   var x=120,y=120,r=82;
-  var polygon=points.map(function(v,i){var a=-Math.PI/2+i*2*Math.PI/9,d=cats.indexOf(CATS9[i])>=0?0.1:v;return (x+Math.cos(a)*r*d).toFixed(1)+','+(y+Math.sin(a)*r*d).toFixed(1);}).join(' ');
+  var vertices=points.map(function(v,i){var a=-Math.PI/2+i*2*Math.PI/9,d=cats.indexOf(CATS9[i])>=0?0.1:v;return {x:x+Math.cos(a)*r*d,y:y+Math.sin(a)*r*d};});
+  var polygon=vertices.map(function(p){return p.x.toFixed(1)+','+p.y.toFixed(1);}).join(' ');
+  var spokes=CATS9.map(function(_,i){var a=-Math.PI/2+i*2*Math.PI/9;return '<line x1="120" y1="120" x2="'+(x+Math.cos(a)*r).toFixed(1)+'" y2="'+(y+Math.sin(a)*r).toFixed(1)+'"/>';}).join('');
+  var dots=vertices.map(function(p,i){return '<circle class="radar-point'+(cats.indexOf(CATS9[i])>=0?' punt-point':'')+'" cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="3.5"><title>'+CATS9[i]+': '+(cats.indexOf(CATS9[i])>=0?'punted':Math.round(points[i]*100)+'% chart radius')+'</title></circle>';}).join('');
   var labels=CATS9.map(function(c,i){var a=-Math.PI/2+i*2*Math.PI/9;return '<text x="'+(x+Math.cos(a)*106).toFixed(1)+'" y="'+(y+Math.sin(a)*106).toFixed(1)+'" text-anchor="middle" dominant-baseline="middle" class="'+(cats.indexOf(c)>=0?'punt-muted':'')+'">'+c+'</text>';}).join('');
-  return '<div class="punt-radar" data-values="'+points.join(',')+'" data-punts="'+cats.join(',')+'" aria-label="Your nine-category build shape. Selected punts shrink toward the center."><svg viewBox="0 0 240 240" role="img" aria-label="Nine-category build shape"><circle cx="120" cy="120" r="82"/><circle cx="120" cy="120" r="41"/><polygon points="'+polygon+'"/>'+labels+'</svg><div class="radar-canvas" aria-hidden="true"></div><p class="muted">Shape compares your rated players with other teams using 2025–26 per-game category values. Inward points are weaker; selected punts fold inward.</p></div>';
+  return '<div class="punt-radar" aria-label="Your nine-category build shape. Each point aligns with its category spoke."><svg viewBox="0 0 240 240" role="img" aria-label="Nine-category build shape, with labeled spokes and category points"><g class="radar-grid"><circle cx="120" cy="120" r="82"/><circle cx="120" cy="120" r="41"/>'+spokes+'</g><polygon points="'+polygon+'"/>'+dots+labels+'</svg><p class="muted">Each point sits on its labeled category spoke. Inward points are weaker; selected punts fold toward the center. Based on 2025–26 per-game category values.</p></div>';
 }
 function wirePuntControls(root){
   var box=root.querySelector('.puntbox');if(!box)return;
@@ -1425,15 +1420,7 @@ function wirePuntControls(root){
   box.querySelectorAll('[data-punt-cat]').forEach(function(b){b.addEventListener('click',function(){
     var cat=b.getAttribute('data-punt-cat'),sel=selected(),i=sel.indexOf(cat);
     if(i>=0)sel.splice(i,1);else if(sel.length<PuntCore.MAX_PUNTS)sel.push(cat);
-    var oldRadar=box.querySelector('.punt-radar');
     box.outerHTML=renderPuntStrategy(draftGrades(),sel,true);
-    var newRadar=root.querySelector('.punt-radar');
-    if(oldRadar&&newRadar){
-      oldRadar.dataset.values=newRadar.dataset.values;oldRadar.dataset.punts=newRadar.dataset.punts;
-      oldRadar.querySelector('svg').innerHTML=newRadar.querySelector('svg').innerHTML;
-      newRadar.replaceWith(oldRadar);
-      window.dispatchEvent(new Event('draft-radar-update'));
-    }
     wirePuntControls(root);
     var again=root.querySelector('[data-punt-cat="'+cat+'"]');if(again)again.focus();
   });});
