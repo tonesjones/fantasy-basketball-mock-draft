@@ -537,7 +537,8 @@ body{
 body{position:relative}
 
 /* Brand */
-#md .brandmark{background:conic-gradient(from 180deg,#52a8ff,#a78bfa,#52d18a,#52a8ff);color:#fff;box-shadow:0 0 18px #52a8ff55}
+#md .brandmark{width:42px;height:42px;background:none;box-shadow:none}
+#md .brandmark img{display:block;width:100%;height:100%;object-fit:contain}
 
 /* Hero */
 #md h2 .grad{background:linear-gradient(90deg,#52a8ff,#a78bfa 45%,#52d18a 90%);background-size:200% 100%;
