@@ -32,3 +32,7 @@ Draft Lab should suggest a category punt when the roster and available players m
 ## Scope for the first release
 
 Support one punt category at a time, excluding `TO`. Use the existing historical 2025-26 per-game category values and label them as such. Multi-category punts, projected 2026-27 category values, and an automatic change to Pick Coach verdicts can wait until the single-punt view proves useful.
+
+## Update: multi-category punts (shipped)
+
+Users can now punt up to three categories at once (`PuntCore.MAX_PUNTS`), including `TO`. State is `puntCats` (array); older saves with a single `puntCategory` string are migrated on load. Rankings drop every punted category from the nine-category sum, and `PuntCore.suggest` skips committed punts and measures near-term risers for the combined set, so it can recommend a second or third punt. The standard grade and Pick Coach verdicts remain nine-category.
