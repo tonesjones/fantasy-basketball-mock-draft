@@ -75,6 +75,7 @@ function mountRadar(host) {
       observer = new ResizeObserver(resize);
       observer.observe(host);
     } catch (_) {
+      threePromise = null;
       dispose(); // SVG stays visible when the CDN or WebGL is unavailable.
     }
   }
