@@ -72,7 +72,10 @@ function board(host) {
     [...table.querySelectorAll("td")].forEach(cell => cell.classList.remove("scene-selected"));
     const picks = rows.map(row => row.cells[team + 1]).filter(Boolean);
     picks.forEach(cell => cell.classList.add("scene-selected"));
-    const names = picks.map((cell, i) => cell.textContent.trim() ? `R${i + 1} ${cell.textContent.trim()}` : null).filter(Boolean);
+    const names = picks.map((cell, i) => {
+      const name = cell.firstChild?.textContent.trim();
+      return name ? `R${i + 1} ${name}` : null;
+    }).filter(Boolean);
     roster.textContent = `${buttons[team].textContent}: ${names.length ? names.join(" · ") : "No picks yet."}`;
     select3D(team);
   }

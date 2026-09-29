@@ -20,10 +20,12 @@ var sandbox = {
   Date: Date,
   isFinite: isFinite,
   PLAYERS: [{ n: "Victor Wembanyama" }, { n: "Nikola Jokic" }],
+  CORE: require("./draft-core"),
   _yahooNameMap: null,
   state: { view: "team", q: "", f: "All", sort: "cons", playoffStart: 20 },
   freshState: function () { return { view: "team", q: "", f: "All", sort: "cons", playoffStart: 20 }; },
   cancelPickCoach: function () { sandbox.cancelled = true; },
+  showPickMoment: function (name, index) { sandbox.moment = { name: name, index: index }; },
   setState: function (next) { sandbox.state = Object.assign({}, sandbox.state, next); },
   save: function () { sandbox.saved = true; },
 };
@@ -59,6 +61,15 @@ sandbox.state.yahooLive.fetchedAt = new Date(now - 26000).toISOString();
 assert.equal(sandbox.yahooBoardFresh(), false, "advice stops on a stale board");
 assert.equal(sandbox.yahooApplySnapshot({ ...board, fetchedAt: new Date().toISOString() }), false);
 assert.equal(sandbox.yahooBoardFresh(), true, "an unchanged refresh resumes advice");
+
+var nextBoard = { ...board, boardHash: "board-2", picks: board.picks.concat([
+  { overallPick: 3, playerName: "CPU 3" },
+  { overallPick: 4, playerName: "CPU 4" },
+  { overallPick: 5, playerName: "CPU 5" },
+  { overallPick: 6, playerName: "Nikola Jokic" },
+]) };
+assert.equal(sandbox.yahooApplySnapshot(nextBoard), true);
+assert.deepEqual(sandbox.moment, { name: "Nikola Jokic", index: 5 }, "a new Yahoo user pick triggers the pick moment");
 
 var olderBoard = { ...board, boardHash: "older", picks: board.picks.slice(0, 1) };
 assert.throws(function () { sandbox.yahooApplySnapshot(olderBoard); }, /older board/);
