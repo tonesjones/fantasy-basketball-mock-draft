@@ -1,0 +1,141 @@
+Matched pool players: 257
+Value changes: 409 (109 moved >= 3)
+  Aaron Nesmith adp 75.3 -> 106.5 (consensus 100.8 -> 129.3)
+  Brook Lopez adp 77.9 -> 104.2 (consensus 103.1 -> 126.3)
+  AJ Green adp 79.2 -> 103.3 (consensus 105.4 -> 126.6)
+  Al Horford adp 86.6 -> 104.3 (consensus 111.5 -> 128.1)
+  Adem Bona adp 85.4 -> 102.9 (consensus 110.4 -> 126.0)
+  Aaron Wiggins adp 92.4 -> 109.1 (consensus 115.8 -> 134.8)
+  Luke Kennard adp 87.5 -> 103.5 (consensus 87.5 -> 103.5)
+  Zach LaVine adp 120.4 -> 105.1 (consensus 117.1 -> 110.9)
+  Anthony Davis adp 24.9 -> 39.1 (consensus 26.5 -> 33.7)
+  Ty Jerome adp 95.9 -> 109.5 (consensus 93.1 -> 98.4)
+  Aday Mara adp 91.5 -> 104.9 (consensus 115.3 -> 128.8)
+  Andre Drummond adp 91.7 -> 104.7 (consensus 115.5 -> 128.6)
+  Moussa Diabate adp 100.3 -> 113 (consensus 128.5 -> 141.2)
+  Brandon Ingram adp 75.4 -> 64.3 (consensus 76.0 -> 70.3)
+  Duncan Robinson adp 96.3 -> 107.2 (consensus 119.1 -> 132.1)
+  Cedric Coward adp 100.5 -> 89.7 (consensus 104.7 -> 98.9)
+  Alex Sarr adp 60.8 -> 71.4 (consensus 62.5 -> 68.3)
+  Alex Caruso adp 94.5 -> 104.7 (consensus 117.7 -> 128.5)
+  Jaden McDaniels adp 78.2 -> 88.3 (consensus 77.8 -> 83.2)
+  Davion Mitchell adpF 140.3 -> 150.3 (consensus 129.2 -> 140.6)
+  Neemias Queta adp 104.9 -> 114.2 (consensus 105.2 -> 108.2)
+  Anfernee Simons adp 113 -> 104.1 (consensus 141.3 -> 127.6)
+  Tobias Harris adp 122.7 -> 113.9 (consensus 158.1 -> 145.7)
+  VJ Edgecombe adp 67 -> 75.7 (consensus 75.2 -> 79.8)
+  Khaman Maluach adpF 189.8 -> 181.2 (consensus 156.5 -> 156.8)
+  Kawhi Leonard adp 19.9 -> 28.5 (consensus 24.6 -> 28.8)
+  Toumani Camara adp 119.3 -> 111 (consensus 114.5 -> 111.7)
+  Daniel Gafford adp 99.4 -> 107.6 (consensus 121.1 -> 132.0)
+  Ayo Dosunmu adp 106.3 -> 114.3 (consensus 105.9 -> 109.6)
+  Andrew Wiggins adp 109.9 -> 102 (consensus 108.3 -> 104.8)
+  Michael Porter Jr. adp 67.9 -> 60.2 (consensus 66.3 -> 62.9)
+  Walker Kessler adp 29.6 -> 37 (consensus 33.7 -> 37.0)
+  Jonathan Kuminga adpF 227.3 -> 220 (consensus 147.5 -> 146.2)
+  Shaedon Sharpe adpF 182.8 -> 190 (consensus 146.4 -> 152.7)
+  Darius Garland adp 58.4 -> 65.3 (consensus 56.3 -> 59.5)
+  Jarrett Allen adp 77.8 -> 70.9 (consensus 80.5 -> 76.6)
+  Domantas Sabonis adp 35.2 -> 28.4 (consensus 36.8 -> 33.3)
+  Davion Mitchell adp 111.9 -> 118.6 (consensus 129.2 -> 140.6)
+  Andrew Nembhard adp 121.5 -> 115 (consensus 131.3 -> 127.8)
+  Tyler Herro adp 61.9 -> 68.1 (consensus 62.1 -> 65.4)
+  Josh Giddey adp 30 -> 23.9 (consensus 28.4 -> 25.3)
+  Darryn Peterson adp 93.3 -> 99.3 (consensus 103.0 -> 105.8)
+  Paul Reed adp 123.6 -> 117.6 (consensus 142.8 -> 138.5)
+  Cam Johnson adp 107.9 -> 113.9 (consensus 137.9 -> 144.5)
+  Kristaps Porzingis adp 105.9 -> 100 (consensus 107.6 -> 104.0)
+  Morez Johnson Jr. adp 123 -> 117.1 (consensus 158.5 -> 146.0)
+  Anthony Edwards adp 14.7 -> 8.8 (consensus 11.8 -> 8.8)
+  Chet Holmgren adp 21.1 -> 27 (consensus 23.1 -> 25.9)
+  Dylan Harper adp 79.2 -> 85 (consensus 83.8 -> 86.8)
+  Kyshawn George adp 111.5 -> 117.3 (consensus 118.9 -> 122.4)
+  Amen Thompson adp 29.3 -> 23.6 (consensus 25.6 -> 22.6)
+  Jalen Green adp 109.5 -> 103.9 (consensus 115.3 -> 111.8)
+  Kyle Filipowski adp 119.6 -> 114 (consensus 150.4 -> 140.4)
+  Reed Sheppard adp 114.7 -> 120.2 (consensus 117.0 -> 119.6)
+  Collin Murray-Boyles adp 121.1 -> 115.8 (consensus 111.7 -> 110.7)
+  Dejounte Murray adp 66.7 -> 71.9 (consensus 60.8 -> 63.3)
+  OG Anunoby adp 61.3 -> 66.5 (consensus 59.8 -> 62.4)
+  Mark Williams adp 102.6 -> 107.8 (consensus 107.2 -> 110.9)
+  Ajay Mitchell adp 110.2 -> 115.4 (consensus 112.6 -> 114.9)
+  Bobby Portis adp 117.1 -> 111.9 (consensus 147.0 -> 138.0)
+  Donovan Mitchell adp 19.3 -> 14.2 (consensus 16.8 -> 14.2)
+  Bennedict Mathurin adpF 173.2 -> 178.2 (consensus 155.0 -> 150.9)
+  Cameron Boozer adp 62.7 -> 57.8 (consensus 60.5 -> 58.0)
+  Mikel Brown Jr. adp 122.4 -> 117.5 (consensus 159.2 -> 151.1)
+  Nic Claxton adp 95.4 -> 90.6 (consensus 97.0 -> 94.5)
+  Tyrese Haliburton adp 21.9 -> 17.2 (consensus 16.8 -> 14.6)
+  Lauri Markkanen adp 43.9 -> 39.2 (consensus 39.5 -> 37.1)
+  Zach Edey adp 70 -> 74.6 (consensus 69.7 -> 72.0)
+  Shaedon Sharpe adp 114.2 -> 118.7 (consensus 146.4 -> 152.7)
+  Jalen Duren adp 31.4 -> 35.8 (consensus 36.9 -> 39.0)
+  Jusuf Nurkic adp 117.6 -> 113.2 (consensus 119.4 -> 117.2)
+  Julius Randle adp 64.1 -> 68.4 (consensus 66.0 -> 68.3)
+  Devin Booker adp 31.7 -> 27.4 (consensus 29.4 -> 27.3)
+  Jabari Smith Jr. adp 98.8 -> 94.5 (consensus 94.8 -> 92.8)
+  Myles Turner adp 95.6 -> 99.8 (consensus 91.3 -> 93.4)
+  Jalen Johnson adp 16.2 -> 12 (consensus 12.9 -> 10.9)
+  Giannis Antetokounmpo adp 12.1 -> 8 (consensus 10.7 -> 8.6)
+  Jaylen Brown adp 32.2 -> 28.2 (consensus 37.9 -> 35.8)
+  Deni Avdija adp 35.4 -> 39.4 (consensus 36.9 -> 39.1)
+  Trey Murphy III adp 35.9 -> 39.9 (consensus 32.6 -> 35.0)
+  Collin Gillespie adp 124.8 -> 120.8 (consensus 137.4 -> 136.1)
+  Mikal Bridges adp 75.8 -> 79.7 (consensus 74.1 -> 76.3)
+  Bennedict Mathurin adp 121.5 -> 117.6 (consensus 155.0 -> 150.9)
+  Jaren Jackson Jr. adp 54.5 -> 50.6 (consensus 48.0 -> 45.9)
+  Julian Champagnie adp 113.1 -> 109.2 (consensus 140.1 -> 133.7)
+  Nikola Vucevic adpF 199 -> 195.2 (consensus 137.3 -> 144.8)
+  Bam Adebayo adp 34 -> 30.2 (consensus 34.9 -> 32.9)
+  Isaiah Hartenstein adp 101.9 -> 105.6 (consensus 100.2 -> 101.3)
+  Paolo Banchero adp 37.5 -> 33.9 (consensus 43.3 -> 41.3)
+  Kyrie Irving adp 49 -> 52.6 (consensus 50.4 -> 52.2)
+  Julian Champagnie adpF 222.9 -> 219.3 (consensus 140.1 -> 133.7)
+  Kel'el Ware adp 75.4 -> 72 (consensus 67.0 -> 65.2)
+  Cason Wallace adp 114.6 -> 118 (consensus 114.8 -> 115.9)
+  Jimmy Butler adp 120.7 -> 117.3 (consensus 152.7 -> 145.8)
+  Kelly Oubre Jr. adp 112 -> 115.4 (consensus 139.1 -> 144.8)
+  Keyonte George adp 52.6 -> 56 (consensus 55.0 -> 56.9)
+  Yaxel Lendeborg adpF 174.2 -> 170.8 (consensus 148.2 -> 147.3)
+  Derik Queen adp 80.7 -> 77.4 (consensus 86.2 -> 84.2)
+  Day'Ron Sharpe adp 91.5 -> 94.8 (consensus 96.3 -> 97.7)
+  Jalen Suggs adp 108.3 -> 111.6 (consensus 98.0 -> 99.1)
+  Draymond Green adp 112.8 -> 109.5 (consensus 144.5 -> 140.2)
+  Ivica Zubac adp 68.3 -> 65.1 (consensus 67.3 -> 65.5)
+  LaMelo Ball adp 22.5 -> 25.7 (consensus 23.6 -> 25.4)
+  Rudy Gobert adp 76.1 -> 72.9 (consensus 73.6 -> 71.7)
+  Nikola Vucevic adp 111.9 -> 115.1 (consensus 137.3 -> 144.8)
+  Isaiah Stewart adpF 218.8 -> 215.7 (consensus 141.0 -> 137.7)
+  Joel Embiid adp 47.9 -> 51 (consensus 53.8 -> 55.3)
+  Damian Lillard adp 71.9 -> 68.9 (consensus 76.7 -> 75.2)
+  Sandro Mamukelashvili adp 115.1 -> 118.1 (consensus 126.9 -> 128.5)
+Newly published: 4
+  Tari Eason adp null -> 116.8
+  Tre Jones adp null -> 112.2
+  Grayson Allen adp null -> 115
+  Jerami Grant adp null -> 117.7
+Now blank (will be nulled): 10
+  Jay Huff adp 102.3 -> null
+  Allen Graves adp 98.4 -> null
+  T.J. McConnell adp 93.5 -> null
+  Nate Ament adp 115.3 -> null
+  Luke Kornet adp 87.5 -> null
+  Ryan Kalkbrenner adp 114.3 -> null
+  Isaiah Collier adp 120 -> null
+  De'Andre Hunter adp 91 -> null
+  GG Jackson adp 96 -> null
+  Sam Hauser adp 109.6 -> null
+Pool players absent from the table (values kept): 13
+  Donte DiVincenzo, Jonas Valanciunas, Goga Bitadze, Nicolas Batum, Jaden Ivey, Aaron Holiday, Jeremy Sochan, Haywood Highsmith, Ochai Agbaji, D'Angelo Russell, Cam Thomas, Jonathan Isaac, Jonathan Mogbo
+Table players with a Yahoo ADP not in the pool (add candidates): 2
+  Bronny James Jr. LAL Yahoo 95.9 Fantrax 243.4
+  Brayden Burries MIL Yahoo 114.1 Fantrax 232.6
+Team / position differences (not written; review by hand): 8
+  Rob Dillingham: team CHA -> CHI, pos PG/SG -> PG/SG
+  Moses Moody: team GS -> GS, pos SG -> PF/SF/SG
+  Taurean Prince: team MIL -> DET, pos PF/SF -> PF/SF
+  Buddy Hield: team CHI -> CHA, pos SF/SG -> SF/SG
+  Devin Carter: team ATL -> BOS, pos PG/SG -> PG/SG
+  Dorian Finney-Smith: team CHA -> ATL, pos PF/SF -> PF/SF
+  Cam Whitmore: team FA -> DEN, pos PF/SF -> PF/SF
+  Nikola Vucevic: team BOS -> ORL, pos C -> C

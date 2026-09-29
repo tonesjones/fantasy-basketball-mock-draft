@@ -62,16 +62,19 @@ function availAt(pick) {
 
 // --- consensus ---
 t("consensus blends Yahoo+Fantrax", function () {
-  var v = S.consensus(P("Mikal Bridges")); // adp 75.8, adpF 72.4: both reliable
-  assert.ok(Math.abs(v - 74.1) < 0.05, "got " + v);
+  // Any player with both ADPs in their reliable range: plain mean.
+  var p = PLAYERS.filter(function (x) { return x.adp != null && x.adp <= 100 && x.adpF != null && x.adpF <= 150; })[0];
+  assert.ok(p, "need a player with both ADPs in range");
+  assert.ok(Math.abs(S.consensus(p) - (p.adp + p.adpF) / 2) < 1e-9, p.n + " got " + S.consensus(p));
 });
 t("consensus matches DraftCore market rank", function () {
-  var p = P("Nikola Vucevic"); // adp 111.9 (Yahoo saturated band), adpF 199
-  assert.strictEqual(S.consensus(p), sandbox.DraftCore.marketRank(p));
+  PLAYERS.forEach(function (p) { assert.strictEqual(S.consensus(p), sandbox.DraftCore.marketRank(p), p.n); });
 });
 t("consensus falls back to one source", function () {
-  var v = S.consensus(P("Tre Jones")); // adp null, adpF 155.3
-  assert.ok(Math.abs(v - 155.3) < 0.5, "got " + v);
+  var p = PLAYERS.filter(function (x) { return x.adp == null && x.adpF != null && x.adpF <= 150; })[0]
+    || PLAYERS.filter(function (x) { return x.adp != null && x.adpF == null; })[0];
+  assert.ok(p, "need a single-platform player");
+  assert.strictEqual(S.consensus(p), p.adp != null ? p.adp : p.adpF, p.n);
 });
 
 // --- loader sanity (fail loudly) ---
@@ -95,16 +98,19 @@ t("playoff schedule loaded for all 30 teams", function () {
 });
 
 // --- trueValue signs (the bug class we're guarding) ---
+function playerWithRole(role) {
+  var n = Object.keys(ctx.moves).filter(function (k) { return ctx.moves[k].roleDelta === role && byName[k] && !byName[k].inj; })[0];
+  assert.ok(n, "need a role-" + role + " player");
+  return P(n);
+}
 t("role-up IMPROVES rank (lowers V)", function () {
-  var p = P("Aaron Gordon");
-  assert.strictEqual((ctx.moves[p.n] || {}).roleDelta, "up", "test player must be role-up");
+  var p = playerWithRole("up");
   var withRole = S.trueValue(p, ctx).V;
   var noRole = S.trueValue(p, { moves: {}, netVac: {}, playoffStart: 20 }).V;
   assert.ok(withRole < noRole, "role-up should lower V: with=" + withRole + " without=" + noRole);
 });
 t("role-down WORSENS rank (raises V)", function () {
-  var p = P("Nikola Vucevic");
-  assert.strictEqual((ctx.moves[p.n] || {}).roleDelta, "down", "test player must be role-down");
+  var p = playerWithRole("down");
   var withRole = S.trueValue(p, ctx).V;
   var noRole = S.trueValue(p, { moves: {}, netVac: {}, playoffStart: 20 }).V;
   assert.ok(withRole > noRole, "role-down should raise V: with=" + withRole + " without=" + noRole);
