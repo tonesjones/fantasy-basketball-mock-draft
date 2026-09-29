@@ -231,6 +231,18 @@ function userDraft(pi){
   var cpu=next.log.length-(checkpoint.log.length+1);
   _pendingLive="You drafted "+name+". "+(cpu>0?cpu+" CPU pick"+(cpu===1?"":"s")+" followed. ":"");
   setState({log:next.log,rngState:next.rngState,userTurns:state.userTurns.concat([checkpoint]).slice(-20),phase:next.log.length>=totalPicks()?"done":"draft",page:0});
+  showPickMoment(name,checkpoint.log.length);
+}
+function showPickMoment(name,pickIndex){
+  var old=el("mdpickmoment");if(old)old.remove();
+  var panel=document.createElement("div");panel.id="mdpickmoment";panel.className="pick-moment";
+  var grade=draftGrades().filter(function(g){return g.team===userTeam();})[0];
+  var heading=document.createElement("strong");heading.textContent="Your pick #"+(pickIndex+1);
+  var player=document.createElement("span");player.textContent=name;
+  var note=document.createElement("small");note.textContent=grade&&grade.rated?"Team grade "+grade.grade+" · historical 9-cat":"Added to your team";
+  panel.append(heading,player,note);
+  document.body.append(panel);
+  setTimeout(function(){panel.remove();},2400);
 }
 function undoUserPick(){
   var history=state.userTurns.slice(),checkpoint=history.pop();if(!checkpoint)return;
@@ -967,6 +979,9 @@ function yahooApplySnapshot(j){
   if(state.yahooLive&&state.yahooLive.draftId===j.draftId&&state.yahooLive.boardHash===j.boardHash){
     setState({yahooLive:Object.assign({},state.yahooLive,{fetchedAt:j.fetchedAt})});return false;
   }
+  var previous=state.yahooLive&&state.yahooLive.draftId===j.draftId?state.log.length:log.length;
+  var newUserPicks=[];
+  for(var k=previous;k<log.length;k++)if(CORE.teamForPick(k,teams)===slot-1)newUserPicks.push({name:picks[k].playerName,index:k});
   cancelPickCoach();
   var keepView=state.view,keepQ=state.q,keepF=state.f,keepSort=state.sort,keepPW=state.playoffStart;
   var fresh=freshState();
@@ -974,7 +989,9 @@ function yahooApplySnapshot(j){
   fresh.yahooLive={teams:teams,teamNames:j.teamNames||{},draftId:j.draftId,boardHash:j.boardHash||null,fetchedAt:j.fetchedAt,worker:true};
   fresh.draftPos=slot;fresh.rounds=rounds;fresh.log=log;fresh.yahooNames=yn;
   fresh.phase=(j.complete||log.length>=teams*rounds)?"done":"draft";
-  setState(fresh);return true;
+  setState(fresh);
+  if(newUserPicks.length){var latest=newUserPicks[newUserPicks.length-1];showPickMoment(latest.name,latest.index);}
+  return true;
 }
 function liveSyncTick(){
   if(!state.yahooLive||!state.yahooLive.worker||state.phase!=="draft"||_liveSyncBusy)return;
@@ -1343,6 +1360,7 @@ function renderPuntStrategy(grades,previewCats,expanded){
   if(have.length)h+='<button class="ghostbtn" id="mdpuntclear">Clear punt</button>';
   h+='</div>';
   if(cats.length===PuntCore.MAX_PUNTS)h+='<p class="muted">With '+cats.length+' punts you still need to win 5 of the remaining '+(9-cats.length)+' categories each week.</p>';
+  h+=puntRadarHtml(grades,cats);
   if(cats.length){
     var lbl=puntLabel(cats),rows=PuntCore.rankings(PLAYERS,PDATA,taken,cats);
     var near=PuntCore.nearTermRisers(rows,PLAYERS,next,following);
@@ -1364,13 +1382,35 @@ function renderPuntStrategy(grades,previewCats,expanded){
   }
   return h+'</details></section>';
 }
+function puntRadarHtml(grades,cats){
+  var me=grades.filter(function(g){return g.team===userTeam();})[0];
+  if(!me||!me.rated)return '<p class="muted">Draft a player with category data to see your build shape.</p>';
+  var points=CATS9.map(function(_,i){
+    var mine=me.cats[i]/me.rated;
+    var peers=grades.filter(function(g){return g.team!==userTeam()&&g.rated;});
+    var below=peers.filter(function(g){return g.cats[i]/g.rated<mine;}).length;
+    return peers.length?(0.18+0.78*below/peers.length):0.5;
+  });
+  var x=120,y=120,r=82;
+  var polygon=points.map(function(v,i){var a=-Math.PI/2+i*2*Math.PI/9,d=cats.indexOf(CATS9[i])>=0?0.1:v;return (x+Math.cos(a)*r*d).toFixed(1)+','+(y+Math.sin(a)*r*d).toFixed(1);}).join(' ');
+  var labels=CATS9.map(function(c,i){var a=-Math.PI/2+i*2*Math.PI/9;return '<text x="'+(x+Math.cos(a)*106).toFixed(1)+'" y="'+(y+Math.sin(a)*106).toFixed(1)+'" text-anchor="middle" dominant-baseline="middle" class="'+(cats.indexOf(c)>=0?'punt-muted':'')+'">'+c+'</text>';}).join('');
+  return '<div class="punt-radar" data-values="'+points.join(',')+'" data-punts="'+cats.join(',')+'" aria-label="Your nine-category build shape. Selected punts shrink toward the center."><svg viewBox="0 0 240 240" role="img" aria-label="Nine-category build shape"><circle cx="120" cy="120" r="82"/><circle cx="120" cy="120" r="41"/><polygon points="'+polygon+'"/>'+labels+'</svg><div class="radar-canvas" aria-hidden="true"></div><p class="muted">Shape compares your rated players with other teams using 2025–26 per-game category values. Inward points are weaker; selected punts fold inward.</p></div>';
+}
 function wirePuntControls(root){
   var box=root.querySelector('.puntbox');if(!box)return;
   function selected(){return Array.prototype.map.call(box.querySelectorAll('[data-punt-cat].sel'),function(b){return b.getAttribute('data-punt-cat');});}
   box.querySelectorAll('[data-punt-cat]').forEach(function(b){b.addEventListener('click',function(){
     var cat=b.getAttribute('data-punt-cat'),sel=selected(),i=sel.indexOf(cat);
     if(i>=0)sel.splice(i,1);else if(sel.length<PuntCore.MAX_PUNTS)sel.push(cat);
+    var oldRadar=box.querySelector('.punt-radar');
     box.outerHTML=renderPuntStrategy(draftGrades(),sel,true);
+    var newRadar=root.querySelector('.punt-radar');
+    if(oldRadar&&newRadar){
+      oldRadar.dataset.values=newRadar.dataset.values;oldRadar.dataset.punts=newRadar.dataset.punts;
+      oldRadar.querySelector('svg').innerHTML=newRadar.querySelector('svg').innerHTML;
+      newRadar.replaceWith(oldRadar);
+      window.dispatchEvent(new Event('draft-radar-update'));
+    }
     wirePuntControls(root);
     var again=root.querySelector('[data-punt-cat="'+cat+'"]');if(again)again.focus();
   });});
