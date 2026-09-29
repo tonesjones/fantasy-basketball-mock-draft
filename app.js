@@ -1239,6 +1239,7 @@ function renderList(){
       evaluatePlayer(parseInt(row.getAttribute("data-pi"),10));
     });
     row.addEventListener("keydown",function(e){
+      if(e.target.closest&&e.target.closest("button"))return;
       if(e.key==="Enter"||e.key===" "){e.preventDefault();evaluatePlayer(parseInt(row.getAttribute("data-pi"),10));}
     });
   });
