@@ -31,6 +31,10 @@ var DA=window.DraftAnalysis;
 var _scarcBase=null;
 function scarcityBase(){return _scarcBase||(_scarcBase=DA.scarcityBase(PLAYERS,PDATA));}
 function renderScarcity(){
+  var nextPick=nextUserPickIdx();
+  var outlook=DA.categoryOutlook({grades:draftGrades(),userTeam:userTeam(),players:PLAYERS,
+    pdata:PDATA,log:state.log,nextPick:nextPick,
+    followingPick:nextPick<0?-1:followingUserPickIdx(nextPick)});
   var base=scarcityBase(),taken={},i,c;
   for(i=0;i<state.log.length;i++)taken[state.log[i]]=1;
   var rem=[0,0,0,0,0,0,0,0,0],tops=[],pcts=[];
@@ -45,9 +49,44 @@ function renderScarcity(){
     if(pct>100)pct=100;if(pct<0)pct=0;
     pcts.push({cat:cat,pct:pct,ci:ci});
   });
-  var quiet=pcts.slice().sort(function(a,b){return a.pct-b.pct;}).slice(0,3).map(function(x){return x.cat+" "+x.pct+"%";}).join(" · ");
+  var strong=outlook.rows.filter(function(x){return x.status==="strong"||x.status==="surplus";})
+    .sort(function(a,b){return a.gap-b.gap;});
+  var paths=outlook.rows.filter(function(x){return x.status==="weak"&&(x.catchup==="one-pick"||x.catchup==="two-pick");})
+    .sort(function(a,b){return b.gap-a.gap;});
+  var hard=outlook.rows.filter(function(x){return x.status==="weak"&&x.catchup==="hard-climb";})
+    .sort(function(a,b){return b.gap-a.gap;});
+  var quiet=outlook.ready
+    ? (outlook.knownPicks<5?"Early read · ":"")+"Strong: "+(strong.slice(0,2).map(function(x){return CATS9[x.ci];}).join(", ")||"none yet")+
+      (paths.length?" · Catch-up paths: "+paths.slice(0,2).map(function(x){return CATS9[x.ci];}).join(", "):"")+
+      (hard.length?" · Hard climb: "+hard.slice(0,2).map(function(x){return CATS9[x.ci];}).join(", "):"")
+    : "Your strengths, weak spots, and what remains";
   var h='<details class="scarcity" id="mdscarcity"'+(state.scarcityOpen?' open':'')+'>';
-  h+='<summary><b>Category scarcity</b> <span class="muted">'+(quiet||"share of draftable value still available")+'</span></summary>';
+  h+='<summary><b>Category outlook</b> <span class="muted">'+quiet+'</span></summary>';
+  h+='<section class="catprofile"><h3>Your roster vs the room</h3>';
+  if(!outlook.ready){
+    var reason=outlook.knownPicks<3?"It needs at least three of your picks."
+      :outlook.mappedRoom/outlook.roomPicks<0.8||outlook.knownPicks/outlook.draftedPicks<0.8
+        ?"Too many Yahoo picks are outside the player pool for a reliable comparison."
+        :"It needs more drafted teams to compare.";
+    h+='<p class="muted">Too early to compare. '+reason+'</p>';
+  }else{
+    h+='<p class="muted">'+(outlook.knownPicks<5?'Early read · ':'')+outlook.knownPicks+' of your picks mapped. Rank compares 2025–26 category value per picked player across the drafted teams.</p>';
+    h+='<div class="catprofile-list">';
+    outlook.rows.forEach(function(row){
+      var label=({surplus:"Clear lead",strong:"Strong",weak:"Needs help","in-mix":"In the mix"})[row.status];
+      h+='<div class="catprofile-row '+row.status+'"><b>'+CATS9[row.ci]+'</b><span class="catprofile-rank">#'+row.rank+'/'+TEAMS+'</span><span class="catprofile-status">'+label+'</span>';
+      if(row.status==="weak"){
+        var path=({"one-pick":"One-pick path","two-pick":"Two-pick path","hard-climb":"Hard climb now","no-picks":"No picks left"})[row.catchup];
+        var names=row.near.slice(0,2).map(function(p){return esc(p.name);}).join(', ');
+        h+='<span class="catprofile-detail">'+row.gap.toFixed(1)+' value per pick behind the room’s middle · '+path;
+        if(names)h+=' · Near-pick options: '+names;
+        h+='</span>';
+      }
+      h+='</div>';
+    });
+    h+='</div><p class="muted">Catch-up paths are optimistic: they assume those players remain available and other teams add middle-of-the-room picks. They are not punt recommendations.</p>';
+  }
+  h+='</section><section class="catpool"><h3>Player pool still available</h3><p class="muted">Share of draftable value left in each category. This describes supply, not your roster.</p>';
   h+='<div class="catgrid">';
   pcts.forEach(function(row){
     var cat=row.cat,ci=row.ci,pct=row.pct;
@@ -60,7 +99,7 @@ function renderScarcity(){
     h+='<span class="catname">'+cat+'</span><span class="catnum" style="color:hsl('+hue+',62%,55%)">'+pct+'%</span><div class="catbar"><i style="width:'+pct+'%;background:hsl('+hue+',62%,45%)"></i></div>';
     h+='<div class="cattops" hidden><b>Top available</b><br>'+topsHtml+'</div></div>';
   });
-  h+='</div><p class="muted">BM-style 2025-26 per-game category values (z-scores; FG%/FT% volume-weighted, TO inverted). Replacement = mean of consensus ranks 150&ndash;170. Tap a category chip to see top contributors.</p></details>';
+  h+='</div><p class="muted">BM-style 2025-26 per-game category values (z-scores; FG%/FT% volume-weighted, TO inverted). Replacement = mean of consensus ranks 150&ndash;170. Tap a category chip to see top contributors. Roster values are historical or market-imputed, not 2026–27 projections.</p></section></details>';
   return h;
 }
 function wireScarcityToggles(root){
