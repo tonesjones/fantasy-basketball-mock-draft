@@ -8,7 +8,6 @@
 // projMpg / projRank: omitted (no Hashtag projection snapshot in repo).
 // See docs/movers-outlook.md and scripts/data-provenance/2026-09-20-movers-outlook/.
 //
-// Generated 2026-09-28. Regenerate: node scripts/generate-movers.js
 var MOVES={
 "AJ Dybantsa":{teamPrev:"WAS",teamCurr:"WAS",mover:false,roleDelta:"unknown"},
 "AJ Green":{teamCurr:"MIL",mover:false,roleDelta:"up",roleNote:"ADP ahead of last rank"},
@@ -51,7 +50,7 @@ var MOVES={
 "CJ McCollum":{teamPrev:"WAS",teamCurr:"ATL",mover:true,roleDelta:"flat",roleNote:"WAS→ATL · team change; ADP near last rank"},
 "Cade Cunningham":{teamPrev:"DET",teamCurr:"DET",mover:false,roleDelta:"flat"},
 "Caleb Wilson":{teamCurr:"CHI",mover:false,roleDelta:"unknown"},
-"Cam Johnson":{teamPrev:"DEN",teamCurr:"DEN",mover:false,roleDelta:"flat"},
+"Cam Johnson":{teamPrev:"DEN",teamCurr:"DEN",mover:false,roleDelta:"down",roleNote:"ADP behind last rank"},
 "Cam Thomas":{teamPrev:"BKN",teamCurr:"BKN",mover:false,roleDelta:"unknown"},
 "Cam Whitmore":{teamPrev:"WAS",teamCurr:"DEN",mover:true,roleDelta:"unknown",roleNote:"WAS→DEN · team change; role unclear"},
 "Cameron Boozer":{teamCurr:"MEM",mover:false,roleDelta:"unknown"},
@@ -177,14 +176,14 @@ var MOVES={
 "Khris Middleton":{teamPrev:"WAS",teamCurr:"WAS",mover:false,roleDelta:"up",roleNote:"ADP ahead of last rank"},
 "Kingston Flemings":{teamCurr:"ATL",mover:false,roleDelta:"unknown"},
 "Klay Thompson":{teamPrev:"DAL",teamCurr:"MIA",mover:true,roleDelta:"up",roleNote:"DAL→MIA · ADP ahead of last rank"},
-"Kon Knueppel":{teamPrev:"CHA",teamCurr:"CHA",mover:false,roleDelta:"up",roleNote:"ADP ahead of last rank"},
+"Kon Knueppel":{teamPrev:"CHA",teamCurr:"CHA",mover:false,roleDelta:"flat"},
 "Kristaps Porzingis":{teamPrev:"ATL",teamCurr:"GS",mover:true,roleDelta:"down",roleNote:"ATL→GS · ADP behind last rank"},
 "Kyle Filipowski":{teamPrev:"UTA",teamCurr:"UTA",mover:false,roleDelta:"flat"},
 "Kyle Kuzma":{teamPrev:"MIL",teamCurr:"MIL",mover:false,roleDelta:"up",roleNote:"ADP ahead of last rank"},
 "Kyrie Irving":{teamPrev:"DAL",teamCurr:"DAL",mover:false,roleDelta:"unknown"},
 "Kyshawn George":{teamPrev:"WAS",teamCurr:"WAS",mover:false,roleDelta:"down",roleNote:"ADP behind last rank"},
 "LaMelo Ball":{teamPrev:"CHA",teamCurr:"MIN",mover:true,roleDelta:"up",roleNote:"CHA→MIN · ADP ahead of last rank"},
-"Lauri Markkanen":{teamPrev:"UTA",teamCurr:"UTA",mover:false,roleDelta:"down",roleNote:"ADP behind last rank"},
+"Lauri Markkanen":{teamPrev:"UTA",teamCurr:"UTA",mover:false,roleDelta:"flat"},
 "LeBron James":{teamPrev:"LAL",teamCurr:"PHI",mover:true,roleDelta:"flat",roleNote:"LAL→PHI · team change; ADP near last rank"},
 "Leonard Miller":{teamPrev:"MIN",teamCurr:"CHI",mover:true,roleDelta:"up",roleNote:"MIN→CHI · ADP ahead of last rank"},
 "Luguentz Dort":{teamPrev:"OKC",teamCurr:"ATL",mover:true,roleDelta:"up",roleNote:"OKC→ATL · ADP ahead of last rank"},

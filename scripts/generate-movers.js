@@ -4,7 +4,7 @@
  * (git 47c17da^) + DOC_PRIOR, teamCurr from player-pool.js, roleDelta from
  * consensus ADP (DraftCore.marketAdp: weighted Yahoo + Fantrax) vs 2025-26
  * per-game rank. Run after an ADP refresh or a team change:
- *   node scripts/generate-movers.js [--date YYYY-MM-DD]
+ *   node scripts/generate-movers.js
  * Maintained copy of scripts/data-provenance/2026-09-20-movers-outlook/generate.js,
  * which read index.html (before the split) and Yahoo-first ADP. */
 const fs = require('fs');
@@ -13,8 +13,6 @@ const {execSync} = require('child_process');
 const vm = require('vm');
 const ROOT = path.join(__dirname, '..');
 const core = require('../draft-core');
-const di = process.argv.indexOf('--date');
-const DATE = di > 0 ? process.argv[di + 1] : new Date().toISOString().slice(0, 10);
 const ALIAS = {SAS:'SA',SA:'SA',NYK:'NY',NY:'NY',PHX:'PHO',PHO:'PHO',NOP:'NO',NO:'NO',WSH:'WAS',WAS:'WAS',GSW:'GS',GS:'GS',BRK:'BKN',BKN:'BKN',CHO:'CHA',CHA:'CHA',UTA:'UTA'};
 function norm(t){if(!t||['—','-','FA','TBD','N/A','–'].includes(t))return null;t=String(t).toUpperCase().trim();return ALIAS[t]||t;}
 function extractPlayers(blob){const m=blob.match(/var PLAYERS=\[(.*?)\];\s*\nPLAYERS\.forEach/s);const players={};for(const mm of m[1].matchAll(/\["([^"]+)",\[[^\]]*\],(?:"([^"]*)")?\]/g))players[mm[1]]=mm[2]||null;return players;}
@@ -22,11 +20,13 @@ const DOC_PRIOR={'Luke Kennard':'LAL','CJ McCollum':'WAS','Sandro Mamukelashvili
 const pre=execSync('git show 47c17da^:index.html',{cwd:ROOT,encoding:'utf8'});
 const pPre=extractPlayers(pre);
 const pCur=extractPlayers(fs.readFileSync(path.join(ROOT,'player-pool.js'),'utf8'));
+const priorCtx={};vm.createContext(priorCtx);vm.runInContext(fs.readFileSync(path.join(ROOT,'movers-outlook.js'),'utf8'),priorCtx);
+const priorMoves=priorCtx.MOVES||{};
 const ctx={};vm.createContext(ctx);vm.runInContext(fs.readFileSync(path.join(ROOT,'player-data.js'),'utf8'),ctx);
 const pdata=ctx.PDATA;const out={};const counts={movers:0,roleUp:0,roleDown:0,roleFlat:0,roleUnknown:0,withPrev:0,projMpg:0,projRank:0,players:0};
 for(const name of Object.keys(pCur).sort()){
   const tc=norm(pCur[name]);
-  const tpRaw=Object.prototype.hasOwnProperty.call(DOC_PRIOR,name)?DOC_PRIOR[name]:pPre[name];
+  const tpRaw=Object.prototype.hasOwnProperty.call(priorMoves,name)?priorMoves[name].teamPrev:(Object.prototype.hasOwnProperty.call(DOC_PRIOR,name)?DOC_PRIOR[name]:pPre[name]);
   const tp=tpRaw?norm(tpRaw):null;const d=pdata[name]||{};
   const market=core.marketAdp({adp:d.adp,adpF:d.adpF});const last=d.last;
   const mover=!!(tp&&tc&&tp!==tc);let roleDelta='unknown';
@@ -53,7 +53,6 @@ const js=`// movers-outlook.js — team-change + role outlook overlay for PDATA/
 // projMpg / projRank: omitted (no Hashtag projection snapshot in repo).
 // See docs/movers-outlook.md and scripts/data-provenance/2026-09-20-movers-outlook/.
 //
-// Generated ${DATE}. Regenerate: node scripts/generate-movers.js
 var MOVES={
 ${items.join(',\n')}
 };

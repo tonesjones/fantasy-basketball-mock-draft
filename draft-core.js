@@ -125,6 +125,9 @@
       sum = 0,
       weight = 0,
       w;
+    if (a != null && isFinite(a) && (f == null || !isFinite(f))) return a;
+    if (f != null && isFinite(f) && (a == null || !isFinite(a)))
+      return f > ADP_TAIL ? ADP_TAIL + (f - ADP_TAIL) / 4 : f;
     if (a != null && isFinite(a)) {
       w = adpWeight(a, ADP_BANDS.adp);
       sum += a * w;

@@ -37,6 +37,7 @@ var ALIASES = {
   "Cameron Johnson": "Cam Johnson",
   "Ron Holland II": "Ron Holland",
   "GG Jackson II": "GG Jackson",
+  "Bobby Portis Jr.": "Bobby Portis",
 };
 var TEAM_ALIASES = { GSW: "GS", NOP: "NO", NYK: "NY", PHX: "PHO", SAS: "SA", WSH: "WAS", UTAH: "UTA", BRK: "BKN" };
 var MATERIAL = 3;

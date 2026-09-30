@@ -67,7 +67,7 @@ The layout collapses to a single column with compact two-line player rows; filte
 - `audit-data.js` — reproducible audit of the actual bundled player, category, and ADP data.
 - `test-*.js` — automated checks; run them all with `npm test`. `test-worker.js` covers the `/api/pick-quality` abuse guard.
 - `run-tests.js`, `package.json` — test runner and `npm test` / `npm run format` scripts; `.github/workflows/test.yml` runs them in CI.
-- `scripts/` — `load-data.js` (loads the bundled data in Node for tests/audit), `hashtag-adp-to-csv.js` + `refresh-adp.js` (ADP refresh from Hashtag's table; Yahoo + Fantrax only, never ESPN), `generate-movers.js` (movers/role overlay), `rebuild-rank.js` (regenerates the built-in Rank order), `build-widget.py` (rebuilds the standalone in-chat widget), `build-playoff-data.py` and `import-playoff-schedule.py` (playoff schedule refresh).
+- `scripts/` — `load-data.js` (loads the bundled data in Node for tests/audit), `hashtag-adp-to-csv.js` + `refresh-adp.js` (ADP refresh from Yahoo or Hashtag CSV; never ESPN), `generate-movers.js` (movers/role overlay), `rebuild-rank.js` (regenerates the built-in Rank order), `build-widget.py` (rebuilds the standalone in-chat widget), `build-playoff-data.py` and `import-playoff-schedule.py` (playoff schedule refresh).
 - `CHANGELOG.md` — dated change log. `OPEN-ME.txt` — desktop handoff notes.
 
 ## Pick coach
@@ -87,7 +87,7 @@ See **`docs/pick-coach.md`** for secret setup (Production vs Preview), pinned mo
 
 Primary: **[https://tony-draft-lab.pages.dev](https://tony-draft-lab.pages.dev)** (deploys from `main`).
 
-Local: open `index.html` directly, or serve this folder with any static server. Draft state is stored only in the browser that created it. A `DATA_VERSION` bump (most recently `2026-09-28b`, the ADP/team/injury refresh from Hashtag's 25 Sep table — see `CHANGELOG.md` and `docs/adp-refresh-2026-09-28.md`) invalidates older saved drafts.
+Local: open `index.html` directly, or serve this folder with any static server. Draft state is stored only in the browser that created it. A `DATA_VERSION` bump (most recently `2026-09-29b`, the Yahoo ADP update — see `docs/data-refresh-2026-09-29.md`) invalidates older saved drafts. Yahoo ADP is from the supplied 29 Sep workbook; Fantrax remains from Hashtag's 25 Sep table.
 
 Run every logic check with:
 
