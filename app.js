@@ -245,7 +245,7 @@ function renderDataHealth(){
 var _pcEvalSeq=0;
 function viewTabsHtml(){
   var views=[["team","My team"],["board","Draft board"],["grades","Grades"],["coach","Pick coach"]];
-  var h='<div class="viewtabs tabs" role="tablist" aria-label="Draft room views"><span class="muted">Room</span>';
+  var h='<div class="viewtabs tabs" role="tablist" aria-label="Draft room views">';
   views.forEach(function(v){
     h+='<button class="segtab'+(state.view===v[0]?' sel':'')+'" data-view="'+v[0]+'" role="tab" aria-selected="'+(state.view===v[0]?'true':'false')+'">'+v[1]+'</button>';
   });
