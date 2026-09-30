@@ -17,13 +17,15 @@ const csv = [
   'Alexandre Sarr,WSH,C,,50.0,40',                    // alias + team alias; Yahoo now blank
   '"Alperen Sengün",HOU,PF C,18.6,20.7,15',           // diacritics
   'Some Rookie,UTA,SG,99.0,120.0,',                   // add candidate
+  'Bobby Portis Jr.,MIA,PF C,112.0,,',
   'Tyrese Haliburton,IND,PG SG,17.2,11.6,',           // PDATA entry with no cv: starts with adp
 ].join('\n');
 const d = R.diff(R.readTable(csv), players);
-assert.equal(d.matched, 4);
+assert.equal(d.matched, 5);
 assert.equal(d.unmatched.length, 1);
 assert.equal(d.unmatched[0].name, 'Some Rookie');
-assert.equal(d.absent.length, players.length - 4, 'every other pool player is flagged absent');
+assert.equal(d.absent.length, players.length - 5, 'every other pool player is flagged absent');
+assert.ok(!d.absent.includes('Bobby Portis'), 'Yahoo display name matches Bobby Portis');
 const jok = d.changes.filter(c => c.name === 'Nikola Jokic');
 assert.equal(jok.length, 1, 'only the changed field is reported');
 assert.equal(jok[0].field, 'adp');
