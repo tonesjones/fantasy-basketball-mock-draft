@@ -99,6 +99,8 @@ npm test        # or: node run-tests.js
 
 Format the engine modules with `npm run format`. GitHub Actions runs a format check, the test suite and `audit-data.js` on every push to `main` and every pull request.
 
+**Preview cleanup.** Every branch push builds a preview in each Pages project (`tony-draft-lab`, `-yahoo`, `-preview`). When a PR closes, `.github/workflows/cleanup-previews.yml` runs `scripts/cleanup-pages-previews.js` to delete that branch's preview deployments (never production). It needs two repo secrets: `CLOUDFLARE_API_TOKEN` (a token with **Cloudflare Pages: Edit**) and `CLOUDFLARE_ACCOUNT_ID`. To clean an older branch, run the workflow manually from the Actions tab with the branch name (tick **dry run** to list first).
+
 ## More docs
 
 - `docs/data-and-methodology.md` — category values, scarcity math, grades, data-health audit and refresh history
