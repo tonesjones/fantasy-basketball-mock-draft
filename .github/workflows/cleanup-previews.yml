@@ -1,0 +1,34 @@
+name: cleanup previews
+# Deletes a branch's Cloudflare Pages preview deployments when its PR closes
+# (merged or not). Run manually to clean up an older branch.
+on:
+  pull_request:
+    types: [closed]
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Branch whose preview deployments to delete
+        required: true
+      dry_run:
+        description: List only, delete nothing
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  cleanup:
+    # Forked PRs get no secrets; skip them.
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Delete preview deployments
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          BRANCH: ${{ github.event.pull_request.head.ref || inputs.branch }}
+          DRY_RUN: ${{ inputs.dry_run && '--dry-run' || '' }}
+        run: node scripts/cleanup-pages-previews.js "$BRANCH" $DRY_RUN
