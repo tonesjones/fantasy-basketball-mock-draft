@@ -28,3 +28,7 @@
 @media (max-width:700px) and (prefers-reduced-motion:reduce){
   #md .mobile-player-sheet,#md .mobile-player-sheet::backdrop{transition:none}
 }
+@media(max-width:700px){
+  /* Coach card already shows playoff pips; avoid repeating them above it. */
+  #md .mobile-player-sheet .mobile-player-extra .playoffbadge{display:none}
+}
