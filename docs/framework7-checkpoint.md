@@ -6,8 +6,10 @@ September 30, 2026. Stopped at the user's suggested review point.
 
 - Production remains at `9bf6828`, with the native mobile player sheet and no
   More menu: https://tony-draft-lab.pages.dev/.
-- Work is isolated on `codex/framework7-preview`. This branch has not been
-  pushed or deployed. Do not promote it until the interaction check passes.
+- Work is isolated on `codex/framework7-preview`. The initial checkpoint commit
+  is `165bc88`. The branch is being pushed for cloud review at the user's request.
+  Git integration may create a branch preview automatically; treat it as
+  unverified. Do not merge or promote it until the interaction check passes.
 - The preview entrypoint is `framework7.html`; `index.html` still loads the
   existing native sheet. Both use the same draft engine, player pool, and coach.
 - No global skill files or model configuration were edited.
@@ -82,6 +84,13 @@ player tap handler ran. Trace the boundary between `userDraft`,
 Determine whether a delayed close callback or Framework7 touch/modal lifecycle
 is suppressing the next tap or restoring a stale inert snapshot. Keep that
 diagnosis separate from the already-fixed positioning issues.
+
+For cloud review, check out `codex/framework7-preview` and read this file first.
+The browser check currently uses installed Microsoft Edge and a Windows-only
+bundled Playwright path in the command above. In a Linux cloud environment, use
+its available Playwright installation and Chromium launch instead of the
+`msedge` channel. The pure 17-file suite runs with `npm test` without that
+browser dependency. Do not mistake an unavailable browser for the sheet bug.
 
 Then run both entrypoints, the 17-file suite, and the deployment checks. Publish
 only the preview branch and verify the deployed phone flow before sending a
