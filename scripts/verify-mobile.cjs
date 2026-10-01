@@ -29,6 +29,28 @@ async function main() {
       await page.locator('.mobile-nav').waitFor();
       assert.equal(await page.locator('.mobile-nav button').count(), 4);
       assert.equal(await page.locator('.turnbar').getByText('More',{exact:true}).count(),0);
+      const restart = page.locator('.turnbar #mdnew');
+      assert.equal(await restart.isVisible(), true, 'Restart visible in phone header');
+      const restartBox = await restart.boundingBox(), pickBox = await page.locator('.pickhead').boundingBox();
+      assert.ok(restartBox.y < pickBox.y + pickBox.height, 'Restart sits on the Pick N row');
+      if (viewport.width === 390) {
+        await page.locator('.prow[data-pi]').first().locator('.prank').click();
+        await page.locator('.pc-draft').click();
+        const logLen = () => page.evaluate(() => JSON.parse(localStorage.getItem('fantasy-basketball-mock-draft.v2')).state.log.length);
+        const drafted = await logLen();
+        assert.ok(drafted > 0);
+        await restart.click();
+        assert.equal(await restart.innerText(), 'Tap again to restart');
+        assert.equal(await logLen(), drafted, 'One tap does not restart');
+        await page.waitForTimeout(3300);
+        assert.equal(await restart.innerText(), 'Restart', 'Restart disarms after 3s');
+        await restart.click();
+        await restart.click();
+        await page.locator('#mdstart').waitFor();
+        await page.locator('#mdstart').click();
+        await page.locator('.mobile-nav').waitFor();
+        assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('fantasy-basketball-mock-draft.v2')).state.userTurns.length), 0, 'Second tap restarts');
+      }
       assert.equal(await page.locator('.cols > .side').isVisible(), false);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
       const bounds = await page.locator('.mobile-nav').boundingBox();
