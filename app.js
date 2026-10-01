@@ -202,12 +202,13 @@ function advance(){
 }
 function userDraft(pi){
   if(!isUserTurn()||!CORE.validPlayerIndex(PLAYERS,state.log,pi))return;
+  if(isMobileDraft())closeMobileSheet();
   var checkpoint={log:state.log.slice(),rngState:state.rngState};
   var name=PLAYERS[pi].n;
   var next=simulateToUser(state.log.concat([pi]),state.rngState);
   var cpu=next.log.length-(checkpoint.log.length+1);
   _pendingLive="You drafted "+name+". "+(cpu>0?cpu+" CPU pick"+(cpu===1?"":"s")+" followed. ":"");
-  setState({log:next.log,rngState:next.rngState,userTurns:state.userTurns.concat([checkpoint]).slice(-20),phase:next.log.length>=totalPicks()?"done":"draft",page:0});
+  setState({log:next.log,rngState:next.rngState,userTurns:state.userTurns.concat([checkpoint]).slice(-20),phase:next.log.length>=totalPicks()?"done":"draft",page:isMobileDraft()?state.page:0});
   showPickMoment(name,checkpoint.log.length);
 }
 function showPickMoment(name,pickIndex){
@@ -222,6 +223,7 @@ function showPickMoment(name,pickIndex){
   setTimeout(function(){panel.remove();},2400);
 }
 function undoUserPick(){
+  var moment=el("mdpickmoment");if(moment)moment.remove();
   var history=state.userTurns.slice(),checkpoint=history.pop();if(!checkpoint)return;
   setState({log:checkpoint.log,rngState:checkpoint.rngState,userTurns:history,phase:"draft",page:0});
 }
@@ -308,6 +310,17 @@ function setFocusPi(pi,opts){
   refreshPickCoach();
 }
 function evaluatePlayer(pi){
+  if(isMobileDraft()){
+    rememberMobileScroll();
+    mobileView="players";
+    mobileSheetPlayer=pi;
+    var mobileIndex=visibleCandidateIndexes().indexOf(pi),mobilePatch={view:"coach",focusPi:pi};
+    if(mobileIndex<0){mobilePatch.q=PLAYERS[pi].n;mobilePatch.f="All";mobileIndex=0;}
+    mobilePatch.page=Math.floor(mobileIndex/50);
+    if(mobilePatch.page!==state.page)mobileScroll.players=0;
+    setState(mobilePatch);
+    return;
+  }
   var cands=visibleCandidateIndexes(),index=cands.indexOf(pi),patch={focusPi:pi,view:"coach"};
   if(index<0){patch.q=PLAYERS[pi].n;patch.f="All";index=0;}
   patch.page=Math.floor(Math.max(0,index)/50);
@@ -909,6 +922,58 @@ function sortLabel(s){
 /* Mobile dock: coach collapsed to a compact strip by default so the player
  * list keeps most of the screen; the handle expands the full card. */
 var coachDockOpen=false;
+var mobileView="players",mobileScroll={},mobileSheetPlayer=null,mobileReturnFocus=null;
+var mobileQuery=window.matchMedia("(max-width:700px)");
+function isMobileDraft(){return mobileQuery.matches&&state.phase==="draft";}
+function rememberMobileScroll(){
+  var pane=document.querySelector("[data-mobile-pane]");
+  if(pane)mobileScroll[pane.dataset.mobilePane]=pane.scrollTop;
+}
+function closeMobileSheet(){
+  var sheet=el("mdplayersheet");
+  if(sheet&&sheet.open)sheet.close();
+  mobileSheetPlayer=null;
+  if(mobileReturnFocus&&mobileReturnFocus.isConnected)mobileReturnFocus.focus({preventScroll:true});
+}
+function wireMobileDraft(){
+  var root=el("md"),avail=document.querySelector("#md .avail"),side=el("mdside");
+  root.dataset.mobileView=mobileView;
+  var pane=mobileView==="players"?el("mdplist"):side;
+  pane.dataset.mobilePane=mobileView;
+  pane.scrollTop=mobileScroll[mobileView]||0;
+  var nav=document.createElement("nav");nav.className="mobile-nav";nav.setAttribute("aria-label","Draft navigation");
+  [["players","Players"],["team","My team"],["board","Board"],["grades","Analysis"]].forEach(function(v){
+    var b=document.createElement("button");b.type="button";b.textContent=v[1];b.setAttribute("aria-current",mobileView===v[0]?"page":"false");
+    b.addEventListener("click",function(){rememberMobileScroll();closeMobileSheet();mobileView=v[0];setState({view:v[0]==="players"?"coach":v[0]});});nav.append(b);
+  });el("mdapp").append(nav);
+  var actions=document.createElement("details");actions.className="mobile-actions";
+  actions.innerHTML='<summary aria-label="Draft actions">More</summary>';
+  ["mdundo","mdnew"].forEach(function(id){var b=el(id);if(b)actions.append(b);});
+  document.querySelector("#md .turnbar").append(actions);
+  var scarcity=el("mdscarcity");
+  if(scarcity&&mobileView==="grades")side.prepend(scarcity);
+  var filters=el("mdfilters"),filterClose=document.createElement("button");
+  filterClose.type="button";filterClose.className="ghostbtn mobile-filter-close";filterClose.textContent="Done";
+  filterClose.addEventListener("click",function(){filters.open=false;el("mdq").focus();});filters.append(filterClose);
+  if(mobileView!=="players")return;
+  var sheet=document.createElement("dialog");sheet.id="mdplayersheet";sheet.className="mobile-player-sheet";sheet.setAttribute("aria-label","Player details and draft advice");
+  var close=document.createElement("button");close.type="button";close.className="ghostbtn mobile-sheet-close";close.textContent="Close player details";
+  close.addEventListener("click",closeMobileSheet);sheet.append(close,side);el("mdapp").append(sheet);
+  sheet.addEventListener("cancel",function(e){e.preventDefault();closeMobileSheet();});
+  sheet.addEventListener("click",function(e){if(e.target===sheet){var r=sheet.getBoundingClientRect();if(e.clientY<r.top||e.clientY>r.bottom||e.clientX<r.left||e.clientX>r.right)closeMobileSheet();}});
+  if(mobileSheetPlayer!=null){
+    var pl=PLAYERS[mobileSheetPlayer],info=document.createElement("div");info.className="mobile-player-info";
+    info.innerHTML='<h3>'+esc(pl.n)+'</h3><p class="muted">'+esc(pl.t)+' · '+esc(pl.p.join(" / "))+' · ADP '+(pl.adp==null?'—':pl.adp)+'</p>'
+      +'<p class="muted">Last season: per-game rank '+(pl.last==null?'—':pl.last)+' · total rank '+(pl.lastTotal==null?'—':pl.lastTotal)+' · '+(pl.mpg==null?'—':pl.mpg.toFixed(1))+' MPG</p>'
+      +'<p class="muted">'+esc(pl.c.join(" · "))+' '+playoffBadge(pl)+'</p>'+(pl.inj?'<p class="mobile-injury">'+esc(injTitle(pl.inj))+'</p>':'');
+    side.prepend(info);
+    var draftButton=side.querySelector(".pc-draft");
+    if(draftButton)draftButton.textContent="Draft "+pl.n;
+    mobileReturnFocus=avail.querySelector('.prow[data-pi="'+mobileSheetPlayer+'"]')||el("mdq");
+    sheet.showModal();
+  }
+}
+mobileQuery.addEventListener("change",function(){rememberMobileScroll();closeMobileSheet();render();});
 function setCoachDockOpen(open){
   coachDockOpen=!!open;
   var root=document.getElementById("md");
@@ -921,7 +986,7 @@ function setCoachDockOpen(open){
   }
 }
 function syncCoachDock(){
-  var on=state.phase==="draft"&&state.view==="coach"&&isUserTurn();
+  var on=!isMobileDraft()&&state.phase==="draft"&&state.view==="coach"&&isUserTurn();
   var root=document.getElementById("md");
   var cols=document.querySelector("#md .cols");
   if(root){
@@ -944,6 +1009,8 @@ function updateCoachDockPeek(name){
   lab.textContent=name?("Pick coach \u00b7 "+name):"Pick coach";
 }
 function renderDraft(){
+  rememberMobileScroll();
+  if(isMobileDraft())state.view=mobileView==="players"?"coach":mobileView;
   var idx=state.log.length,round=Math.floor(idx/TEAMS)+1,team=idx<totalPicks()?teamForPick(idx):-1;
   var h='<div class="turnbar">';
   var liveCore="";
@@ -990,7 +1057,8 @@ function renderDraft(){
   el("mdnew").addEventListener("click",restartDraft);
   renderList();renderSide();
   syncCoachDock();
-  if(state.view==="coach")revealFocusedRow(state.focusPi);
+  if(isMobileDraft())wireMobileDraft();
+  if(state.view==="coach"&&!isMobileDraft())revealFocusedRow(state.focusPi);
   if(state.view==="coach")refreshPickCoach();
 }
 function renderList(){
@@ -1286,6 +1354,8 @@ function wirePlayoffSettings(root){
 }
 function render(){
   clearPlayoffHost();
+  document.body.classList.toggle("mobile-drafting",isMobileDraft());
+  el("md").classList.toggle("mobile-draft",isMobileDraft());
   document.body.classList.toggle("dl-on-clock",state.phase==="draft"&&isUserTurn());
   if(state.phase==="setup")renderSetup();
   else if(state.phase==="done")renderDone();
