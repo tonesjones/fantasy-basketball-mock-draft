@@ -65,6 +65,13 @@
   #md.mobile-draft .playoffbadge .pw.g3{color:var(--dl-amber);background:var(--dl-amber-bg);border-color:var(--dl-amber-line)}
   #md.mobile-draft .playoffbadge .pw.g4{color:var(--dl-green);background:var(--dl-green-bg);border-color:var(--dl-green-line)}
 
+  /* a11y: 44px hit areas */
+  #md.mobile-draft .fchip{min-width:44px;min-height:44px}
+  #md.mobile-draft .ghostbtn{min-height:44px;min-width:44px}
+  #md.mobile-draft .prow .injtag{position:relative}
+  #md.mobile-draft .prow .injtag::after{content:"";position:absolute;left:50%;top:50%;width:44px;height:44px;transform:translate(-50%,-50%)}
+  #md.mobile-draft summary{display:flex;align-items:center;min-height:44px;flex-wrap:wrap}
+
   /* bottom nav */
   #md.mobile-draft .mobile-nav{gap:0;padding:0 0 env(safe-area-inset-bottom);background:#152036;border-top:1px solid #26344f;margin:0 -10px;padding-left:10px;padding-right:10px}
   #md.mobile-draft .mobile-nav button{position:relative;min-height:56px;border:0;border-radius:0;background:transparent;color:#9aa8bd;font-size:14px}

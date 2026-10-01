@@ -44,7 +44,7 @@ async function main() {
       assert.equal(await page.locator('#mdplist').evaluate(n=>n.scrollTop), playerScroll);
       const row = page.locator('.prow[data-pi]').nth(8);
       const pi = await row.getAttribute('data-pi');
-      await row.click();
+      await row.locator('.prank').click();
       await page.locator('#mdplayersheet[open]').waitFor();
       assert.ok((await page.locator('.mobile-player-info h3').innerText()).length > 0);
       const keptScroll = await page.locator('#mdplist').evaluate(n=>n.scrollTop);
@@ -63,7 +63,7 @@ async function main() {
       await page.getByRole('button',{name:'Players',exact:true}).click();
       assert.equal(await page.locator('[data-f="PG"]').getAttribute('class'), 'fchip sel');
       await page.locator('#mdq').fill('Curry');
-      await page.locator('.prow[data-pi]').first().click();
+      await page.locator('.prow[data-pi]').first().locator('.prank').click();
       const before = await page.evaluate(() => JSON.parse(localStorage.getItem('fantasy-basketball-mock-draft.v2')).state.log.length);
       await page.locator('.pc-draft:not([disabled])').waitFor();
       await page.locator('#mdplayersheet .side').evaluate(n=>{n.scrollTop=n.scrollHeight;});
@@ -102,7 +102,7 @@ async function main() {
         await page.locator('[data-f="All"]').click();
         await page.getByRole('button',{name:'Done',exact:true}).click();
         for(let turn=0;turn<13;turn++){
-          await page.locator('.prow[data-pi]').first().click();
+          await page.locator('.prow[data-pi]').first().locator('.prank').click();
           await page.locator('.pc-draft:not([disabled])').waitFor();
           await page.locator('.pc-draft').click();
         }
