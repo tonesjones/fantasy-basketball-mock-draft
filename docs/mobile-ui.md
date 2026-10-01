@@ -14,7 +14,7 @@ Escape closes the dialog and restores focus to the player row.
 View changes preserve each view's scroll position during the current session.
 Search and filters retain their existing browser persistence. Mobile drafting
 keeps the current list page; desktop retains its existing behavior. Category
-outlook is under Analysis. Undo and Restart are under More.
+outlook, Undo, and Restart are under Analysis. The status strip has no More menu.
 
 Desktop layouts above 700px retain the existing controls, including the coach
 dock on tablets through 900px. Setup and completed drafts use the existing

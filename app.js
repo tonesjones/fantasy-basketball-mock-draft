@@ -946,10 +946,9 @@ function wireMobileDraft(){
     var b=document.createElement("button");b.type="button";b.textContent=v[1];b.setAttribute("aria-current",mobileView===v[0]?"page":"false");
     b.addEventListener("click",function(){rememberMobileScroll();closeMobileSheet();mobileView=v[0];setState({view:v[0]==="players"?"coach":v[0]});});nav.append(b);
   });el("mdapp").append(nav);
-  var actions=document.createElement("details");actions.className="mobile-actions";
-  actions.innerHTML='<summary aria-label="Draft actions">More</summary>';
-  ["mdundo","mdnew"].forEach(function(id){var b=el(id);if(b)actions.append(b);});
-  document.querySelector("#md .turnbar").append(actions);
+  var actions=document.createElement("div");actions.className="mobile-actions";
+  ["mdundo","mdnew"].forEach(function(id){var b=el(id);if(b){if(mobileView==="grades")actions.append(b);else b.remove();}});
+  if(mobileView==="grades")side.append(actions);
   var scarcity=el("mdscarcity");
   if(scarcity&&mobileView==="grades")side.prepend(scarcity);
   var filters=el("mdfilters"),filterClose=document.createElement("button");

@@ -676,10 +676,8 @@ body{background:transparent!important}
   #md.mobile-draft .mobile-nav{display:flex;flex:none;gap:4px;padding:8px 0 max(8px,env(safe-area-inset-bottom));background:var(--dl-bg)}
   #md.mobile-draft .mobile-nav button{flex:1;min-height:48px;padding:8px 4px;border:1px solid transparent;border-radius:10px;background:transparent;color:var(--dl-muted);font-size:12px;cursor:pointer}
   #md.mobile-draft .mobile-nav button[aria-current="page"]{background:var(--dl-raised);color:var(--dl-text);border-color:var(--dl-border-strong)}
-  #md.mobile-draft .mobile-actions{position:relative;margin-left:auto}
-  #md.mobile-draft .mobile-actions summary{cursor:pointer;min-height:44px;display:flex;align-items:center;padding:0 10px;color:var(--dl-muted)}
-  #md.mobile-draft .mobile-actions[open]{position:absolute;right:10px;top:8px;z-index:10;padding:4px;background:var(--dl-raised);border:1px solid var(--dl-border);border-radius:10px}
-  #md.mobile-draft .mobile-actions button{display:block;min-height:44px;width:100%;margin-bottom:4px}
+  #md.mobile-draft .mobile-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px;padding-top:16px;border-top:1px solid var(--dl-border)}
+  #md.mobile-draft .mobile-actions button{min-height:44px;flex:1}
   #md.mobile-draft .prow{padding:10px;min-height:66px}
   #md.mobile-draft .prow .draftbtn{display:none}
   #md.mobile-draft .prow .l2{gap:6px;flex-wrap:wrap}

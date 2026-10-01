@@ -28,6 +28,7 @@ async function main() {
       await page.locator('#mdstart').click();
       await page.locator('.mobile-nav').waitFor();
       assert.equal(await page.locator('.mobile-nav button').count(), 4);
+      assert.equal(await page.locator('.turnbar').getByText('More',{exact:true}).count(),0);
       assert.equal(await page.locator('.cols > .side').isVisible(), false);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
       const bounds = await page.locator('.mobile-nav').boundingBox();
@@ -79,9 +80,10 @@ async function main() {
       assert.equal(await page.locator('#mdq').inputValue(), 'Curry');
       const after = await page.evaluate(() => JSON.parse(localStorage.getItem('fantasy-basketball-mock-draft.v2')).state.log.length);
       assert.ok(after > before, 'Draft button executes the pick');
-      await page.locator('.mobile-actions summary').click();
+      await page.getByRole('button',{name:'Analysis',exact:true}).click();
       await page.locator('#mdundo').click();
       assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('fantasy-basketball-mock-draft.v2')).state.log.length),before);
+      await page.getByRole('button',{name:'Players',exact:true}).click();
       assert.deepEqual(errors, []);
       if (process.env.MOBILE_SCREENSHOT && viewport.width===390) {
         await page.locator('#mdq').fill('');
