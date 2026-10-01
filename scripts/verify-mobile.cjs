@@ -1,4 +1,4 @@
-// Optional browser check: NODE_PATH must include Playwright. Uses installed Edge.
+// Optional browser check: NODE_PATH must include Playwright. Uses bundled Chromium (MOBILE_BROWSER_CHANNEL=msedge for Edge).
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -18,7 +18,7 @@ async function main() {
     fs.createReadStream(file).pipe(res);
   });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
-  const browser = await chromium.launch({ channel: 'msedge', headless: true });
+  const browser = await chromium.launch(process.env.MOBILE_BROWSER_CHANNEL ? { channel: process.env.MOBILE_BROWSER_CHANNEL, headless: true } : { headless: true });
   try {
     for (const viewport of [{width:390,height:844},{width:320,height:568},{width:430,height:932},{width:667,height:375}]) {
       const page = await browser.newPage({viewport});
@@ -90,6 +90,7 @@ async function main() {
         await page.screenshot({path:process.env.MOBILE_SCREENSHOT});
       }
       await page.setViewportSize({width:1280,height:900});
+      await page.locator('.mobile-nav').waitFor({state:'detached'});
       assert.equal(await page.locator('.mobile-nav').count(), 0);
       assert.equal(await page.locator('.viewtabs').isVisible(), true);
       assert.equal(await page.locator('.avail').isVisible(), true);
