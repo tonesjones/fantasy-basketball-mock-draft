@@ -1,4 +1,5 @@
-// Optional browser check: NODE_PATH must include Playwright. Uses installed Edge.
+// Optional browser check: NODE_PATH must include Playwright. Uses bundled Chromium;
+// set MOBILE_BROWSER_CHANNEL=msedge to use installed Edge instead.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -19,7 +20,7 @@ async function main() {
     fs.createReadStream(file).pipe(res);
   });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
-  const browser = await chromium.launch({ channel: 'msedge', headless: true });
+  const browser = await chromium.launch(process.env.MOBILE_BROWSER_CHANNEL ? { channel: process.env.MOBILE_BROWSER_CHANNEL, headless: true } : { headless: true });
   try {
     for (const viewport of [{width:390,height:844},{width:320,height:568},{width:430,height:932},{width:667,height:375}]) {
       const page = await browser.newPage({viewport,hasTouch:true});
@@ -45,7 +46,7 @@ async function main() {
       assert.equal(await page.locator('#mdplist').evaluate(n=>n.scrollTop), playerScroll);
       const row = page.locator('.prow[data-pi]').nth(8);
       const pi = await row.getAttribute('data-pi');
-      await row.tap();
+      await row.locator('.prank').tap();
       await page.locator('#mdplayersheet[open]').waitFor();
       assert.ok((await page.locator('.mobile-player-info h3').innerText()).length > 0);
       if(entry==='/framework7.html'){
@@ -72,7 +73,7 @@ async function main() {
         await session.detach();
         await page.locator('#mdplayersheet[open]').waitFor({state:'hidden'});
         assert.equal(await page.locator('.mobile-nav').evaluate(n=>n.inert),false);
-        await row.tap();
+        await row.locator('.prank').tap();
         await page.locator('#mdplayersheet[open]').waitFor();
       }
       const keptScroll = await page.locator('#mdplist').evaluate(n=>n.scrollTop);
@@ -92,7 +93,7 @@ async function main() {
       await page.getByRole('button',{name:'Players',exact:true}).tap();
       assert.equal(await page.locator('[data-f="PG"]').getAttribute('class'), 'fchip sel');
       await page.locator('#mdq').fill('Curry');
-      await page.locator('.prow[data-pi]').first().tap();
+      await page.locator('.prow[data-pi]').first().locator('.prank').tap();
       const before = await page.evaluate(() => JSON.parse(localStorage.getItem('fantasy-basketball-mock-draft.v2')).state.log.length);
       await page.locator('.pc-draft:not([disabled])').waitFor();
       await page.locator('#mdplayersheet .side').evaluate(n=>{n.scrollTop=n.scrollHeight;});
@@ -132,9 +133,10 @@ async function main() {
         await page.locator('[data-f="All"]').tap();
         await page.getByRole('button',{name:'Done',exact:true}).tap();
         for(let turn=0;turn<13;turn++){
-          await page.locator('.prow[data-pi]').first().tap();
+          await page.locator('.prow[data-pi]').first().locator('.prank').tap();
           await page.locator('.pc-draft:not([disabled])').waitFor();
           await page.locator('.pc-draft').tap();
+          assert.ok(await page.locator('.sheet-backdrop').count()<=1,'Sheet backdrops do not accumulate across renders');
         }
         assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('fantasy-basketball-mock-draft.v2')).state.phase),'done');
         assert.equal(await page.evaluate(()=>document.body.classList.contains('mobile-drafting')),false);

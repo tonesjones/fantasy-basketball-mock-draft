@@ -141,8 +141,13 @@
           document.removeEventListener("keydown", keydown, true);
           opened = false;
           setInert(false);
+          var backdrop = instance.backdropEl;
           instance.close(false);
           instance.destroy();
+          // Framework7 creates a unique backdrop per sheet and destroy() leaves it
+          // in the DOM; leaked backdrops stack up and eventually swallow taps.
+          if (backdrop && backdrop.remove) backdrop.remove();
+          else if (backdrop && backdrop[0]) backdrop[0].remove();
           sheetEl.remove();
         }
       };

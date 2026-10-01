@@ -19,9 +19,9 @@ The optional real-browser check supports both entrypoints:
 
 ```powershell
 # NODE_PATH must point to an existing installation of Playwright.
-node scripts/verify-mobile.cjs
+node scripts/verify-mobile.cjs   # bundled Chromium; MOBILE_BROWSER_CHANNEL=msedge for Edge
 $env:MOBILE_ENTRYPOINT='/framework7.html'
-node scripts/verify-mobile.cjs
+node scripts/verify-mobile.cjs   # bundled Chromium; MOBILE_BROWSER_CHANNEL=msedge for Edge
 ```
 
 ## Tokenomics check

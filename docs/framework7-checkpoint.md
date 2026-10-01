@@ -66,7 +66,32 @@ September 30, 2026. Stopped at the user's suggested review point.
    restores inert state, calls `instance.close(false)`, then destroys and removes
    the sheet. This change is retained for inspection but is not a proven fix.
 
-## Exact next action
+## Resolution (October 1, 2026)
+
+The lifecycle failure had two independent causes, found by instrumenting each
+turn of the 390px completion loop:
+
+1. **Backdrop leak (real bug).** With `backdropUnique: true`, Framework7
+   creates a `.sheet-backdrop` per sheet instance, and `instance.destroy()`
+   does not remove it. `render()` remounts the sheet on every render, so two
+   backdrops leaked per turn, each picking up `inert` handling on the next
+   open (the growing `[inert]` count). Adapter `destroy` now removes the
+   instance backdrop; the count stays at one.
+2. **Tap target (test bug).** By round 9 the top available player could carry
+   an injury tag. Tapping the row centre hit the nested injury toggle, which
+   expands the injury note instead of opening the sheet. This is intended app
+   behaviour; the native entrypoint passed only because AI picks left a
+   different player on top. The check now taps the row's rank cell.
+
+The browser check now launches Playwright's bundled Chromium by default (set
+`MOBILE_BROWSER_CHANNEL=msedge` for Edge) and asserts backdrops never
+accumulate. Both entrypoints passed all four viewports on three consecutive
+runs in a Linux cloud environment; `npm test` passes 17/17.
+
+Remaining before promotion: deployment checks, a deployed phone check, and
+a decision on the full-bundle cost noted in `framework7-preview.md`.
+
+## Original next action (superseded)
 
 Run the preview check with Playwright available on `NODE_PATH`:
 
