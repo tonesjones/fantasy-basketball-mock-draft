@@ -82,3 +82,10 @@
   #md.mobile-draft .playoffbadge .pwk{display:none}
   #md.mobile-draft .prow .l1{padding-right:104px}
 }
+/* Restart sits beside "Pick N" on every phone tab; first tap arms, second restarts. */
+@media (max-width:700px){
+  #md.mobile-draft .pickhead{flex:1 1 0;min-width:0;order:-2}
+  #md.mobile-draft #mdnew{order:-1;align-self:flex-start;min-height:44px;padding:8px 12px;font-size:14px;color:#9aa8bd;background:transparent;border:1px solid #26344f;border-radius:10px;white-space:nowrap}
+  #md.mobile-draft #mdnew.armed{color:#f0b45a;border-color:#f0b45a}
+  #md.mobile-draft .turnbar>.nextpick{flex-basis:100%}
+}

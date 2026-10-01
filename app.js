@@ -228,6 +228,14 @@ function undoUserPick(){
   setState({log:checkpoint.log,rngState:checkpoint.rngState,userTurns:history,phase:"draft",page:0});
 }
 function restartDraft(){clearSaved();state=freshState();save();render();}
+/* Phone header Restart needs a second tap within 3s, so a stray tap can't wipe the draft. */
+var restartArmTimer=null;
+function onRestartClick(e){
+  var b=e.currentTarget;
+  if(!isMobileDraft()||b.classList.contains("armed")){clearTimeout(restartArmTimer);restartDraft();return;}
+  b.classList.add("armed");b.textContent="Tap again to restart";announceLive("Tap Restart again to clear this draft.");
+  restartArmTimer=setTimeout(function(){if(b.isConnected){b.classList.remove("armed");b.textContent="Restart";}},3000);
+}
 /* Escape ANY data interpolated into innerHTML strings (names, notes, anything from an API). Text from the network goes in via textContent. */
 function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");}
 function posBadges(p){return p.map(function(x){return x;}).join("/");}
@@ -947,7 +955,7 @@ function wireMobileDraft(){
     b.addEventListener("click",function(){rememberMobileScroll();closeMobileSheet();mobileView=v[0];setState({view:v[0]==="players"?"coach":v[0]});});nav.append(b);
   });el("mdapp").append(nav);
   var actions=document.createElement("div");actions.className="mobile-actions";
-  ["mdundo","mdnew"].forEach(function(id){var b=el(id);if(b){if(mobileView==="grades")actions.append(b);else b.remove();}});
+  var undoBtn=el("mdundo");if(undoBtn){if(mobileView==="grades")actions.append(undoBtn);else undoBtn.remove();}
   if(mobileView==="grades")side.append(actions);
   var scarcity=el("mdscarcity");
   if(scarcity&&mobileView==="grades")side.prepend(scarcity);
@@ -1067,7 +1075,7 @@ function renderDraft(){
   q.addEventListener("keydown",function(e){e.stopPropagation();});
   var sim=el("mdsim");if(sim)sim.addEventListener("click",advance);
   var undo=el("mdundo");if(undo)undo.addEventListener("click",undoUserPick);
-  el("mdnew").addEventListener("click",restartDraft);
+  el("mdnew").addEventListener("click",onRestartClick);
   renderList();renderSide();
   syncCoachDock();
   if(isMobileDraft())wireMobileDraft();

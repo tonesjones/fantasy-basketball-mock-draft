@@ -7,6 +7,7 @@ Details: `docs/mobile-redesign.md`.
 - **Player rows:** team, positions, ADP, and three playoff week pips (W1/W2/W3 game counts colored good/ok/bad) instead of the long playoff sentence.
 - **Player sheet:** stays the native dialog with a grip; swipe down to close; one compact header with name shown once and Close button; maple Draft button pinned at the bottom; slide-up animation (respects reduced motion).
 - **Bottom navigation:** maple indicator bar.
+- **Restart on phones:** sits beside "Pick N" in the header on every tab (was only at the bottom of Analysis); first tap shows "Tap again to restart", a second tap within 3s restarts. Desktop unchanged.
 - **No new dependencies.**
 - **New files:** `mobile.css` (phone layout tokens, pick header, rows, nav), `mobile-sheet.css` (player sheet styles), `docs/mobile-redesign.md`.
 - **Tooling:** `scripts/verify-mobile.cjs` now uses bundled Chromium by default (`MOBILE_BROWSER_CHANNEL=msedge` for Edge).
