@@ -97,7 +97,9 @@ async function main() {
       assert.equal(await page.locator('.side').isVisible(), true);
       if(viewport.width===390){
         await page.setViewportSize(viewport);
+        await page.locator('.mobile-nav').waitFor();
         await page.locator('#mdq').fill('');
+        assert.equal(await page.locator('#mdq').inputValue(), '');
         await page.locator('#mdfilters summary').click();
         await page.locator('[data-f="All"]').click();
         await page.getByRole('button',{name:'Done',exact:true}).click();
