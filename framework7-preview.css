@@ -1,0 +1,115 @@
+/* Preview-only overrides for the Framework7-backed mobile player sheet. */
+html, body { height: auto; overflow: auto; }
+#md.framework7-root:not(.mobile-draft) { height: auto; overflow: visible; }
+#md .mobile-player-sheet.draft-preview-sheet:not([open]) { display: none; }
+
+#md .mobile-player-sheet.draft-preview-sheet[open] {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: none;
+  height: 85dvh;
+  max-height: 85dvh;
+  padding: 0 12px max(12px, env(safe-area-inset-bottom));
+  overflow: hidden;
+  color: var(--dl-text);
+  background: var(--dl-surface);
+  border: 1px solid var(--dl-border-strong);
+  border-radius: 20px 20px 0 0;
+  overscroll-behavior: contain;
+}
+
+#md .draft-preview-sheet .draft-preview-header {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 58px;
+  margin: 0 -12px 8px;
+  padding: 6px 12px;
+  background: var(--dl-surface);
+  border-bottom: 1px solid var(--dl-border);
+  touch-action: pan-y;
+}
+
+#md .draft-preview-sheet .draft-preview-grip {
+  display: grid;
+  width: 52px;
+  height: 42px;
+  place-items: center;
+  cursor: grab;
+  touch-action: none;
+}
+
+#md .draft-preview-sheet .draft-preview-grip span {
+  width: 36px;
+  height: 5px;
+  border-radius: 9px;
+  background: var(--dl-muted);
+  opacity: .55;
+}
+
+#md .draft-preview-sheet .draft-preview-expand,
+#md .draft-preview-sheet .mobile-sheet-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: auto;
+  min-height: 44px;
+  margin: 0;
+}
+
+#md .draft-preview-sheet .mobile-sheet-close { margin-left: 6px; }
+#md .draft-preview-sheet .mobile-player-info p { margin: 6px 0; }
+#md .draft-preview-sheet .mobile-player-info h3 { margin: 6px 0; }
+
+#md .draft-preview-sheet #mdside.side {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  width: 100%;
+  min-height: 0;
+  height: auto;
+  padding: 0 0 76px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border: 0;
+  box-shadow: none;
+}
+
+#md .draft-preview-sheet #mdside .pc-head { position: sticky; top: 0; z-index: 2; background: var(--dl-surface); }
+#md .draft-preview-sheet #mdside .pc-dock-handle,
+#md .draft-preview-sheet #mdside .pc-side-title { display: none; }
+#md .draft-preview-sheet #mdside .pc-draft {
+  position: fixed;
+  bottom: max(12px, env(safe-area-inset-bottom));
+  left: 12px;
+  right: 12px;
+  z-index: 5;
+  flex: none;
+  width: calc(100% - 24px);
+  min-height: 48px;
+  margin-top: auto;
+  box-shadow: 0 -8px 24px var(--dl-surface);
+}
+#md .draft-preview-sheet.modal-in-breakpoint #mdside .pc-draft {
+  bottom: calc(var(--f7-sheet-breakpoint, 0px) + max(12px, env(safe-area-inset-bottom)));
+}
+#md .draft-preview-sheet.modal-in-breakpoint #mdside.side {
+  margin-bottom: var(--f7-sheet-breakpoint, 0px);
+}
+
+/* app.js has a native-dialog transform for this same element; let F7 move it. */
+#md .mobile-player-sheet.draft-preview-sheet.modal-in[open]:not(.modal-in-breakpoint) {
+  transform: translateZ(0);
+}
+#md .mobile-player-sheet.draft-preview-sheet.modal-in-breakpoint[open] {
+  transform: translate3d(0, var(--f7-sheet-breakpoint, var(--f7-sheet-swipe-step, 0px)), 0);
+}
+#md .mobile-player-sheet.draft-preview-sheet.modal-out[open] {
+  transform: translate3d(0, 100%, 0);
+}

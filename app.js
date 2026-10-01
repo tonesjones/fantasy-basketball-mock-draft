@@ -922,7 +922,7 @@ function sortLabel(s){
 /* Mobile dock: coach collapsed to a compact strip by default so the player
  * list keeps most of the screen; the handle expands the full card. */
 var coachDockOpen=false;
-var mobileView="players",mobileScroll={},mobileSheetPlayer=null,mobileReturnFocus=null;
+var mobileView="players",mobileScroll={},mobileSheetPlayer=null,mobileReturnFocus=null,mobileSheetController=null;
 var mobileQuery=window.matchMedia("(max-width:700px)");
 function isMobileDraft(){return mobileQuery.matches&&state.phase==="draft";}
 function rememberMobileScroll(){
@@ -931,7 +931,8 @@ function rememberMobileScroll(){
 }
 function closeMobileSheet(){
   var sheet=el("mdplayersheet");
-  if(sheet&&sheet.open)sheet.close();
+  if(mobileSheetController)mobileSheetController.close();
+  else if(sheet&&sheet.open)sheet.close();
   mobileSheetPlayer=null;
   if(mobileReturnFocus&&mobileReturnFocus.isConnected)mobileReturnFocus.focus({preventScroll:true});
 }
@@ -955,11 +956,15 @@ function wireMobileDraft(){
   filterClose.type="button";filterClose.className="ghostbtn mobile-filter-close";filterClose.textContent="Done";
   filterClose.addEventListener("click",function(){filters.open=false;el("mdq").focus();});filters.append(filterClose);
   if(mobileView!=="players")return;
-  var sheet=document.createElement("dialog");sheet.id="mdplayersheet";sheet.className="mobile-player-sheet";sheet.setAttribute("aria-label","Player details and draft advice");
+  var sheet=document.createElement(window.DraftSheetPreview?"div":"dialog");sheet.id="mdplayersheet";sheet.className="mobile-player-sheet";sheet.setAttribute("aria-label","Player details and draft advice");
   var close=document.createElement("button");close.type="button";close.className="ghostbtn mobile-sheet-close";close.textContent="Close player details";
   close.addEventListener("click",closeMobileSheet);sheet.append(close,side);el("mdapp").append(sheet);
-  sheet.addEventListener("cancel",function(e){e.preventDefault();closeMobileSheet();});
-  sheet.addEventListener("click",function(e){if(e.target===sheet){var r=sheet.getBoundingClientRect();if(e.clientY<r.top||e.clientY>r.bottom||e.clientX<r.left||e.clientX>r.right)closeMobileSheet();}});
+  if(window.DraftSheetPreview){
+    mobileSheetController=window.DraftSheetPreview.mount(sheet,{onClose:function(){mobileSheetPlayer=null;if(mobileReturnFocus&&mobileReturnFocus.isConnected)mobileReturnFocus.focus({preventScroll:true});}});
+  }else{
+    sheet.addEventListener("cancel",function(e){e.preventDefault();closeMobileSheet();});
+    sheet.addEventListener("click",function(e){if(e.target===sheet){var r=sheet.getBoundingClientRect();if(e.clientY<r.top||e.clientY>r.bottom||e.clientX<r.left||e.clientX>r.right)closeMobileSheet();}});
+  }
   if(mobileSheetPlayer!=null){
     var pl=PLAYERS[mobileSheetPlayer],info=document.createElement("div");info.className="mobile-player-info";
     info.innerHTML='<h3>'+esc(pl.n)+'</h3><p class="muted">'+esc(pl.t)+' · '+esc(pl.p.join(" / "))+' · ADP '+(pl.adp==null?'—':pl.adp)+'</p>'
@@ -969,7 +974,8 @@ function wireMobileDraft(){
     var draftButton=side.querySelector(".pc-draft");
     if(draftButton)draftButton.textContent="Draft "+pl.n;
     mobileReturnFocus=avail.querySelector('.prow[data-pi="'+mobileSheetPlayer+'"]')||el("mdq");
-    sheet.showModal();
+    if(mobileSheetController)mobileSheetController.open();
+    else sheet.showModal();
   }
 }
 mobileQuery.addEventListener("change",function(){rememberMobileScroll();closeMobileSheet();render();});
@@ -1352,6 +1358,7 @@ function wirePlayoffSettings(root){
   root.querySelectorAll("[data-pw]").forEach(function(b){b.addEventListener("click",function(){setState({playoffStart:Number(b.getAttribute("data-pw")),page:0});});});
 }
 function render(){
+  if(mobileSheetController){mobileSheetController.destroy();mobileSheetController=null;}
   clearPlayoffHost();
   document.body.classList.toggle("mobile-drafting",isMobileDraft());
   el("md").classList.toggle("mobile-draft",isMobileDraft());
