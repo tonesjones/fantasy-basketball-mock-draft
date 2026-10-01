@@ -51,6 +51,8 @@ The layout collapses to a single column with compact two-line player rows; filte
 
 - `index.html` — page shell: loads `styles.css` and the scripts below in order.
 - `styles.css` — all styling; the final "Geist theme" layer sets the look (tokens at the top of that layer).
+- `mobile.css` — phone layout tokens, pick header, rows and nav (see `docs/mobile-redesign.md`).
+- `mobile-sheet.css` — phone player sheet styles.
 - `fonts/` — self-hosted Geist Sans and Geist Mono (SIL OFL, see `fonts/OFL.txt`), so the app still needs no network.
 - `app.js` — UI: state, rendering, event wiring, save/restore.
 - `fx.js` — optional pointer-spotlight effect (visual only; off for reduced motion and touch).

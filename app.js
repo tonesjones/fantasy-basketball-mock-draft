@@ -956,14 +956,27 @@ function wireMobileDraft(){
   filterClose.addEventListener("click",function(){filters.open=false;el("mdq").focus();});filters.append(filterClose);
   if(mobileView!=="players")return;
   var sheet=document.createElement("dialog");sheet.id="mdplayersheet";sheet.className="mobile-player-sheet";sheet.setAttribute("aria-label","Player details and draft advice");
-  var close=document.createElement("button");close.type="button";close.className="ghostbtn mobile-sheet-close";close.textContent="Close player details";
-  close.addEventListener("click",closeMobileSheet);sheet.append(close,side);el("mdapp").append(sheet);
+  var grip=document.createElement("div");grip.className="mobile-sheet-grip";grip.setAttribute("aria-hidden","true");grip.innerHTML="<span></span>";
+  var head=document.createElement("div");head.className="mobile-sheet-head";
+  var titleBox=document.createElement("div");titleBox.className="mobile-sheet-titlebox mobile-player-info";
+  var close=document.createElement("button");close.type="button";close.className="mobile-sheet-close";close.textContent="Close";close.setAttribute("aria-label","Close player details");
+  close.addEventListener("click",closeMobileSheet);head.append(titleBox,close);
+  var drag=document.createElement("div");drag.className="mobile-sheet-drag";drag.append(grip,head);
+  sheet.append(drag,side);el("mdapp").append(sheet);
+  (function(){var y0=null,dy=0;
+    function reset(){sheet.style.transition="";sheet.style.transform="";}
+    drag.addEventListener("pointerdown",function(e){if(e.target.closest("button"))return;y0=e.clientY;dy=0;sheet.style.transition="none";try{drag.setPointerCapture(e.pointerId);}catch(_){}});
+    drag.addEventListener("pointermove",function(e){if(y0==null)return;dy=Math.max(0,e.clientY-y0);sheet.style.transform="translateY("+dy+"px)";});
+    function end(){if(y0==null)return;var d=dy;y0=null;dy=0;if(d>80){reset();closeMobileSheet();}else{sheet.style.transition="transform 180ms ease-out";sheet.style.transform="translateY(0)";setTimeout(reset,200);}}
+    drag.addEventListener("pointerup",end);drag.addEventListener("pointercancel",end);
+  })();
   sheet.addEventListener("cancel",function(e){e.preventDefault();closeMobileSheet();});
   sheet.addEventListener("click",function(e){if(e.target===sheet){var r=sheet.getBoundingClientRect();if(e.clientY<r.top||e.clientY>r.bottom||e.clientX<r.left||e.clientX>r.right)closeMobileSheet();}});
   if(mobileSheetPlayer!=null){
-    var pl=PLAYERS[mobileSheetPlayer],info=document.createElement("div");info.className="mobile-player-info";
-    info.innerHTML='<h3>'+esc(pl.n)+'</h3><p class="muted">'+esc(pl.t)+' · '+esc(pl.p.join(" / "))+' · ADP '+(pl.adp==null?'—':pl.adp)+'</p>'
-      +'<p class="muted">Last season: per-game rank '+(pl.last==null?'—':pl.last)+' · total rank '+(pl.lastTotal==null?'—':pl.lastTotal)+' · '+(pl.mpg==null?'—':pl.mpg.toFixed(1))+' MPG</p>'
+    var pl=PLAYERS[mobileSheetPlayer],info=document.createElement("div");info.className="mobile-player-extra";
+    titleBox.innerHTML='<h3 class="mobile-sheet-name">'+esc(pl.n)+'</h3><p class="mobile-sheet-sub"><span>'+esc(pl.t)+'</span><span>'+esc(pl.p.join("/"))+'</span><span>ADP '+(pl.adp==null?'—':pl.adp)+'</span></p>';
+    sheet.setAttribute("aria-label",pl.n+" details and draft advice");
+    info.innerHTML='<p class="muted">Last season: per-game rank '+(pl.last==null?'—':pl.last)+' · total rank '+(pl.lastTotal==null?'—':pl.lastTotal)+' · '+(pl.mpg==null?'—':pl.mpg.toFixed(1))+' MPG</p>'
       +'<p class="muted">'+esc(pl.c.join(" · "))+' '+playoffBadge(pl)+'</p>'+(pl.inj?'<p class="mobile-injury">'+esc(injTitle(pl.inj))+'</p>':'');
     side.prepend(info);
     var draftButton=side.querySelector(".pc-draft");
@@ -1013,9 +1026,10 @@ function renderDraft(){
   var idx=state.log.length,round=Math.floor(idx/TEAMS)+1,team=idx<totalPicks()?teamForPick(idx):-1;
   var h='<div class="turnbar">';
   var liveCore="";
+  var totRounds=Math.round(totalPicks()/TEAMS);
   if(state.phase==="done"){h+='<span><b>Draft complete.</b></span>';liveCore="Draft complete.";}
-  else if(isUserTurn()){h+='<span class="you">YOUR PICK</span><span class="muted">Round '+round+', overall pick '+(idx+1)+' of '+totalPicks()+'</span>';liveCore="Your pick. Round "+round+", overall pick "+(idx+1)+" of "+totalPicks()+".";}
-  else{h+='<span><b>'+esc(teamName(team))+'</b> is picking...</span><span class="muted">Round '+round+', overall pick '+(idx+1)+'</span>';liveCore=teamName(team)+" is picking. Round "+round+", overall pick "+(idx+1)+".";}
+  else if(isUserTurn()){h+='<span class="pickhead on"><span class="pknum">Pick '+(idx+1)+'</span><span class="pkline"><span class="you">You\'re on the clock</span><span class="muted">Round '+round+' of '+totRounds+'</span></span></span>';liveCore="Your pick. Round "+round+", overall pick "+(idx+1)+" of "+totalPicks()+".";}
+  else{h+='<span class="pickhead"><span class="pknum">Pick '+(idx+1)+'</span><span class="pkline"><span><b>'+esc(teamName(team))+'</b> is picking...</span><span class="muted">Round '+round+' of '+totRounds+'</span></span></span>';liveCore=teamName(team)+" is picking. Round "+round+", overall pick "+(idx+1)+".";}
   var nxt=nextUserPickIdx();
   if(nxt>=0&&!isUserTurn())h+='<span class="nextpick">Your next pick: <b>#'+(nxt+1)+'</b> ('+(nxt-idx)+' picks away)</span>';
   if(nxt>=0&&isUserTurn()){var nxt2=-1,tot2=totalPicks();for(var j=nxt+1;j<tot2;j++)if(teamForPick(j)===userTeam()){nxt2=j;break;}
@@ -1090,7 +1104,7 @@ function renderList(){
     i=cands[k];var pl2=PLAYERS[i];
     var pr=puntByPi[i];
     var rlabel=srt==="punt"?(pr?pr.puntRank:"—"):(srt==="cons"?consRank(pl2).toFixed(1):pl2.r);
-    var sub='<span>ADP '+disp(pl2.adp)+'</span><span>Last '+disp(pl2.last)+'</span><span>Tot '+disp(pl2.lastTotal)+'</span><span>MPG '+(pl2.mpg==null?'—':pl2.mpg.toFixed(1))+'</span><span>'+posBadges(pl2.p)+'</span>'+playoffBadge(pl2);
+    var sub='<span>ADP '+disp(pl2.adp)+'</span><span>Last '+disp(pl2.last)+'</span><span>Tot '+disp(pl2.lastTotal)+'</span><span>MPG '+(pl2.mpg==null?'—':pl2.mpg.toFixed(1))+'</span><span>'+posBadges(pl2.p)+'</span>'+playoffBadge(pl2)+'<span class="rt">'+esc(pl2.t)+'</span>';
     var mvRow=moverRoleChipHtml(pl2, false);if(mvRow)sub+=mvRow;
     if(pl2.c.length)sub+='<span>'+pl2.c.slice(0,4).join(" · ")+'</span>';
     if(state.puntCats.length)sub+=pr?'<span title="Historical available-player ranks, nine-category vs excluding '+puntLabel()+'">Punt '+state.puntCats.join('+')+': #'+pr.baseRank+' → #'+pr.puntRank+(pr.gain>0?' (+'+pr.gain+')':'')+'</span>':'<span>Punt value: unknown (no 2025-26 category data)</span>';
@@ -1316,7 +1330,8 @@ function playoffBadge(pl){
  var v=window.PlayoffCore.counts(window.PlayoffData,pl.t,state.playoffStart);
  if(!v)return '<span class="playoffbadge">Playoffs \u2014 team unknown</span>';
  var r=window.PlayoffCore.rating(v);
- return '<span class="playoffbadge '+r+'" title="Schedule quality: '+r+' (2 games in a week = bad, 3 = ok, 4+ = good)">Playoffs W1 '+v[0]+' \u00b7 W2 '+v[1]+' \u00b7 W3 '+v[2]+' = '+window.PlayoffCore.total(v)+'</span>';
+ function pw(i){return '<span class="pw g'+Math.min(4,v[i])+'"><span class="pwk">W'+(i+1)+' </span><span class="pwn">'+v[i]+'</span></span>';}
+ return '<span class="playoffbadge '+r+'" title="Schedule quality: '+r+' (2 games in a week = bad, 3 = ok, 4+ = good)"><span class="pwx">Playoffs </span>'+pw(0)+'<span class="pwx"> \u00b7 </span>'+pw(1)+'<span class="pwx"> \u00b7 </span>'+pw(2)+'<span class="pwx"> = '+window.PlayoffCore.total(v)+'</span></span>';
 }
 function playoffRoster(mine){
  var sum=window.PlayoffCore.summary(window.PlayoffData,mine.map(function(m){return PLAYERS[m.pi];}),state.playoffStart);

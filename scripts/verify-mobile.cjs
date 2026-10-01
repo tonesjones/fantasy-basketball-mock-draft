@@ -1,4 +1,4 @@
-// Optional browser check: NODE_PATH must include Playwright. Uses installed Edge.
+// Optional browser check: NODE_PATH must include Playwright. Uses bundled Chromium (MOBILE_BROWSER_CHANNEL=msedge for Edge).
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -18,7 +18,7 @@ async function main() {
     fs.createReadStream(file).pipe(res);
   });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
-  const browser = await chromium.launch({ channel: 'msedge', headless: true });
+  const browser = await chromium.launch(process.env.MOBILE_BROWSER_CHANNEL ? { channel: process.env.MOBILE_BROWSER_CHANNEL, headless: true } : { headless: true });
   try {
     for (const viewport of [{width:390,height:844},{width:320,height:568},{width:430,height:932},{width:667,height:375}]) {
       const page = await browser.newPage({viewport});
@@ -44,7 +44,7 @@ async function main() {
       assert.equal(await page.locator('#mdplist').evaluate(n=>n.scrollTop), playerScroll);
       const row = page.locator('.prow[data-pi]').nth(8);
       const pi = await row.getAttribute('data-pi');
-      await row.click();
+      await row.locator('.prank').click();
       await page.locator('#mdplayersheet[open]').waitFor();
       assert.ok((await page.locator('.mobile-player-info h3').innerText()).length > 0);
       const keptScroll = await page.locator('#mdplist').evaluate(n=>n.scrollTop);
@@ -63,7 +63,7 @@ async function main() {
       await page.getByRole('button',{name:'Players',exact:true}).click();
       assert.equal(await page.locator('[data-f="PG"]').getAttribute('class'), 'fchip sel');
       await page.locator('#mdq').fill('Curry');
-      await page.locator('.prow[data-pi]').first().click();
+      await page.locator('.prow[data-pi]').first().locator('.prank').click();
       const before = await page.evaluate(() => JSON.parse(localStorage.getItem('fantasy-basketball-mock-draft.v2')).state.log.length);
       await page.locator('.pc-draft:not([disabled])').waitFor();
       await page.locator('#mdplayersheet .side').evaluate(n=>{n.scrollTop=n.scrollHeight;});
@@ -90,18 +90,21 @@ async function main() {
         await page.screenshot({path:process.env.MOBILE_SCREENSHOT});
       }
       await page.setViewportSize({width:1280,height:900});
+      await page.locator('.mobile-nav').waitFor({state:'detached'});
       assert.equal(await page.locator('.mobile-nav').count(), 0);
       assert.equal(await page.locator('.viewtabs').isVisible(), true);
       assert.equal(await page.locator('.avail').isVisible(), true);
       assert.equal(await page.locator('.side').isVisible(), true);
       if(viewport.width===390){
         await page.setViewportSize(viewport);
+        await page.locator('.mobile-nav').waitFor();
         await page.locator('#mdq').fill('');
+        assert.equal(await page.locator('#mdq').inputValue(), '');
         await page.locator('#mdfilters summary').click();
         await page.locator('[data-f="All"]').click();
         await page.getByRole('button',{name:'Done',exact:true}).click();
         for(let turn=0;turn<13;turn++){
-          await page.locator('.prow[data-pi]').first().click();
+          await page.locator('.prow[data-pi]').first().locator('.prank').click();
           await page.locator('.pc-draft:not([disabled])').waitFor();
           await page.locator('.pc-draft').click();
         }

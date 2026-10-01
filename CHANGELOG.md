@@ -1,5 +1,16 @@
 # Changelog
 
+## Phone draft room redesign (preview branch) (2026-10-01)
+Details: `docs/mobile-redesign.md`.
+- **Palette:** navy court / maple accent on phones only; desktop unchanged.
+- **Pick header:** "Pick N" with "You're on the clock" subtitle replaces the verbose text.
+- **Player rows:** team, positions, ADP, and three playoff week pips (W1/W2/W3 game counts colored good/ok/bad) instead of the long playoff sentence.
+- **Player sheet:** stays the native dialog with a grip; swipe down to close; one compact header with name shown once and Close button; maple Draft button pinned at the bottom; slide-up animation (respects reduced motion).
+- **Bottom navigation:** maple indicator bar.
+- **No new dependencies.**
+- **New files:** `mobile.css` (phone layout tokens, pick header, rows, nav), `mobile-sheet.css` (player sheet styles), `docs/mobile-redesign.md`.
+- **Tooling:** `scripts/verify-mobile.cjs` now uses bundled Chromium by default (`MOBILE_BROWSER_CHANNEL=msedge` for Edge).
+
 ## ADP, team and injury refresh (2026-09-28)
 Details: `docs/adp-refresh-2026-09-28.md`. Provenance:
 `scripts/data-provenance/2026-09-28-adp-refresh/`.
