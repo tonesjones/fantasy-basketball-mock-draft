@@ -933,7 +933,7 @@ function sortLabel(s){
 var coachDockOpen=false;
 var mobileView="players",mobileScroll={},mobileSheetPlayer=null,mobileReturnFocus=null;
 var mobileQuery=window.matchMedia("(max-width:700px)");
-function isMobileDraft(){return mobileQuery.matches&&state.phase==="draft";}
+function isMobileDraft(){return mobileQuery.matches&&(state.phase==="draft"||state.phase==="done");}
 function rememberMobileScroll(){
   var pane=document.querySelector("[data-mobile-pane]");
   if(pane)mobileScroll[pane.dataset.mobilePane]=pane.scrollTop;
@@ -993,7 +993,7 @@ function mobilePuntHtml(){
   var me=grades.filter(function(g){return g.team===userTeam();})[0],covered=me.rated>=3&&me.rated/(me.rated+me.unrated)>=0.8;
   var choices=outlook.ready&&covered&&state.puntCats.length<PuntCore.MAX_PUNTS?outlook.rows.filter(function(row){return row.rank>=10&&row.gap>=0.5&&row.catchup==='hard-climb'&&state.puntCats.indexOf(CATS9[row.ci])<0;}):[];
   var h='<h3>Punt strategy</h3><p class="muted">Start with one category. Add another when the tradeoff helps.</p><p class="m-strategy">Committed: <b>'+(state.puntCats.length?esc(puntLabel()):'Balanced')+'</b></p><h4>Punts to consider</h4>';
-  if(!choices.length)h+='<p class="muted">'+(!outlook.ready||!covered?'No recommendations yet. Draft at least three rated players with 80% roster coverage.':'No additional category is far enough behind to recommend a punt.')+'</p>';
+  if(!choices.length)h+='<p class="muted">'+(state.puntCats.length>=PuntCore.MAX_PUNTS?'Three punts committed. Remove one to explore another.':!outlook.ready||!covered?'No recommendations yet. Draft at least three rated players with 80% roster coverage.':nextUserPickIdx()<0?'Draft complete. No remaining picks to guide.':'No additional category is far enough behind to recommend a punt.')+'</p>';
   choices.forEach(function(row){h+='<button class="m-punt-recommend ghostbtn" data-mobile-punt-explore="'+CATS9[row.ci]+'"><b>Explore '+CATS9[row.ci]+'</b><span>#'+row.rank+'/'+TEAMS+' · '+row.gap.toFixed(1)+' value per pick behind the room’s middle. A hard climb with near-pick options.</span></button>';});
   h+='<p class="muted">Updates after every pick. Only large, hard-to-recover deficits qualify.</p><h4>Explore your options</h4><div class="m-punt-options" role="group" aria-label="Categories to punt">';
   CATS9.forEach(function(cat){var on=cats.indexOf(cat)>=0;h+='<button type="button" class="ghostbtn" data-mobile-punt="'+cat+'" aria-pressed="'+on+'"'+(!on&&cats.length>=PuntCore.MAX_PUNTS?' disabled':'')+'>'+cat+'</button>';});
@@ -1038,6 +1038,7 @@ function wireMobileDraft(){
   var root=el("md"),avail=document.querySelector("#md .avail"),side=el("mdside");
   root.dataset.mobileView=mobileView;
   var turnLabel=root.querySelector(".pkline .you");if(turnLabel)turnLabel.textContent="Your pick";
+  if(state.phase==="done"){var wait=root.querySelector(".pc-wait");if(wait)wait.textContent="Draft complete. Undo a pick to resume drafting.";}
   var pane=mobileView==="players"?el("mdplist"):side;
   pane.dataset.mobilePane=mobileView;
   pane.scrollTop=mobileScroll[mobileView]||0;
@@ -1420,6 +1421,7 @@ function wirePuntControls(root){
 }
 function renderDone(){
   cancelPickCoach();
+  if(isMobileDraft()){if(mobileView==="players")mobileView="team";renderDraft();return;}
   var h='<h2>Draft complete</h2><div class="muted">Final roster from pick #'+state.draftPos+' ('+state.rounds+' rounds, 12 teams)</div>';
   h+='<button class="bigbtn" id="mdnew2">Run it back</button>';
   if(state.userTurns.length)h+='<button class="ghostbtn" id="mdundo2" style="margin-left:8px">Undo my last pick</button>';
