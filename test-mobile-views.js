@@ -6,7 +6,7 @@ const DA = require('./draft-analysis');
 const PuntCore = require('./punt-core');
 const data = require('./scripts/load-data').loadData();
 const cats = ['PTS','REB','AST','STL','BLK','3PM','FG%','FT%','TO'];
-let grades = Array.from({length:12}, (_,team) => ({team,score:team*2,cats:Array(9).fill(team),rated:3,unrated:0}));
+let grades = Array.from({length:12}, (_,team) => ({team,score:team*2,cats:Array(9).fill(team),rated:3,unrated:0,rank:12-team,grade:team>8?'A':'C'}));
 let outlook = {ready:false,knownPicks:1,rows:cats.map((cat,ci)=>({ci,status:'early',rank:12,gap:1,catchup:'hard-climb'}))};
 const state = {log:[0],rounds:13,puntCats:[]};
 const context = {window:{},state,PLAYERS:data.PLAYERS,PDATA:data.PDATA,CATS9:cats,CORE:core,DA:{...DA,categoryOutlook:()=>outlook},PuntCore,TEAMS:12,
@@ -25,25 +25,35 @@ assert.equal((markup.match(/Their edge/g)||[]).length,99,'all opponents expose a
 assert(markup.includes('0–9'),'score is from your perspective');
 context.mobileMatchSort='number';
 markup=context.mobileMatchupHtml();assert(markup.indexOf('CPU 2')<markup.indexOf('CPU 12'));
-assert(!context.mobilePuntHtml().includes('data-mobile-punt-explore='),'no early recommendation');
-outlook={...outlook,ready:true};
-outlook.rows.forEach(row=>{row.rank=8;row.gap=.3;row.status='weak';});
-outlook.rows[0].rank=12;outlook.rows[0].gap=.8;
-outlook.rows[1].rank=12;outlook.rows[1].gap=.4;
-outlook.rows[2].rank=12;outlook.rows[2].gap=.8;outlook.rows[2].catchup='one-pick';
+assert(markup.includes('gradebadge g-C')&&markup.includes('#12 of 12'),'your own grade is shown');
+grades[0].rated=0;grades[0].unrated=0;assert(context.mobileMatchupHtml().includes('Your grade appears after your first pick'),'no grade before your first pick');
+grades[0].rated=3;
+// Punt advice must come from PuntCore.suggest, the same rule the desktop Punt advice box uses.
+const taken={};state.log.forEach(pi=>{taken[pi]=true;});
+const expected=PuntCore.suggest(grades,0,data.PLAYERS,data.PDATA,taken,24,47,[]);
+assert(expected,'fixture qualifies for a desktop punt suggestion');
 markup=context.mobilePuntHtml();
-assert(markup.includes('data-mobile-punt-explore="PTS"'));
-assert(!markup.includes('data-mobile-punt-explore="REB"'),'small deficit is not a recommendation');
-assert(!markup.includes('data-mobile-punt-explore="AST"'),'recoverable deficit is not a recommendation');
-state.puntCats=['FT%','TO','3PM'];assert(!context.mobilePuntHtml().includes('data-mobile-punt-explore='),'full strategy cannot recommend a fourth punt');
-state.puntCats=[];grades[0].rated=1;grades[0].unrated=2;assert(!context.mobilePuntHtml().includes('data-mobile-punt-explore='),'imputed roster cannot support recommendation');
+assert.equal((markup.match(/data-mobile-punt-explore=/g)||[]).length,1,'one recommendation, like desktop');
+assert(markup.includes('data-mobile-punt-explore="'+expected.cat+'"'),'phone recommends the desktop category');
+assert(markup.includes('trails '+expected.below+' of '+expected.peers));
+let suggestArgs=null;context.PuntCore={...PuntCore,suggest:(...a)=>{suggestArgs=a;return null;}};
+state.puntCats=['FT%'];markup=context.mobilePuntHtml();
+assert.deepEqual([suggestArgs[5],suggestArgs[6],suggestArgs[7]],[24,47,['FT%']],'next picks and committed punts are passed through');
+assert(!markup.includes('data-mobile-punt-explore=')&&markup.includes('No additional punt stands out'));
+state.puntCats=[];assert(context.mobilePuntHtml().includes('No punt recommendation yet'));
+context.PuntCore={...PuntCore,suggest:()=>({cat:'BLK',below:8,peers:11,risers:2,missing:1,also:['REB','AST','STL']})};
+markup=context.mobilePuntHtml();assert(markup.includes('data-mobile-punt-explore="BLK"')&&markup.includes('Also trailing: REB, AST.')&&markup.includes('1 of your picks lack category data'));
+context.PuntCore=PuntCore;
+state.puntCats=['FT%','TO','3PM'];markup=context.mobilePuntHtml();assert(!markup.includes('data-mobile-punt-explore='),'full strategy cannot recommend a fourth punt');assert(markup.includes('Three punts committed'));
+state.puntCats=[];
 grades[0].rated=3;grades[0].unrated=0;
-context.mobileRosterMode='picks';markup=context.mobileTeamHtml();assert(markup.includes('R1 P1'));assert(!markup.includes('NaN'));assert.equal((markup.match(/class="m-category /g)||[]).length,9);
+context.mobileRosterMode='picks';markup=context.mobileTeamHtml();assert(!markup.includes('mdmobilerunback'),'no Run it back mid-draft');assert(markup.includes('R1 P1'));assert(!markup.includes('NaN'));assert.equal((markup.match(/class="m-category /g)||[]).length,9);
 markup=context.mobilePlayerStats(data.PLAYERS.find(p=>p.n==='Nikola Jokic'));
 assert(markup.includes('Strengths')&&markup.includes('Weaknesses'));assert(markup.includes('6.1 / 7.4')&&markup.includes('9.9 / 17.4'));assert.equal((markup.match(/<dd>/g)||[]).length,9);
 markup=context.mobilePlayerStats(data.PLAYERS.find(p=>p.n==='Tyrese Haliburton'));assert(markup.includes('No recorded 2025–26'));
 assert.equal(data.PLAYERS.filter(p=>context.window.PlayerAverages.players[p.n]).length,253);
 for(const stats of Object.values(context.window.PlayerAverages.players)){assert(stats.g>0);assert(stats.ftm<=stats.fta&&stats.fgm<=stats.fga);for(const value of Object.values(stats))assert(Number.isFinite(value)&&value>=0);}
+state.phase='done';markup=context.mobileTeamHtml();assert(markup.includes('id="mdmobilerunback"')&&markup.includes('gradebadge'),'finished draft shows grade and Run it back');state.phase='draft';
 console.log('mobile views: opponent order, nine categories, adaptive punts, roster picks and sourced stat lines passed');
 
 let completedRenders=0;context.cancelPickCoach=()=>{};context.renderDraft=()=>completedRenders++;context.isMobileDraft=()=>true;
