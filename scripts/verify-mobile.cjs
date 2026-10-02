@@ -78,10 +78,24 @@ async function main() {
       await page.locator('[data-f="PG"]').click();
       await page.getByRole('button',{name:'Done',exact:true}).click();
       assert.equal(await page.locator('#mdfilters').evaluate(n=>n.open), false);
-      await page.getByRole('button',{name:'Board',exact:true}).click();
+      await page.getByRole('button',{name:'My team',exact:true}).click();
+      await page.locator('[data-mobile-roster="board"]').click();
       await page.locator('table.board').waitFor();
+      assert.equal(await page.locator('.mobile-nav button[aria-current="page"]').innerText(), 'My team', 'Board lives under My team');
+      await page.getByRole('button',{name:'Back to roster',exact:true}).click();
+      await page.locator('.m-roster-toggle').waitFor();
       await page.getByRole('button',{name:'Analysis',exact:true}).click();
-      assert.equal(await page.locator('#mdscarcity').isVisible(), true);
+      assert.equal(await page.locator('.m-matchup').count(), 11, 'Analysis lists every opponent');
+      await page.getByRole('button',{name:'Punts',exact:true}).click();
+      const commit = page.locator('#mdmobilepuntcommit');
+      assert.equal(await commit.isDisabled(), true);
+      assert.ok(Number(await commit.evaluate(n=>getComputedStyle(n).opacity)) < 1, 'Disabled commit looks disabled');
+      await page.locator('[data-mobile-punt="FT%"]').click();
+      assert.equal(await commit.isDisabled(), false);
+      await commit.click();
+      assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('fantasy-basketball-mock-draft.v2')).state.puntCats), ['FT%']);
+      await page.locator('#mdmobilepuntclear').click();
+      assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('fantasy-basketball-mock-draft.v2')).state.puntCats), []);
       await page.getByRole('button',{name:'Players',exact:true}).click();
       assert.equal(await page.locator('[data-f="PG"]').getAttribute('class'), 'fchip sel');
       await page.locator('#mdq').fill('Curry');
@@ -99,6 +113,10 @@ async function main() {
       }
       await page.locator('.pc-draft').click();
       assert.equal(await page.locator('#mdplayersheet').evaluate(n=>n.open), false);
+      const toast = page.locator('#mdpickmoment');
+      assert.ok(!/Times/.test(await toast.evaluate(n=>getComputedStyle(n).fontFamily)), 'Pick toast uses the app font');
+      const toastBox = await toast.boundingBox(), undoBox = await page.locator('#mdundo').boundingBox();
+      assert.ok(toastBox.y > undoBox.y + undoBox.height, 'Pick toast leaves the header Undo visible');
       assert.equal(await page.locator('#mdq').inputValue(), 'Curry');
       const after = await page.evaluate(() => JSON.parse(localStorage.getItem('fantasy-basketball-mock-draft.v2')).state.log.length);
       assert.ok(after > before, 'Draft button executes the pick');
@@ -131,8 +149,12 @@ async function main() {
           await page.locator('.pc-draft').click();
         }
         assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('fantasy-basketball-mock-draft.v2')).state.phase),'done');
-        assert.equal(await page.evaluate(()=>document.body.classList.contains('mobile-drafting')),false);
+        assert.equal(await page.evaluate(()=>document.body.classList.contains('mobile-drafting')),true,'Finished draft keeps the phone layout');
+        assert.equal(await page.locator('#md').getAttribute('data-mobile-view'),'team','Finished draft lands on My team');
         assert.equal(await page.locator('dialog[open]').count(),0);
+        assert.equal(await page.locator('.m-grade-card .gradebadge').isVisible(),true,'Finished draft shows your grade');
+        await page.locator('#mdmobilerunback').click();
+        await page.locator('#mdstart').waitFor();
       }
       await page.close();
       console.log(`PASS mobile ${viewport.width}×${viewport.height}, draft, undo, navigation, scroll, desktop resize`);
