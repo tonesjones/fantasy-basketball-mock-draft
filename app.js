@@ -206,6 +206,7 @@ function userDraft(pi){
   var checkpoint={log:state.log.slice(),rngState:state.rngState};
   var name=PLAYERS[pi].n;
   var next=simulateToUser(state.log.concat([pi]),state.rngState);
+  if(isMobileDraft()&&next.log.length>=totalPicks())mobileView="team";
   var cpu=next.log.length-(checkpoint.log.length+1);
   _pendingLive="You drafted "+name+". "+(cpu>0?cpu+" CPU pick"+(cpu===1?"":"s")+" followed. ":"");
   setState({log:next.log,rngState:next.rngState,userTurns:state.userTurns.concat([checkpoint]).slice(-20),phase:next.log.length>=totalPicks()?"done":"draft",page:isMobileDraft()?state.page:0});
@@ -215,19 +216,19 @@ function showPickMoment(name,pickIndex){
   var old=el("mdpickmoment");if(old)old.remove();
   var panel=document.createElement("div");panel.id="mdpickmoment";panel.className="pick-moment";
   var grade=draftGrades().filter(function(g){return g.team===userTeam();})[0];
-  var heading=document.createElement("strong");heading.textContent="Your pick #"+(pickIndex+1);
+  var heading=document.createElement("strong");heading.textContent=isMobileDraft()?name+" drafted":"Your pick #"+(pickIndex+1);
   var player=document.createElement("span");player.textContent=name;
   var note=document.createElement("small");note.textContent=grade&&grade.rated?"Team grade "+grade.grade+" · historical 9-cat":"Added to your team";
-  panel.append(heading,player,note);
+  if(isMobileDraft()){var undo=document.createElement('button');undo.className='ghostbtn';undo.textContent='Undo';undo.addEventListener('click',undoUserPick);panel.append(heading,undo);}else panel.append(heading,player,note);
   document.body.append(panel);
   setTimeout(function(){panel.remove();},2400);
 }
 function undoUserPick(){
   var moment=el("mdpickmoment");if(moment)moment.remove();
   var history=state.userTurns.slice(),checkpoint=history.pop();if(!checkpoint)return;
-  setState({log:checkpoint.log,rngState:checkpoint.rngState,userTurns:history,phase:"draft",page:0});
+  setState({log:checkpoint.log,rngState:checkpoint.rngState,userTurns:history,phase:"draft",page:isMobileDraft()?state.page:0});
 }
-function restartDraft(){clearSaved();state=freshState();save();render();}
+function restartDraft(){mobilePuntPreview=null;mobileRosterMode="slots";mobileView="players";clearSaved();state=freshState();save();render();}
 /* Phone header Restart needs a second tap within 3s, so a stray tap can't wipe the draft. */
 var restartArmTimer=null;
 function onRestartClick(e){
@@ -903,6 +904,7 @@ function renderSetup(){
   h+='<div class="muted" style="margin-top:8px">Drafts save automatically in this browser. Data version: '+DATA_VERSION+'. · <button type="button" class="textlink" id="mdclear">Clear saved draft</button></div>';
   h+=playoffSettingsHtml();
   h+=renderDataHealth();
+  if(mobileQuery.matches)h=h.replace('12 teams, snake draft. 270-player pool from early 2026-27 preseason rankings. You draft your slot; the other 11 teams auto-pick.','12 teams. Snake draft. Pick your spot. We draft the other teams.').replace('Start Mock Draft','Start draft').replace('Data health','Data &amp; sources');
   el("mdapp").innerHTML=h;
   el("mdapp").querySelectorAll(".posbtn").forEach(function(b){b.addEventListener("click",function(){setState({draftPos:parseInt(b.getAttribute("data-pos"),10)});});});
   el("mdrounds").addEventListener("change",function(e){setState({rounds:parseInt(e.target.value,10)});});
@@ -930,9 +932,9 @@ function sortLabel(s){
 /* Mobile dock: coach collapsed to a compact strip by default so the player
  * list keeps most of the screen; the handle expands the full card. */
 var coachDockOpen=false;
-var mobileView="players",mobileScroll={},mobileSheetPlayer=null,mobileReturnFocus=null;
+var mobileView=state.phase==="done"?"team":"players",mobileScroll={},mobileSheetPlayer=null,mobileReturnFocus=null;
 var mobileQuery=window.matchMedia("(max-width:700px)");
-function isMobileDraft(){return mobileQuery.matches&&state.phase==="draft";}
+function isMobileDraft(){return mobileQuery.matches&&(state.phase==="draft"||state.phase==="done");}
 function rememberMobileScroll(){
   var pane=document.querySelector("[data-mobile-pane]");
   if(pane)mobileScroll[pane.dataset.mobilePane]=pane.scrollTop;
@@ -943,22 +945,114 @@ function closeMobileSheet(){
   mobileSheetPlayer=null;
   if(mobileReturnFocus&&mobileReturnFocus.isConnected)mobileReturnFocus.focus({preventScroll:true});
 }
+var mobileRosterMode="slots",mobileMatchSort="value",mobilePuntPreview=null;
+function mobileOutlook(grades){
+  var next=nextUserPickIdx();
+  return DA.categoryOutlook({grades:grades,userTeam:userTeam(),players:PLAYERS,pdata:PDATA,log:state.log,nextPick:next,followingPick:next<0?-1:followingUserPickIdx(next)});
+}
+function mobileSnapshot(grades){
+  var outlook=mobileOutlook(grades);
+  var h='<section class="m-snapshot"><h3>All nine categories</h3><p class="muted">Last season’s value per picked player. '+(outlook.ready?'Compared with the room.':'Early read — your roster is still forming.')+'</p>';
+  outlook.rows.forEach(function(row){
+    var label=outlook.ready?({surplus:'Clear lead',strong:'Strong',weak:'Needs help','in-mix':'In the mix'})[row.status]:'Early';
+    h+='<div class="m-category '+row.status+'"><b>'+CATS9[row.ci]+'</b><span>'+label+(state.puntCats.indexOf(CATS9[row.ci])>=0?' · punted':'')+'</span><strong>'+(outlook.knownPicks?'#'+row.rank:'—')+'</strong></div>';
+  });
+  return h+'<p class="muted">Historical stats, not projections. Missing player data uses market-implied values. Lower turnovers rate higher.</p></section>';
+}
+function mobileTeamHtml(){
+  var entries=CORE.teamEntries(PLAYERS,state.log,userTeam(),TEAMS),ros=myRoster();
+  var h='<h3>My team <span class="muted">'+entries.length+'/'+state.rounds+'</span></h3><div class="m-roster-toggle" role="group" aria-label="Roster view">';
+  [['slots','By position'],['picks','Pick order'],['board','Board']].forEach(function(v){h+='<button type="button" class="ghostbtn" data-mobile-roster="'+v[0]+'" aria-pressed="'+(mobileRosterMode===v[0])+'">'+v[1]+'</button>';});
+  h+='</div><div class="rlist">';
+  if(mobileRosterMode==='picks'){
+    if(!entries.length)h+='<p class="muted">No picks yet.</p>';
+    entries.forEach(function(e){h+='<div class="rrow"><span class="rpick">'+pickLabel(e.index)+'</span><span class="pname">'+esc(e.player.n)+injBadge(e.player)+'<small>'+esc(e.player.t)+' · '+esc(e.player.p.join('/'))+'</small></span></div>';});
+  }else{
+    ros.slots.forEach(function(e){h+='<div class="rrow"><span class="rpick">'+e.slot+'</span><span class="pname">'+(e.player?esc(e.player.player.n)+injBadge(e.player.player)+'<small>'+esc(e.player.player.t)+' · '+esc(e.player.player.p.join('/'))+'</small>':'<span class="muted">Open</span>')+'</span></div>';});
+    ros.overflow.forEach(function(e){h+='<div class="rrow"><span class="rpick">Extra</span><span class="pname">'+esc(e.player.n)+injBadge(e.player)+'</span></div>';});
+  }
+  return h+'</div>'+mobileSnapshot(draftGrades())+playoffRoster(entries.map(function(e){return {pi:e.pi};}));
+}
+function mobileMatchupHtml(){
+  var grades=draftGrades(),me=grades.filter(function(g){return g.team===userTeam();})[0];
+  var rows=grades.filter(function(g){return g.team!==userTeam();}).map(function(g){var mu=catMatchup(me.cats,g.cats);return {g:g,mu:mu,w:mu.filter(function(v){return v==='win';}).length,l:mu.filter(function(v){return v==='loss';}).length};});
+  rows.sort(function(a,b){return mobileMatchSort==='number'?a.g.team-b.g.team:mobileMatchSort==='difficulty'?a.w-b.w||b.l-a.l||b.g.score-a.g.score:b.g.score-a.g.score;});
+  var h='<h3>How you match up</h3><p class="muted">Your category score against every opponent. Historical value comparison — not weekly win probabilities.</p>';
+  h+='<p class="m-strategy">'+(state.puntCats.length?'Punting '+esc(puntLabel())+'. All nine categories still count.':'Balanced · all nine categories count.')+'</p>';
+  h+='<label class="m-sort">Sort by <select id="mdmatchsort">';
+  [['value','Team value'],['difficulty','Toughest matchup'],['number','Team number']].forEach(function(v){h+='<option value="'+v[0]+'"'+(mobileMatchSort===v[0]?' selected':'')+'>'+v[1]+'</option>';});
+  h+='</select></label><p class="muted">'+(mobileMatchSort==='value'?'Highest opponent value first.':'difficulty'===mobileMatchSort?'Fewest category edges for you first.':'Team number order.')+'</p>';
+  rows.forEach(function(row){var g=row.g,ties=9-row.w-row.l;
+    h+='<details class="m-matchup"><summary><span>'+esc(teamName(g.team))+'<small>Team value '+g.score.toFixed(1)+' · '+(g.rated+g.unrated)+' picks</small></span><b class="'+(row.w>row.l?'m-gain':'m-weak')+'">'+row.w+'–'+row.l+'</b><small>Your score'+(ties?' · '+ties+' even':'')+'</small></summary><div class="m-match-cats">';
+    CATS9.forEach(function(cat,ci){h+='<div class="'+row.mu[ci]+'"><b>'+cat+'</b><span>'+({win:'Your edge',loss:'Their edge',even:'Even'})[row.mu[ci]]+'</span><small>'+me.cats[ci].toFixed(1)+' vs '+g.cats[ci].toFixed(1)+(state.puntCats.indexOf(cat)>=0?' · punted':'')+'</small></div>';});
+    h+='</div>'+((g.unrated||me.unrated)?'<p class="muted">'+me.unrated+' of your players and '+g.unrated+' opponents lack category data; those players use market-implied values.</p>':'')+'</details>';
+  });
+  return h+'<details class="m-method"><summary>How scoring works</summary><p class="muted">Sum of last season’s per-game category z-scores across each roster. A difference above 0.5 is an edge; within ±0.5 is even. Scores are your category edges and losses, with ties shown separately. Missing data uses the mean of ten rated players nearest in consensus ADP. Starters and bench count equally; pick counts, injuries, schedules and role changes can affect the comparison. These are not forecast box scores or probabilities.</p></details>';
+}
+function mobilePuntHtml(){
+  var grades=draftGrades(),outlook=mobileOutlook(grades),cats=mobilePuntPreview==null?state.puntCats.slice():mobilePuntPreview;
+  var me=grades.filter(function(g){return g.team===userTeam();})[0],covered=me.rated>=3&&me.rated/(me.rated+me.unrated)>=0.8;
+  var choices=outlook.ready&&covered&&state.puntCats.length<PuntCore.MAX_PUNTS?outlook.rows.filter(function(row){return row.rank>=10&&row.gap>=0.5&&row.catchup==='hard-climb'&&state.puntCats.indexOf(CATS9[row.ci])<0;}):[];
+  var h='<h3>Punt strategy</h3><p class="muted">Start with one category. Add another when the tradeoff helps.</p><p class="m-strategy">Committed: <b>'+(state.puntCats.length?esc(puntLabel()):'Balanced')+'</b></p><h4>Punts to consider</h4>';
+  if(!choices.length)h+='<p class="muted">'+(state.puntCats.length>=PuntCore.MAX_PUNTS?'Three punts committed. Remove one to explore another.':!outlook.ready||!covered?'No recommendations yet. Draft at least three rated players with 80% roster coverage.':nextUserPickIdx()<0?'Draft complete. No remaining picks to guide.':'No additional category is far enough behind to recommend a punt.')+'</p>';
+  choices.forEach(function(row){h+='<button class="m-punt-recommend ghostbtn" data-mobile-punt-explore="'+CATS9[row.ci]+'"><b>Explore '+CATS9[row.ci]+'</b><span>#'+row.rank+'/'+TEAMS+' · '+row.gap.toFixed(1)+' value per pick behind the room’s middle. A hard climb with near-pick options.</span></button>';});
+  h+='<p class="muted">Updates after every pick. Only large, hard-to-recover deficits qualify.</p><h4>Explore your options</h4><div class="m-punt-options" role="group" aria-label="Categories to punt">';
+  CATS9.forEach(function(cat){var on=cats.indexOf(cat)>=0;h+='<button type="button" class="ghostbtn" data-mobile-punt="'+cat+'" aria-pressed="'+on+'"'+(!on&&cats.length>=PuntCore.MAX_PUNTS?' disabled':'')+'>'+cat+'</button>';});
+  h+='</div><p class="muted">Exploring: '+(cats.length?esc(PuntCore.label(cats)):'Balanced')+'. '+(sameCats(cats,state.puntCats)?'Matches your committed strategy.':'Commit to apply these changes.')+'</p><div class="m-punt-actions"><button class="bigbtn" id="mdmobilepuntcommit"'+(sameCats(cats,state.puntCats)?' disabled':'')+'>'+(cats.length?'Commit '+esc(PuntCore.label(cats)):'Commit balanced')+'</button><button class="ghostbtn" id="mdmobilepuntclear">Clear punts</button></div>';
+  if(cats.length===3)h+='<p class="muted">With three punts, you need five wins from the remaining six categories.</p>';
+  var taken={};state.log.forEach(function(pi){taken[pi]=true;});
+  var next=nextUserPickIdx(),target=isUserTurn()?followingUserPickIdx(next):next;
+  h+='<h4>Value near '+(target>=0?'pick #'+(target+1):'your last pick')+'</h4><p class="muted">Available now. ADP does not guarantee they reach your next pick.</p>';
+  if(!cats.length)h+='<p class="muted">Select a punt to compare available-player ranks.</p>';
+  else{
+    var risers=PuntCore.rankings(PLAYERS,PDATA,taken,cats).filter(function(row){return target>=0&&Math.abs(consRank(PLAYERS[row.pi])-(target+1))<=12;}).sort(function(a,b){return b.gain-a.gain||a.puntRank-b.puntRank;}).slice(0,8);
+    if(!risers.length)h+='<p class="muted">No players with category data in this pick window.</p>';
+    risers.forEach(function(row){var pl=PLAYERS[row.pi];h+='<button class="m-punt-player" data-mobile-punt-player="'+row.pi+'"><span><b>'+esc(pl.n)+'</b><small>'+esc(pl.p.join('/'))+' · ADP '+consRank(pl).toFixed(1)+' · available rank #'+row.baseRank+' → #'+row.puntRank+'</small></span><strong class="'+(row.gain>0?'m-gain':row.gain<0?'m-weak':'')+'">'+(row.gain>0?'+':'')+row.gain+'<small>rank change</small></strong></button>';});
+  }
+  return h+'<details class="m-method"><summary>How punt value works</summary><p class="muted">Recommendations need a bottom-three category, at least 0.5 value per player behind the room’s median, and no one- or two-pick catch-up path. Value uses existing historical category values, excluding all selected punts. Rank changes compare rated, available players. Up to three punts; TO values are inverted so fewer turnovers rate higher. Coach verdicts still count all nine categories. Missing category data cannot support a punt ranking.</p></details>';
+}
+function wireMobileSide(root){
+  var sort=root.querySelector('#mdmatchsort');if(sort)sort.addEventListener('change',function(){mobileMatchSort=sort.value;rememberMobileScroll();renderSide();el('mdside').scrollTop=mobileScroll[mobileView]||0;});
+  root.querySelectorAll('[data-mobile-roster]').forEach(function(b){b.addEventListener('click',function(){mobileRosterMode=b.dataset.mobileRoster;if(mobileRosterMode==='board'){mobileView='board';setState({view:'board'});}else{mobileView='team';setState({view:'team'});}});});
+  root.querySelectorAll('[data-mobile-punt]').forEach(function(b){b.addEventListener('click',function(){var cat=b.dataset.mobilePunt,cats=mobilePuntPreview==null?state.puntCats.slice():mobilePuntPreview.slice(),i=cats.indexOf(cat);if(i>=0)cats.splice(i,1);else if(cats.length<PuntCore.MAX_PUNTS)cats.push(cat);mobilePuntPreview=PuntCore.normalize(cats);var top=root.scrollTop;renderSide();root.scrollTop=top;var again=root.querySelector('[data-mobile-punt="'+cat+'"]');if(again)again.focus({preventScroll:true});});});
+  root.querySelectorAll('[data-mobile-punt-explore]').forEach(function(b){b.addEventListener('click',function(){mobilePuntPreview=PuntCore.normalize(state.puntCats.concat([b.dataset.mobilePuntExplore]));renderSide();});});
+  var commit=root.querySelector('#mdmobilepuntcommit');if(commit)commit.addEventListener('click',function(){var cats=mobilePuntPreview||state.puntCats;mobilePuntPreview=null;setState({puntCats:cats,sort:!cats.length&&state.sort==='punt'?'cons':state.sort});});
+  var clear=root.querySelector('#mdmobilepuntclear');if(clear)clear.addEventListener('click',function(){mobilePuntPreview=null;setState({puntCats:[],sort:state.sort==='punt'?'cons':state.sort});});
+  root.querySelectorAll('[data-mobile-punt-player]').forEach(function(b){b.addEventListener('click',function(){evaluatePlayer(Number(b.dataset.mobilePuntPlayer));});});
+  wireInjToggles(root);
+}
+function mobilePlayerStats(pl){
+  var cv=PDATA[pl.n]&&PDATA[pl.n].cv;
+  var h='<section class="m-player-profile"><h4>Category profile</h4>';
+  if(cv){var ranked=CATS9.map(function(cat,ci){return {cat:cat,value:cv[ci]};}).sort(function(a,b){return b.value-a.value;});
+    h+='<div class="m-strength-pair"><div><small>Strengths</small><b>'+(ranked.filter(function(v){return v.value>0;}).slice(0,2).map(function(v){return v.cat;}).join(' · ')||'None above average')+'</b></div><div><small>Weaknesses</small><b class="m-weak">'+(ranked.filter(function(v){return v.value<0;}).slice(-2).map(function(v){return v.cat;}).join(' · ')||'None below average')+'</b></div></div><p class="muted">Last season’s category values. TO is inverted; lower turnovers is better.</p>';
+  }else h+='<p class="muted">Category strengths and weaknesses unavailable: no historical category data.</p>';
+  var data=window.PlayerAverages,stats=data&&data.players[pl.n];
+  h+='<h4>Per-game averages</h4>';
+  if(stats){h+='<p class="muted">'+esc(data.season)+' actuals · not a season forecast. '+stats.g+' games.</p><dl class="m-per-game">';
+    [['FT · made / attempted',stats.ftm.toFixed(1)+' / '+stats.fta.toFixed(1)],['FG · made / attempted',stats.fgm.toFixed(1)+' / '+stats.fga.toFixed(1)],['3PM',stats.threes],['Points',stats.pts],['Rebounds',stats.reb],['Assists',stats.ast],['Steals',stats.stl],['Blocks',stats.blk],['Turnovers',stats.to]].forEach(function(stat){h+='<div><dt>'+stat[0]+'</dt><dd>'+(typeof stat[1]==='number'?stat[1].toFixed(1):stat[1])+'</dd></div>';});
+    h+='</dl><p class="muted"><a href="'+esc(data.source)+'" target="_blank" rel="noopener">Stat source</a> · Season averages; not projected production.</p>';
+  }else h+='<p class="muted">No recorded 2025–26 NBA season averages available.</p>';
+  return h+'<p class="m-strategy">'+(state.puntCats.length?'Punting '+esc(puntLabel())+' · Coach verdict counts all nine categories.':'Balanced · all nine categories count.')+'</p><button class="ghostbtn m-manage-punts" id="mdsheetpunts">Manage punts</button></section>';
+}
 function wireMobileDraft(){
   var root=el("md"),avail=document.querySelector("#md .avail"),side=el("mdside");
   root.dataset.mobileView=mobileView;
+  var turnLabel=root.querySelector(".pkline .you");if(turnLabel)turnLabel.textContent="Your pick";
+  if(state.phase==="done"){var wait=root.querySelector(".pc-wait");if(wait)wait.textContent="Draft complete. Undo a pick to resume drafting.";}
   var pane=mobileView==="players"?el("mdplist"):side;
   pane.dataset.mobilePane=mobileView;
   pane.scrollTop=mobileScroll[mobileView]||0;
   var nav=document.createElement("nav");nav.className="mobile-nav";nav.setAttribute("aria-label","Draft navigation");
-  [["players","Players"],["team","My team"],["board","Board"],["grades","Analysis"]].forEach(function(v){
-    var b=document.createElement("button");b.type="button";b.textContent=v[1];b.setAttribute("aria-current",mobileView===v[0]?"page":"false");
-    b.addEventListener("click",function(){rememberMobileScroll();closeMobileSheet();mobileView=v[0];setState({view:v[0]==="players"?"coach":v[0]});});nav.append(b);
+  [["players","Players"],["team","My team"],["grades","Analysis"],["punt","Punts"]].forEach(function(v){
+    var b=document.createElement("button");b.type="button";b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="'+({players:'M3 3h18v18H3zM3 12h18M9 3v5h6V3',team:'M5 21v-3a7 7 0 0 1 14 0v3M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8',grades:'M4 20V10M12 20V4M20 20v-7',punt:'M4 21V3m0 0h15l-4 5 4 5H4'})[v[0]]+'"/></svg><span>'+v[1]+'</span>';b.setAttribute("aria-current",(mobileView===v[0]||mobileView==='board'&&v[0]==='team')?"page":"false");
+    b.addEventListener("click",function(){rememberMobileScroll();closeMobileSheet();mobileView=v[0];if(v[0]==='team'&&mobileRosterMode==='board')mobileRosterMode='slots';setState({view:(v[0]==="players"||v[0]==="punt")?"coach":v[0]});});nav.append(b);
   });el("mdapp").append(nav);
-  var actions=document.createElement("div");actions.className="mobile-actions";
-  var undoBtn=el("mdundo");if(undoBtn){if(mobileView==="grades")actions.append(undoBtn);else undoBtn.remove();}
-  if(mobileView==="grades")side.append(actions);
+
+  var undoBtn=el("mdundo");if(undoBtn)undoBtn.textContent="Undo pick";
+
   var scarcity=el("mdscarcity");
-  if(scarcity&&mobileView==="grades")side.prepend(scarcity);
+  if(scarcity)scarcity.remove();
   var filters=el("mdfilters"),filterClose=document.createElement("button");
   filterClose.type="button";filterClose.className="ghostbtn mobile-filter-close";filterClose.textContent="Done";
   filterClose.addEventListener("click",function(){filters.open=false;el("mdq").focus();});filters.append(filterClose);
@@ -982,17 +1076,19 @@ function wireMobileDraft(){
   sheet.addEventListener("click",function(e){if(e.target===sheet){var r=sheet.getBoundingClientRect();if(e.clientY<r.top||e.clientY>r.bottom||e.clientX<r.left||e.clientX>r.right)closeMobileSheet();}});
   if(mobileSheetPlayer!=null){
     var pl=PLAYERS[mobileSheetPlayer],info=document.createElement("div");info.className="mobile-player-extra";
-    titleBox.innerHTML='<h3 class="mobile-sheet-name">'+esc(pl.n)+'</h3><p class="mobile-sheet-sub"><span>'+esc(pl.t)+'</span><span>'+esc(pl.p.join("/"))+'</span><span>ADP '+(pl.adp==null?'—':pl.adp)+'</span></p>';
+    titleBox.innerHTML='<h3 class="mobile-sheet-name">'+esc(pl.n)+'</h3><p class="mobile-sheet-sub"><span>'+esc(pl.t)+'</span><span>'+esc(pl.p.join("/"))+'</span><span>ADP '+(pl.adp==null?'—':pl.adp)+'</span></p>'+(pl.inj?'<p class="mobile-injury m-injury-alert">'+esc(pl.inj.injury)+' · '+esc(pl.inj.ret)+'</p>':'');
     sheet.setAttribute("aria-label",pl.n+" details and draft advice");
-    info.innerHTML='<p class="muted">Last season: per-game rank '+(pl.last==null?'—':pl.last)+' · total rank '+(pl.lastTotal==null?'—':pl.lastTotal)+' · '+(pl.mpg==null?'—':pl.mpg.toFixed(1))+' MPG</p>'
-      +'<p class="muted">'+esc(pl.c.join(" · "))+' '+playoffBadge(pl)+'</p>'+(pl.inj?'<p class="mobile-injury">'+esc(injTitle(pl.inj))+'</p>':'');
-    side.prepend(info);
+    side.append(info);info.innerHTML=mobilePlayerStats(pl)+(pl.inj?'<p class="mobile-injury">'+esc(injTitle(pl.inj))+'</p>':'');
+    var manage=el('mdsheetpunts');if(manage)manage.addEventListener('click',function(){closeMobileSheet();mobileView='punt';setState({view:'coach'});});
     var draftButton=side.querySelector(".pc-draft");
     if(draftButton)draftButton.textContent="Draft "+pl.n;
     mobileReturnFocus=avail.querySelector('.prow[data-pi="'+mobileSheetPlayer+'"]')||el("mdq");
     sheet.showModal();
   }
 }
+function syncMobileViewport(){el('md').style.setProperty('--mobile-height',(window.visualViewport?window.visualViewport.height:window.innerHeight)+'px');}
+if(window.visualViewport)window.visualViewport.addEventListener('resize',syncMobileViewport);
+window.addEventListener('resize',syncMobileViewport);syncMobileViewport();
 mobileQuery.addEventListener("change",function(){rememberMobileScroll();closeMobileSheet();render();});
 function setCoachDockOpen(open){
   coachDockOpen=!!open;
@@ -1030,7 +1126,7 @@ function updateCoachDockPeek(name){
 }
 function renderDraft(){
   rememberMobileScroll();
-  if(isMobileDraft())state.view=mobileView==="players"?"coach":mobileView;
+  if(isMobileDraft())state.view=(mobileView==="players"||mobileView==="punt")?"coach":mobileView;
   var idx=state.log.length,round=Math.floor(idx/TEAMS)+1,team=idx<totalPicks()?teamForPick(idx):-1;
   var h='<div class="turnbar">';
   var liveCore="";
@@ -1148,8 +1244,11 @@ function myRoster(){
 }
 function renderSide(){
   var s=el("mdside");if(!s)return;
+  if(isMobileDraft()&&mobileView!=="players"&&mobileView!=="board"){
+    s.innerHTML=mobileView==='punt'?mobilePuntHtml():mobileView==='grades'?mobileMatchupHtml():mobileTeamHtml();wireMobileSide(s);return;
+  }
   if(state.view==="coach"){
-    s.innerHTML='<button type="button" class="pc-dock-handle" id="pc-dock-handle" aria-controls="pick-coach" aria-expanded="'+(coachDockOpen?'true':'false')+'"><span class="pc-dock-grip" aria-hidden="true"></span><span class="pc-dock-label">Pick coach</span><span class="pc-dock-more muted">'+(coachDockOpen?'Less':'More')+'</span></button><h3 class="pc-side-title">Pick coach</h3><p class="muted pc-advisory">Advice only. Drafting always takes a separate click.</p>'+pickCoachShellHtml()+renderPastAdp()+renderPuntStrategy(draftGrades());
+    s.innerHTML='<button type="button" class="pc-dock-handle" id="pc-dock-handle" aria-controls="pick-coach" aria-expanded="'+(coachDockOpen?'true':'false')+'"><span class="pc-dock-grip" aria-hidden="true"></span><span class="pc-dock-label">Pick coach</span><span class="pc-dock-more muted">'+(coachDockOpen?'Less':'More')+'</span></button><h3 class="pc-side-title">Pick coach</h3><p class="muted pc-advisory">Advice only. Drafting always takes a separate click.</p>'+pickCoachShellHtml()+(isMobileDraft()?"":renderPastAdp()+renderPuntStrategy(draftGrades()));
     s.querySelector('#pc-dock-handle').addEventListener('click',function(){setCoachDockOpen(!coachDockOpen);});
     s.querySelector('.pc-alt').addEventListener('click',function(e){var pi=parseInt(e.currentTarget.dataset.pi,10);if(isFinite(pi))evaluatePlayer(pi);});
     s.querySelector('.pc-draft').addEventListener('click',function(e){var pi=parseInt(e.currentTarget.dataset.pi,10);if(isUserTurn()&&pi===resolveFocusPi())userDraft(pi);});
@@ -1160,7 +1259,7 @@ function renderSide(){
   if(state.view==="grades"){s.innerHTML=renderGrades();wireInjToggles(s);return;}
   if(state.view==="board"){
     var h='<h3>Draft board</h3><div class="boardwrap"><table class="board"><tr><th>Rd</th>';
-    for(var t=0;t<TEAMS;t++)h+='<th>'+esc(teamName(t))+'</th>';
+    for(var t=0;t<TEAMS;t++)h+='<th>'+esc(teamName(t))+(isMobileDraft()&&t===userTeam()?'<small>Your team</small>':'')+'</th>';
     h+='</tr>';
     for(var r=0;r<state.rounds;r++){
       h+='<tr><td><b>'+(r+1)+'</b></td>';
@@ -1174,6 +1273,7 @@ function renderSide(){
       h+='</tr>';
     }
     s.innerHTML=h+'</table></div><p class="muted"><span class="vdelta g">+12</span> value: picked 12 spots later than ADP &nbsp;·&nbsp; <span class="vdelta b">-8</span> reach: picked 8 spots earlier than ADP &nbsp;·&nbsp; no number: picked at ADP or no ADP data</p>';
+    if(isMobileDraft()){var back=document.createElement('button');back.type='button';back.className='ghostbtn';back.textContent='Back to roster';back.addEventListener('click',function(){mobileRosterMode='slots';mobileView='team';setState({view:'team'});});s.prepend(back);}
     wireInjToggles(s);return;
   }else{
     var mine=[];state.log.forEach(function(pi,idx){if(teamForPick(idx)===userTeam())mine.push({pi:pi,idx:idx});});
@@ -1322,6 +1422,7 @@ function wirePuntControls(root){
 }
 function renderDone(){
   cancelPickCoach();
+  if(isMobileDraft()){renderDraft();return;}
   var h='<h2>Draft complete</h2><div class="muted">Final roster from pick #'+state.draftPos+' ('+state.rounds+' rounds, 12 teams)</div>';
   h+='<button class="bigbtn" id="mdnew2">Run it back</button>';
   if(state.userTurns.length)h+='<button class="ghostbtn" id="mdundo2" style="margin-left:8px">Undo my last pick</button>';
