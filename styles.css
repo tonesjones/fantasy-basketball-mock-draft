@@ -148,7 +148,7 @@ body{background:radial-gradient(ellipse at top right,#19352f66,transparent 55%),
 #md .punt-radar svg text{fill:var(--dl-text,var(--hatch-widget-text));font-size:10px;font-weight:700}
 #md .punt-radar svg text.punt-muted{fill:var(--dl-muted,var(--hatch-widget-muted))}
 #md .punt-radar>p{margin:4px 0 0}
-.pick-moment{position:fixed;z-index:30;right:22px;bottom:22px;display:grid;gap:2px;min-width:220px;max-width:min(90vw,340px);padding:17px 20px;border:1px solid var(--dl-border-strong,#456074);border-radius:14px;background:var(--dl-surface,#121d2c);color:var(--dl-text,#eef3f8);box-shadow:0 18px 50px #0009;animation:pick-flip .35s ease-out}
+.pick-moment{position:fixed;font-family:var(--dl-sans);z-index:30;right:22px;bottom:22px;display:grid;gap:2px;min-width:220px;max-width:min(90vw,340px);padding:17px 20px;border:1px solid var(--dl-border-strong,#456074);border-radius:14px;background:var(--dl-surface,#121d2c);color:var(--dl-text,#eef3f8);box-shadow:0 18px 50px #0009;animation:pick-flip .35s ease-out}
 .pick-moment strong{color:var(--dl-blue,#85e5bc);font-size:11px;text-transform:uppercase;letter-spacing:.1em}
 .pick-moment span{font-size:18px;font-weight:750}
 .pick-moment small{color:var(--dl-muted,#a3b1c3)}

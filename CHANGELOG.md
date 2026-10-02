@@ -1,5 +1,42 @@
 # Changelog
 
+## Phone draft room refresh (2026-10-02)
+Details: `docs/mobile-ui.md`. Desktop unchanged apart from the toast font
+fix below.
+- **Tabs:** Players, My team, Analysis, **Punts**. Board moved under My team
+  (By position / Pick order / Board, with "Back to roster").
+- **Players:** a collapsed **Past ADP** row above the list (the desktop
+  "Past ADP and still available" box). It opens as a drop-down over the list
+  (beside Filters in landscape); tapping a player opens their sheet.
+- **My team:** roster by slot or pick order, a nine-category snapshot, and
+  playoff games.
+- **Analysis:** your grade (letter, rank of 12, team value) above a card per
+  opponent with your category score (e.g. 5–4) and a per-category breakdown;
+  sort by team value, toughest matchup or team number. Before your first
+  pick it says "Matchups appear after your first pick".
+- **Punts:** the same recommendation rule as the desktop Punt advice box
+  (`PuntCore.suggest`), category toggles with explicit Commit, and the same
+  "consider at pick #N" / "watch for later" riser lists as desktop
+  (`PuntCore.nearTermRisers` / `laterRisers`).
+- **Board:** opens on your column; the round column stays pinned.
+- **Player sheet:** category strengths/weaknesses and 2025–26 per-game
+  averages (display only, from Hashtag Basketball; provenance in
+  `scripts/data-provenance/2026-10-02-per-game/`), plus "Manage punts".
+  `player-averages.js` loads the first time a phone opens a sheet, so
+  desktop never downloads it.
+- **Finished draft** stays in the phone layout: lands on My team with your
+  grade and **Run it back**; tabs and Undo still work.
+- **Pick toast** sits above the tab bar in the app font, leaving the header's
+  Undo visible. Disabled buttons look disabled. The desktop toast also gets
+  the app font (it rendered in Times).
+- **Desktop only:** the positional scarcity strip (no room for it on phones).
+- **Styles:** `mobile-approved.css` keeps its colors as variables on `:root`
+  and one block per media query; phone wording is chosen at render time.
+- **New files:** `mobile-approved.css`, `player-averages.js`, `test-mobile-views.js`.
+- **Tooling:** `scripts/verify-mobile.cjs` covers the new tabs, Past ADP,
+  Punts, the board column, toast placement and font, the finished-draft
+  screen, and a desktop page (no averages download, scarcity kept).
+
 ## Phone draft room redesign (preview branch) (2026-10-01)
 Details: `docs/mobile-redesign.md`.
 - **Palette:** navy court / maple accent on phones only; desktop unchanged.
