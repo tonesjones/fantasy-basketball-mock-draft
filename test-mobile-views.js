@@ -60,6 +60,12 @@ context.mobileRosterMode='picks';markup=context.mobileTeamHtml();assert(!markup.
 markup=context.mobilePlayerStats(data.PLAYERS.find(p=>p.n==='Nikola Jokic'));
 assert(markup.includes('Strengths')&&markup.includes('Weaknesses'));assert(markup.includes('6.1 / 7.4')&&markup.includes('9.9 / 17.4'));assert.equal((markup.match(/<dd>/g)||[]).length,9);
 markup=context.mobilePlayerStats(data.PLAYERS.find(p=>p.n==='Tyrese Haliburton'));assert(markup.includes('No recorded 2025–26'));
+// Averages load on demand: before they arrive the sheet says so, and a failed load says so instead of claiming no data.
+const averages=context.window.PlayerAverages;delete context.window.PlayerAverages;
+markup=context.mobilePlayerStats(data.PLAYERS.find(p=>p.n==='Nikola Jokic'));assert(markup.includes('Loading per-game averages')&&!markup.includes('<dd>')&&!markup.includes('No recorded'));
+context.averagesLoad='failed';assert(context.mobilePlayerStats(data.PLAYERS.find(p=>p.n==='Nikola Jokic')).includes('unavailable right now'));
+context.averagesLoad=null;context.window.PlayerAverages=averages;
+assert(!fs.readFileSync('./index.html','utf8').includes('player-averages.js'),'index.html does not load the averages up front');
 assert.equal(data.PLAYERS.filter(p=>context.window.PlayerAverages.players[p.n]).length,253);
 for(const stats of Object.values(context.window.PlayerAverages.players)){assert(stats.g>0);assert(stats.ftm<=stats.fta&&stats.fgm<=stats.fga);for(const value of Object.values(stats))assert(Number.isFinite(value)&&value>=0);}
 state.phase='done';markup=context.mobileTeamHtml();assert(markup.includes('id="mdmobilerunback"')&&markup.includes('gradebadge'),'finished draft shows grade and Run it back');state.phase='draft';

@@ -1045,6 +1045,17 @@ function wireMobileSide(root){
   root.querySelectorAll('[data-mobile-punt-player]').forEach(function(b){b.addEventListener('click',function(){evaluatePlayer(Number(b.dataset.mobilePuntPlayer));});});
   wireInjToggles(root);
 }
+/* player-averages.js (81 KB, display-only) loads the first time a phone opens a player sheet; desktop never fetches it.
+   averagesLoad: null (not started or done), "loading", or "failed" (the next sheet open retries). */
+var averagesLoad=null;
+function loadPlayerAverages(onDone){
+  if(window.PlayerAverages||averagesLoad==="loading")return;
+  averagesLoad="loading";
+  var tag=document.createElement("script");tag.src="player-averages.js";
+  tag.onload=function(){averagesLoad=null;onDone();};
+  tag.onerror=function(){averagesLoad="failed";tag.remove();onDone();};
+  document.head.append(tag);
+}
 function mobilePlayerStats(pl){
   var cv=PDATA[pl.n]&&PDATA[pl.n].cv;
   var h='<section class="m-player-profile"><h4>Category profile</h4>';
@@ -1053,7 +1064,8 @@ function mobilePlayerStats(pl){
   }else h+='<p class="muted">Category strengths and weaknesses unavailable: no historical category data.</p>';
   var data=window.PlayerAverages,stats=data&&data.players[pl.n];
   h+='<h4>Per-game averages</h4>';
-  if(stats){h+='<p class="muted">'+esc(data.season)+' actuals · not a season forecast. '+stats.g+' games.</p><dl class="m-per-game">';
+  if(!data)h+='<p class="muted m-avg-wait">'+(averagesLoad==="failed"?'Per-game averages unavailable right now.':'Loading per-game averages…')+'</p>';
+  else if(stats){h+='<p class="muted">'+esc(data.season)+' actuals · not a season forecast. '+stats.g+' games.</p><dl class="m-per-game">';
     [['FT · made / attempted',stats.ftm.toFixed(1)+' / '+stats.fta.toFixed(1)],['FG · made / attempted',stats.fgm.toFixed(1)+' / '+stats.fga.toFixed(1)],['3PM',stats.threes],['Points',stats.pts],['Rebounds',stats.reb],['Assists',stats.ast],['Steals',stats.stl],['Blocks',stats.blk],['Turnovers',stats.to]].forEach(function(stat){h+='<div><dt>'+stat[0]+'</dt><dd>'+(typeof stat[1]==='number'?stat[1].toFixed(1):stat[1])+'</dd></div>';});
     h+='</dl><p class="muted"><a href="'+esc(data.source)+'" target="_blank" rel="noopener">Stat source</a> · Season averages; not projected production.</p>';
   }else h+='<p class="muted">No recorded 2025–26 NBA season averages available.</p>';
@@ -1101,8 +1113,13 @@ function wireMobileDraft(){
     var pl=PLAYERS[mobileSheetPlayer],info=document.createElement("div");info.className="mobile-player-extra";
     titleBox.innerHTML='<h3 class="mobile-sheet-name">'+esc(pl.n)+'</h3><p class="mobile-sheet-sub"><span>'+esc(pl.t)+'</span><span>'+esc(pl.p.join("/"))+'</span><span>ADP '+(pl.adp==null?'—':pl.adp)+'</span></p>'+(pl.inj?'<p class="mobile-injury m-injury-alert">'+esc(pl.inj.injury)+' · '+esc(pl.inj.ret)+'</p>':'');
     sheet.setAttribute("aria-label",pl.n+" details and draft advice");
-    side.append(info);info.innerHTML=mobilePlayerStats(pl)+(pl.inj?'<p class="mobile-injury">'+esc(injTitle(pl.inj))+'</p>':'');
-    var manage=el('mdsheetpunts');if(manage)manage.addEventListener('click',function(){closeMobileSheet();mobileView='punt';setState({view:'coach'});});
+    var sheetPi=mobileSheetPlayer,fillInfo=function(){
+      info.innerHTML=mobilePlayerStats(pl)+(pl.inj?'<p class="mobile-injury">'+esc(injTitle(pl.inj))+'</p>':'');
+      var manage=el('mdsheetpunts');if(manage)manage.addEventListener('click',function(){closeMobileSheet();mobileView='punt';setState({view:'coach'});});
+    };
+    side.append(info);fillInfo();
+    /* Refresh only the stats block once the averages arrive, so sheet scroll and focus stay put. */
+    loadPlayerAverages(function(){if(mobileSheetPlayer===sheetPi&&info.isConnected)fillInfo();});
     var draftButton=side.querySelector(".pc-draft");
     if(draftButton)draftButton.textContent="Draft "+pl.n;
     mobileReturnFocus=avail.querySelector('.prow[data-pi="'+mobileSheetPlayer+'"]')||el("mdq");

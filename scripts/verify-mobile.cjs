@@ -22,8 +22,9 @@ async function main() {
   try {
     for (const viewport of [{width:390,height:844},{width:320,height:568},{width:430,height:932},{width:667,height:375}]) {
       const page = await browser.newPage({viewport});
-      const errors = [];
+      const errors = [], averageFetches = [];
       page.on('pageerror', e => errors.push(e.message));
+      page.on('request', r => { if (r.url().includes('player-averages.js')) averageFetches.push(r.url()); });
       await page.goto(`http://127.0.0.1:${server.address().port}`);
       assert.equal(await page.locator('#mdstart').innerText(), 'Start draft', 'Phone setup wording');
       await page.locator('#mdstart').click();
@@ -70,6 +71,9 @@ async function main() {
       await row.locator('.prank').click();
       await page.locator('#mdplayersheet[open]').waitFor();
       assert.ok((await page.locator('.mobile-player-info h3').innerText()).length > 0);
+      await page.locator('#mdplayersheet .m-per-game, #mdplayersheet .m-player-profile p.muted:not(.m-avg-wait)').first().waitFor();
+      assert.equal(await page.locator('#mdplayersheet .m-avg-wait').count(), 0, 'Per-game averages finish loading in the sheet');
+      assert.equal(averageFetches.length, 1, 'Averages are fetched once, on the first sheet open');
       const keptScroll = await page.locator('#mdplist').evaluate(n=>n.scrollTop);
       await page.keyboard.press('Escape');
       assert.equal(await page.locator('#mdplayersheet').evaluate(n=>n.open), false);
@@ -179,6 +183,24 @@ async function main() {
       }
       await page.close();
       console.log(`PASS mobile ${viewport.width}×${viewport.height}, draft, undo, navigation, scroll, desktop resize`);
+    }
+    {
+      const page = await browser.newPage({viewport:{width:1280,height:900}});
+      const fetched = [], errors = [];
+      page.on('request', r => { if (r.url().includes('player-averages.js')) fetched.push(r.url()); });
+      page.on('pageerror', e => errors.push(e.message));
+      await page.goto(`http://127.0.0.1:${server.address().port}`);
+      assert.equal(await page.locator('#mdstart').innerText(), 'Start Mock Draft', 'Desktop setup wording unchanged');
+      await page.locator('#mdstart').click();
+      await page.locator('.viewtabs').waitFor();
+      await page.locator('.prow[data-pi]').first().locator('.draftbtn').click();
+      await page.waitForTimeout(500);
+      assert.equal(await page.locator('#mdpickmoment').evaluate(n=>/Times/.test(getComputedStyle(n).fontFamily)), false, 'Desktop pick toast uses the app font');
+      assert.equal(await page.locator('#mdscarcity').isVisible(), true, 'Desktop keeps scarcity');
+      assert.deepEqual(fetched, [], 'Desktop never downloads player-averages.js');
+      assert.deepEqual(errors, []);
+      await page.close();
+      console.log('PASS desktop 1280×900, no per-game averages download, scarcity, toast font');
     }
   } finally { await browser.close(); await new Promise(resolve => server.close(resolve)); }
 }
