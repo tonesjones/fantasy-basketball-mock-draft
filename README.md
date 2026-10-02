@@ -34,7 +34,7 @@ Press **Start draft**. Your picks are marked; the 11 CPU teams draft automatical
 
 ### On mobile
 
-The layout collapses to a single column with compact two-line player rows; filters, scarcity, INJ detail, tabs, and the draft board work the same as on desktop (tap targets for intel that used to be hover-only). Draft state saves in the browser via `localStorage`, so a refresh mid-draft resumes where you left off (browser saving can vary for local `file://` URLs — prefer the hosted app or serve the folder over HTTP). Use **Clear saved draft** or **Restart** to begin fresh.
+Phones get their own draft room with bottom tabs: **Players**, **My team** (roster, category snapshot, and the draft board), **Analysis** (your grade and your category score against each opponent), and **Punts** (the same punt recommendation as desktop, with explicit Commit). Tapping a player opens a sheet with coach advice, category strengths, and 2025–26 per-game averages. See `docs/mobile-ui.md`. Draft state saves in the browser via `localStorage`, so a refresh mid-draft resumes where you left off (browser saving can vary for local `file://` URLs — prefer the hosted app or serve the folder over HTTP). Use **Clear saved draft** or **Restart** to begin fresh.
 
 ## What it does
 
@@ -53,6 +53,8 @@ The layout collapses to a single column with compact two-line player rows; filte
 - `styles.css` — all styling; the final "Geist theme" layer sets the look (tokens at the top of that layer).
 - `mobile.css` — phone layout tokens, pick header, rows and nav (see `docs/mobile-redesign.md`).
 - `mobile-sheet.css` — phone player sheet styles.
+- `mobile-approved.css` — phone draft room refresh (tabs, Analysis, Punts, finished draft); phones only.
+- `player-averages.js` — display-only 2025–26 per-game averages for the phone player sheet.
 - `fonts/` — self-hosted Geist Sans and Geist Mono (SIL OFL, see `fonts/OFL.txt`), so the app still needs no network.
 - `app.js` — UI: state, rendering, event wiring, save/restore.
 - `fx.js` — optional pointer-spotlight effect (visual only; off for reduced motion and touch).

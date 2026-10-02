@@ -1,5 +1,29 @@
 # Changelog
 
+## Phone draft room refresh (2026-10-02)
+Details: `docs/mobile-ui.md`. Desktop unchanged.
+- **Tabs:** Players, My team, Analysis, **Punts**. Board moved under My team
+  (By position / Pick order / Board, with "Back to roster").
+- **My team:** roster by slot or pick order, a nine-category snapshot, and
+  playoff games.
+- **Analysis:** your grade (letter, rank of 12, team value) above a card per
+  opponent with your category score (e.g. 5–4) and a per-category breakdown;
+  sort by team value, toughest matchup or team number.
+- **Punts:** the same recommendation rule as the desktop Punt advice box
+  (`PuntCore.suggest`), category toggles with explicit Commit, and available
+  players near your next pick whose rank rises under the punt.
+- **Player sheet:** category strengths/weaknesses and 2025–26 per-game
+  averages (display only, from Hashtag Basketball; provenance in
+  `scripts/data-provenance/2026-10-02-per-game/`), plus "Manage punts".
+- **Finished draft** stays in the phone layout: lands on My team with your
+  grade and **Run it back**; tabs and Undo still work.
+- **Pick toast** sits above the tab bar in the app font, leaving the header's
+  Undo visible. Disabled buttons look disabled.
+- **Removed on phones:** the positional scarcity strip and Past ADP in the coach.
+- **New files:** `mobile-approved.css`, `player-averages.js`, `test-mobile-views.js`.
+- **Tooling:** `scripts/verify-mobile.cjs` updated for the new tabs, Punts,
+  toast placement and the finished-draft screen.
+
 ## Phone draft room redesign (preview branch) (2026-10-01)
 Details: `docs/mobile-redesign.md`.
 - **Palette:** navy court / maple accent on phones only; desktop unchanged.
