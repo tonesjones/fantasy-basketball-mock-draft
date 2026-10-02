@@ -206,6 +206,7 @@ function userDraft(pi){
   var checkpoint={log:state.log.slice(),rngState:state.rngState};
   var name=PLAYERS[pi].n;
   var next=simulateToUser(state.log.concat([pi]),state.rngState);
+  if(isMobileDraft()&&next.log.length>=totalPicks())mobileView="team";
   var cpu=next.log.length-(checkpoint.log.length+1);
   _pendingLive="You drafted "+name+". "+(cpu>0?cpu+" CPU pick"+(cpu===1?"":"s")+" followed. ":"");
   setState({log:next.log,rngState:next.rngState,userTurns:state.userTurns.concat([checkpoint]).slice(-20),phase:next.log.length>=totalPicks()?"done":"draft",page:isMobileDraft()?state.page:0});
@@ -931,7 +932,7 @@ function sortLabel(s){
 /* Mobile dock: coach collapsed to a compact strip by default so the player
  * list keeps most of the screen; the handle expands the full card. */
 var coachDockOpen=false;
-var mobileView="players",mobileScroll={},mobileSheetPlayer=null,mobileReturnFocus=null;
+var mobileView=state.phase==="done"?"team":"players",mobileScroll={},mobileSheetPlayer=null,mobileReturnFocus=null;
 var mobileQuery=window.matchMedia("(max-width:700px)");
 function isMobileDraft(){return mobileQuery.matches&&(state.phase==="draft"||state.phase==="done");}
 function rememberMobileScroll(){
@@ -1421,7 +1422,7 @@ function wirePuntControls(root){
 }
 function renderDone(){
   cancelPickCoach();
-  if(isMobileDraft()){if(mobileView==="players")mobileView="team";renderDraft();return;}
+  if(isMobileDraft()){renderDraft();return;}
   var h='<h2>Draft complete</h2><div class="muted">Final roster from pick #'+state.draftPos+' ('+state.rounds+' rounds, 12 teams)</div>';
   h+='<button class="bigbtn" id="mdnew2">Run it back</button>';
   if(state.userTurns.length)h+='<button class="ghostbtn" id="mdundo2" style="margin-left:8px">Undo my last pick</button>';

@@ -45,3 +45,8 @@ markup=context.mobilePlayerStats(data.PLAYERS.find(p=>p.n==='Tyrese Haliburton')
 assert.equal(data.PLAYERS.filter(p=>context.window.PlayerAverages.players[p.n]).length,253);
 for(const stats of Object.values(context.window.PlayerAverages.players)){assert(stats.g>0);assert(stats.ftm<=stats.fta&&stats.fgm<=stats.fga);for(const value of Object.values(stats))assert(Number.isFinite(value)&&value>=0);}
 console.log('mobile views: opponent order, nine categories, adaptive punts, roster picks and sourced stat lines passed');
+
+let completedRenders=0;context.cancelPickCoach=()=>{};context.renderDraft=()=>completedRenders++;context.isMobileDraft=()=>true;
+vm.runInContext(source.slice(source.indexOf("function renderDone(){"),source.indexOf("function playoffBadge(pl){")),context);
+context.mobileView="grades";context.renderDone();assert.equal(context.mobileView,"grades");
+context.mobileView="players";context.renderDone();assert.equal(context.mobileView,"players");assert.equal(completedRenders,2,"completed mobile views retain navigation");
