@@ -126,3 +126,14 @@
   #md.mobile-draft .mobile-nav button{min-height:52px}
 }
 @media(max-width:700px){#md .mobile-player-sheet .m-injury-alert{color:#ffa5a5;font-size:12px;line-height:1.5;margin:10px 0 0}}
+
+/* Reserve room for actions even at three-digit pick numbers. */
+@media(max-width:700px){
+  #md.mobile-draft .turnbar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 10px}
+  #md.mobile-draft .turnbar>span[style]{display:none}
+  #md.mobile-draft .pickhead{grid-column:1;grid-row:1;gap:10px;min-width:0}
+  #md.mobile-draft #mdnew{grid-column:2;grid-row:1;justify-self:end}
+  #md.mobile-draft .nextpick{grid-column:1;grid-row:2;font-size:12px;line-height:1.5}
+  #md.mobile-draft #mdundo{grid-column:2;grid-row:2;font-size:12px;padding:6px 10px;justify-self:end}
+  #md.mobile-draft .pkline .muted{font-size:12px}
+}
