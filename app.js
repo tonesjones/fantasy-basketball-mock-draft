@@ -903,7 +903,7 @@ function renderSetup(){
   h+='<div class="muted" style="margin-top:8px">Drafts save automatically in this browser. Data version: '+DATA_VERSION+'. · <button type="button" class="textlink" id="mdclear">Clear saved draft</button></div>';
   h+=playoffSettingsHtml();
   h+=renderDataHealth();
-  if(mobileQuery.matches)h=h.replace('12 teams, snake draft. 270-player pool from early 2026-27 preseason rankings. You draft your slot; the other 11 teams auto-pick.','12 teams. Snake draft. Pick your spot. We draft the other teams.').replace('Start Mock Draft','Start draft');
+  if(mobileQuery.matches)h=h.replace('12 teams, snake draft. 270-player pool from early 2026-27 preseason rankings. You draft your slot; the other 11 teams auto-pick.','12 teams. Snake draft. Pick your spot. We draft the other teams.').replace('Start Mock Draft','Start draft').replace('Data health','Data &amp; sources');
   el("mdapp").innerHTML=h;
   el("mdapp").querySelectorAll(".posbtn").forEach(function(b){b.addEventListener("click",function(){setState({draftPos:parseInt(b.getAttribute("data-pos"),10)});});});
   el("mdrounds").addEventListener("change",function(e){setState({rounds:parseInt(e.target.value,10)});});
@@ -1045,9 +1045,9 @@ function wireMobileDraft(){
     var b=document.createElement("button");b.type="button";b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="'+({players:'M3 3h18v18H3zM3 12h18M9 3v5h6V3',team:'M5 21v-3a7 7 0 0 1 14 0v3M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8',grades:'M4 20V10M12 20V4M20 20v-7',punt:'M4 21V3m0 0h15l-4 5 4 5H4'})[v[0]]+'"/></svg><span>'+v[1]+'</span>';b.setAttribute("aria-current",(mobileView===v[0]||mobileView==='board'&&v[0]==='team')?"page":"false");
     b.addEventListener("click",function(){rememberMobileScroll();closeMobileSheet();mobileView=v[0];if(v[0]==='team'&&mobileRosterMode==='board')mobileRosterMode='slots';setState({view:(v[0]==="players"||v[0]==="punt")?"coach":v[0]});});nav.append(b);
   });el("mdapp").append(nav);
-  var actions=document.createElement("div");actions.className="mobile-actions";
+
   var undoBtn=el("mdundo");if(undoBtn)undoBtn.textContent="Undo pick";
-  if(mobileView==="grades")side.append(actions);
+
   var scarcity=el("mdscarcity");
   if(scarcity)scarcity.remove();
   var filters=el("mdfilters"),filterClose=document.createElement("button");
