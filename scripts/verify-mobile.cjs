@@ -25,6 +25,7 @@ async function main() {
       const errors = [];
       page.on('pageerror', e => errors.push(e.message));
       await page.goto(`http://127.0.0.1:${server.address().port}`);
+      assert.equal(await page.locator('#mdstart').innerText(), 'Start draft', 'Phone setup wording');
       await page.locator('#mdstart').click();
       await page.locator('.mobile-nav').waitFor();
       assert.equal(await page.locator('.mobile-nav button').count(), 4);
@@ -81,11 +82,15 @@ async function main() {
       await page.getByRole('button',{name:'My team',exact:true}).click();
       await page.locator('[data-mobile-roster="board"]').click();
       await page.locator('table.board').waitFor();
+      const youBox = await page.locator('table.board th', {hasText:'Your team'}).boundingBox();
+      assert.ok(youBox && youBox.x >= 0 && youBox.x + youBox.width <= viewport.width + 1, 'Board opens on your column');
       assert.equal(await page.locator('.mobile-nav button[aria-current="page"]').innerText(), 'My team', 'Board lives under My team');
       await page.getByRole('button',{name:'Back to roster',exact:true}).click();
       await page.locator('.m-roster-toggle').waitFor();
       await page.getByRole('button',{name:'Analysis',exact:true}).click();
-      assert.equal(await page.locator('.m-matchup').count(), 11, 'Analysis lists every opponent');
+      assert.equal(await page.locator('.m-match-empty').isVisible(), true, 'No matchup cards before your first pick');
+      assert.equal(await page.locator('.m-matchup').count(), 0);
+      assert.equal(await page.locator('#mdscarcity').count(), 0, 'Scarcity is desktop-only');
       await page.getByRole('button',{name:'Punts',exact:true}).click();
       const commit = page.locator('#mdmobilepuntcommit');
       assert.equal(await commit.isDisabled(), true);
@@ -121,6 +126,7 @@ async function main() {
       const after = await page.evaluate(() => JSON.parse(localStorage.getItem('fantasy-basketball-mock-draft.v2')).state.log.length);
       assert.ok(after > before, 'Draft button executes the pick');
       await page.getByRole('button',{name:'Analysis',exact:true}).click();
+      assert.equal(await page.locator('.m-matchup').count(), 11, 'Analysis lists every opponent after a pick');
       await page.locator('#mdundo').click();
       assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('fantasy-basketball-mock-draft.v2')).state.log.length),before);
       await page.getByRole('button',{name:'Players',exact:true}).click();
@@ -133,6 +139,7 @@ async function main() {
       await page.locator('.mobile-nav').waitFor({state:'detached'});
       assert.equal(await page.locator('.mobile-nav').count(), 0);
       assert.equal(await page.locator('.viewtabs').isVisible(), true);
+      assert.equal(await page.locator('#mdscarcity').isVisible(), true, 'Desktop keeps scarcity');
       assert.equal(await page.locator('.avail').isVisible(), true);
       assert.equal(await page.locator('.side').isVisible(), true);
       if(viewport.width===390){
@@ -143,12 +150,26 @@ async function main() {
         await page.locator('#mdfilters summary').click();
         await page.locator('[data-f="All"]').click();
         await page.getByRole('button',{name:'Done',exact:true}).click();
+        let pastAdpChecked=false;
         for(let turn=0;turn<13;turn++){
+          if(!pastAdpChecked && await page.locator('#mdpastadp').count()){
+            await page.locator('#mdpastadp summary').click();
+            const item = page.locator('#mdpastadp [data-past-adp-pi]').first();
+            const name = await item.locator('b').innerText();
+            await item.click();
+            await page.locator('#mdplayersheet[open]').waitFor();
+            assert.equal(await page.locator('.mobile-sheet-name').innerText(), name, 'Past ADP opens the player sheet');
+            await page.keyboard.press('Escape');
+            assert.equal(await page.locator('#mdpastadp').evaluate(n=>n.open), false, 'Past ADP closes once you choose a player');
+            pastAdpChecked=true;
+          }
           await page.locator('.prow[data-pi]').first().locator('.prank').click();
           await page.locator('.pc-draft:not([disabled])').waitFor();
           await page.locator('.pc-draft').click();
         }
+        assert.ok(pastAdpChecked, 'Past ADP row appeared during the draft');
         assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('fantasy-basketball-mock-draft.v2')).state.phase),'done');
+        assert.equal(await page.locator('#mdpastadp').count(), 0, 'No Past ADP on a finished draft');
         assert.equal(await page.evaluate(()=>document.body.classList.contains('mobile-drafting')),true,'Finished draft keeps the phone layout');
         assert.equal(await page.locator('#md').getAttribute('data-mobile-view'),'team','Finished draft lands on My team');
         assert.equal(await page.locator('dialog[open]').count(),0);
