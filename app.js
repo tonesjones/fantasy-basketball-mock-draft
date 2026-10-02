@@ -995,7 +995,7 @@ function mobilePuntHtml(){
   var h='<h3>Punt strategy</h3><p class="muted">Start with one category. Add another when the tradeoff helps.</p><p class="m-strategy">Committed: <b>'+(state.puntCats.length?esc(puntLabel()):'Balanced')+'</b></p><h4>Punts to consider</h4>';
   if(!choices.length)h+='<p class="muted">'+(!outlook.ready||!covered?'No recommendations yet. Draft at least three rated players with 80% roster coverage.':'No additional category is far enough behind to recommend a punt.')+'</p>';
   choices.forEach(function(row){h+='<button class="m-punt-recommend ghostbtn" data-mobile-punt-explore="'+CATS9[row.ci]+'"><b>Explore '+CATS9[row.ci]+'</b><span>#'+row.rank+'/'+TEAMS+' · '+row.gap.toFixed(1)+' value per pick behind the room’s middle. A hard climb with near-pick options.</span></button>';});
-  h+='<p class="muted">Updates after every pick. Recommendations require a bottom-three category, a gap of at least 0.5 historical value per player, and no one- or two-pick catch-up path.</p><h4>Explore your options</h4><div class="m-punt-options" role="group" aria-label="Categories to punt">';
+  h+='<p class="muted">Updates after every pick. Only large, hard-to-recover deficits qualify.</p><h4>Explore your options</h4><div class="m-punt-options" role="group" aria-label="Categories to punt">';
   CATS9.forEach(function(cat){var on=cats.indexOf(cat)>=0;h+='<button type="button" class="ghostbtn" data-mobile-punt="'+cat+'" aria-pressed="'+on+'"'+(!on&&cats.length>=PuntCore.MAX_PUNTS?' disabled':'')+'>'+cat+'</button>';});
   h+='</div><p class="muted">Exploring: '+(cats.length?esc(PuntCore.label(cats)):'Balanced')+'. '+(sameCats(cats,state.puntCats)?'Matches your committed strategy.':'Commit to apply these changes.')+'</p><div class="m-punt-actions"><button class="bigbtn" id="mdmobilepuntcommit"'+(sameCats(cats,state.puntCats)?' disabled':'')+'>'+(cats.length?'Commit '+esc(PuntCore.label(cats)):'Commit balanced')+'</button><button class="ghostbtn" id="mdmobilepuntclear">Clear punts</button></div>';
   if(cats.length===3)h+='<p class="muted">With three punts, you need five wins from the remaining six categories.</p>';
@@ -1008,7 +1008,7 @@ function mobilePuntHtml(){
     if(!risers.length)h+='<p class="muted">No players with category data in this pick window.</p>';
     risers.forEach(function(row){var pl=PLAYERS[row.pi];h+='<button class="m-punt-player" data-mobile-punt-player="'+row.pi+'"><span><b>'+esc(pl.n)+'</b><small>'+esc(pl.p.join('/'))+' · ADP '+consRank(pl).toFixed(1)+' · available rank #'+row.baseRank+' → #'+row.puntRank+'</small></span><strong class="'+(row.gain>0?'m-gain':row.gain<0?'m-weak':'')+'">'+(row.gain>0?'+':'')+row.gain+'<small>rank change</small></strong></button>';});
   }
-  return h+'<details class="m-method"><summary>How punt value works</summary><p class="muted">Existing historical category values, excluding all selected punts. Rank changes compare rated, available players. Up to three punts; TO values are inverted so fewer turnovers rate higher. Coach verdicts still count all nine categories. Missing category data cannot support a punt ranking.</p></details>';
+  return h+'<details class="m-method"><summary>How punt value works</summary><p class="muted">Recommendations need a bottom-three category, at least 0.5 value per player behind the room’s median, and no one- or two-pick catch-up path. Value uses existing historical category values, excluding all selected punts. Rank changes compare rated, available players. Up to three punts; TO values are inverted so fewer turnovers rate higher. Coach verdicts still count all nine categories. Missing category data cannot support a punt ranking.</p></details>';
 }
 function wireMobileSide(root){
   var sort=root.querySelector('#mdmatchsort');if(sort)sort.addEventListener('change',function(){mobileMatchSort=sort.value;rememberMobileScroll();renderSide();el('mdside').scrollTop=mobileScroll[mobileView]||0;});
@@ -1037,6 +1037,7 @@ function mobilePlayerStats(pl){
 function wireMobileDraft(){
   var root=el("md"),avail=document.querySelector("#md .avail"),side=el("mdside");
   root.dataset.mobileView=mobileView;
+  var turnLabel=root.querySelector(".pkline .you");if(turnLabel)turnLabel.textContent="Your pick";
   var pane=mobileView==="players"?el("mdplist"):side;
   pane.dataset.mobilePane=mobileView;
   pane.scrollTop=mobileScroll[mobileView]||0;
@@ -1073,7 +1074,7 @@ function wireMobileDraft(){
   sheet.addEventListener("click",function(e){if(e.target===sheet){var r=sheet.getBoundingClientRect();if(e.clientY<r.top||e.clientY>r.bottom||e.clientX<r.left||e.clientX>r.right)closeMobileSheet();}});
   if(mobileSheetPlayer!=null){
     var pl=PLAYERS[mobileSheetPlayer],info=document.createElement("div");info.className="mobile-player-extra";
-    titleBox.innerHTML='<h3 class="mobile-sheet-name">'+esc(pl.n)+'</h3><p class="mobile-sheet-sub"><span>'+esc(pl.t)+'</span><span>'+esc(pl.p.join("/"))+'</span><span>ADP '+(pl.adp==null?'—':pl.adp)+'</span></p>';
+    titleBox.innerHTML='<h3 class="mobile-sheet-name">'+esc(pl.n)+'</h3><p class="mobile-sheet-sub"><span>'+esc(pl.t)+'</span><span>'+esc(pl.p.join("/"))+'</span><span>ADP '+(pl.adp==null?'—':pl.adp)+'</span></p>'+(pl.inj?'<p class="mobile-injury m-injury-alert">'+esc(pl.inj.injury)+' · '+esc(pl.inj.ret)+'</p>':'');
     sheet.setAttribute("aria-label",pl.n+" details and draft advice");
     side.append(info);info.innerHTML=mobilePlayerStats(pl)+(pl.inj?'<p class="mobile-injury">'+esc(injTitle(pl.inj))+'</p>':'');
     var manage=el('mdsheetpunts');if(manage)manage.addEventListener('click',function(){closeMobileSheet();mobileView='punt';setState({view:'coach'});});

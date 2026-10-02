@@ -34,7 +34,7 @@
   #md.mobile-draft .mobile-nav svg{width:20px;height:20px}
   #md.mobile-draft .mobile-nav button[aria-current="page"]{color:#9ce9bf;background:#19271f;border-radius:10px 10px 0 0}
   #md.mobile-draft .mobile-nav button[aria-current="page"]::before{background:#9ce9bf}
-  #md.mobile-draft .side{padding:12px 0 24px}
+  #md.mobile-draft .side{padding:12px 0 24px;overflow-x:hidden}
   #md.mobile-draft h3{font-size:23px;letter-spacing:-.5px;text-transform:none;margin:10px 0}
   #md.mobile-draft h4,#md .mobile-player-sheet h4{font-size:16px;letter-spacing:0;text-transform:none;margin:24px 0 10px}
   #md.mobile-draft .muted,#md .mobile-player-sheet .muted{font-size:12px;line-height:1.6;color:#abbab1}
@@ -119,3 +119,10 @@
 @media(max-width:700px) and (prefers-reduced-motion:reduce){
   #md *,body.mobile-drafting .pick-moment{animation:none!important;transition:none!important;scroll-behavior:auto!important}
 }
+
+@media(max-width:700px) and (max-height:500px){
+  #md.mobile-draft .turnbar{padding:6px 0;gap:2px 8px}
+  #md.mobile-draft .nextpick,#md.mobile-draft #mdpager{display:none}
+  #md.mobile-draft .mobile-nav button{min-height:52px}
+}
+@media(max-width:700px){#md .mobile-player-sheet .m-injury-alert{color:#ffa5a5;font-size:12px;line-height:1.5;margin:10px 0 0}}
