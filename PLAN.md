@@ -133,4 +133,10 @@ Needed before item 3 can be tested live:
 ## Status (3 October 2026)
 
 - Done: review rechecked; plan written.
-- In progress: item 1.
+- Item 1: merged `main` (PR into `test/yahoo-draft-copilot`). Tests, worker
+  tests, format check and data audit pass. Data files match `main`. Checked
+  locally on desktop and phone with a saved Yahoo board. On phones, the
+  Engine's take line now gets its own row; it overlapped the next-pick line
+  under main's new phone header. Waiting on the owner's live Yahoo check on
+  the branch preview.
+- Next: item 2.

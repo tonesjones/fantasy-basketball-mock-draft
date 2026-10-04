@@ -5,8 +5,8 @@
   "scripts": {
     "test": "node run-tests.js",
     "audit-data": "node audit-data.js",
-    "format": "npx --yes prettier@3 --write draft-core.js draft-analysis.js punt-core.js playoff-core.js data-health.js audit-data.js _worker.js run-tests.js scripts/rebuild-rank.js scripts/refresh-adp.js scripts/hashtag-adp-to-csv.js",
-    "format:check": "npx --yes prettier@3 --check draft-core.js draft-analysis.js punt-core.js playoff-core.js data-health.js audit-data.js _worker.js run-tests.js scripts/rebuild-rank.js scripts/refresh-adp.js scripts/hashtag-adp-to-csv.js"
+    "format": "npx --yes prettier@3 --write draft-core.js draft-analysis.js punt-core.js playoff-core.js data-health.js audit-data.js _worker.js run-tests.js scripts/rebuild-rank.js scripts/refresh-adp.js scripts/hashtag-adp-to-csv.js scripts/cleanup-pages-previews.js",
+    "format:check": "npx --yes prettier@3 --check draft-core.js draft-analysis.js punt-core.js playoff-core.js data-health.js audit-data.js _worker.js run-tests.js scripts/rebuild-rank.js scripts/refresh-adp.js scripts/hashtag-adp-to-csv.js scripts/cleanup-pages-previews.js"
   },
   "engines": {
     "node": ">=18"
