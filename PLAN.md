@@ -1,10 +1,13 @@
-# Plan: land Yahoo Draft Copilot on main (Step 0)
+# Plan: one codebase for Draft Lab and Yahoo mode
 
 Background and findings: [docs/yahoo-copilot-review-2026-10-03.md](docs/yahoo-copilot-review-2026-10-03.md).
 
-Goal: get Yahoo live-draft mode onto `main`, hidden unless configured, with its
-known bugs fixed. Single user only. Multi-user sign-in is Step 1, not this
-plan.
+Goal: stop maintaining two versions. Yahoo live-draft mode moves onto `main`
+and shows only on the site that has the Yahoo secrets. Afterward, every change
+goes to `main`, and the `test/yahoo-draft-copilot` branch and the
+`tony-draft-lab-yahoo` Pages project go away.
+
+Yahoo mode stays single-user. It reads Yahoo with the owner's token only.
 
 Work on a branch off `main` (`claude/yahoo-on-main`). Port the Yahoo work
 instead of rebasing all 33 branch commits: the branch has merge commits, and
@@ -27,7 +30,7 @@ Acceptance:
 ### 2. Move the Worker routes into `_worker.js`
 
 Serve `/api/yahoo/watch`, `/api/yahoo/board` and `/oauth/*` from the Pages
-worker, same-origin. Keep the `WATCH_TOKEN` gate for now.
+worker, same-origin. Keep the `WATCH_TOKEN` gate.
 
 Acceptance:
 - Port the existing `worker/test-worker.mjs` cases into `test-worker.js`, and
@@ -49,66 +52,51 @@ Acceptance:
 - On a configured project, the Yahoo setup appears.
 - A test covers both cases.
 
-### 4. Match picks by Yahoo player ID
-
-Add a Yahoo player ID to each pool player. Match by ID first, and fall back to
-the name.
+### 4. Retire the separate Yahoo version
 
 Acceptance:
-- A pick whose Yahoo name differs from the pool name but whose ID matches is
-  removed from the available list (test).
-- The board shows a count of unmatched Yahoo picks when there are any.
-- `audit-data.js` reports pool players with no Yahoo ID.
-
-### 5. Freshness from the device's own clock
-
-Acceptance:
-- Freshness uses the time the response arrived on the device, not `fetchedAt`.
-- Tests: a board stays fresh with a device clock skewed ±60 s, and goes stale
-  25 s after the last successful sync regardless of skew.
-
-### 6. Assign picks by team, not snake order
-
-Map `team_key` to draft slot when the watch starts. Use the pick's team for
-rosters, grades, "your pick", and the pick-landed toast.
-
-Acceptance:
-- Test with a traded pick: the pick lands on the receiving team's roster, and
-  "your pick" fires on the traded-in pick.
-- Boards without traded picks behave as before.
-
-### 7. Allow gaps in the board
-
-Acceptance:
-- A board with keepers at picks 5 and 18 and picks 1–4 made syncs without an
-  error (test).
-- A board where an already-made pick disappears is still rejected as older.
-
-### 8. Retire the separate Yahoo Pages project
-
-Acceptance:
+- A real Yahoo draft syncs on the chosen Pages project before anything is
+  removed.
 - `tools/yahoo-copilot/publish.py` and `sync.py` are removed. The `yh1` manual
   sync code either goes too or is documented as a fallback.
 - `scripts/cleanup-pages-previews.js` and the README no longer list
   `tony-draft-lab-yahoo`.
 - The README says which Pages project runs Yahoo mode and which secrets it
   needs.
+- The owner deletes the `tony-draft-lab-yahoo` project, the standalone
+  `yahoo-draft-copilot` Worker and the `test/yahoo-draft-copilot` branch.
 
-## Before Step 1
+## Mock-lobby access test (owner, any time)
 
-Have a friend open a Yahoo mock lobby the owner isn't in, and test whether
-the owner's token can read it. The result decides whether mock-only users need
-their own Yahoo sign-in right away.
+Join a Yahoo mock lobby with a second Yahoo account, then connect to that room
+from Draft Lab signed in as the main account. If the board loads and updates,
+the owner's token can read lobbies it didn't join. If Yahoo returns 401 or
+403, other users would need their own Yahoo sign-in.
+
+## Later (not needed to merge)
+
+Bugs from the review. Each needs a test when it's done.
+
+- Match picks by Yahoo player ID, not just name. Worth doing first: a name
+  mismatch leaves a drafted player available. Needs Yahoo IDs added to the
+  pool.
+- Measure freshness with the device's own clock. A slow device clock never
+  marks the board stale.
+- Assign picks by `team_key`. Only matters in leagues with traded picks.
+- Allow gaps in the board. Only matters in keeper leagues. Untested.
+
+Multi-user sign-in, one poller per draft, and the copilot UX changes are
+Steps 1–3 in the review. They depend on whether other people will use Yahoo
+mode.
 
 ## Open decisions
 
 - Which Pages project runs Yahoo mode: `tony-draft-lab-preview` (recommended,
   matching Pick Coach) or production.
 - Whether to keep the `yh1` manual sync code as a fallback.
-- Source for Yahoo player IDs: the Yahoo ADP workbook, if it has them, or a
-  one-time lookup through the Yahoo API.
 
 ## Status (3 October 2026)
 
-- Done: review rechecked against `d425e4b`; this plan written.
-- Next: item 1.
+- Done: review rechecked against `d425e4b`; this plan written and trimmed to
+  the merge.
+- Next: item 1. Items 1 and 4 are mechanical enough to run on Sonnet.
