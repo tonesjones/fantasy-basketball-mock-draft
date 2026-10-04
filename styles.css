@@ -670,6 +670,7 @@ body{background:transparent!important}
 #md .yhrow textarea{font-family:var(--dl-mono);font-size:11px}
 #md .yhrow input:focus,#md .yhrow textarea:focus{border-color:var(--dl-muted);box-shadow:0 0 0 3px #ffffff14;outline:none}
 #md .yhsync summary{color:var(--dl-muted)}
+#md a.bigbtn{display:inline-block;text-decoration:none}
 #mdapp:has(#mdstart) .yhrow,#mdapp:has(#mdstart) .yhsync{text-align:left}
 @media(prefers-reduced-motion:reduce){#md .livechip::before{animation:none}}
 #md .yhrow{align-items:center}#md .yhrow textarea{min-height:44px;height:44px;resize:vertical}

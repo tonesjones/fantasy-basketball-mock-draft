@@ -77,4 +77,23 @@ assert.throws(function () { sandbox.yahooApplySnapshot(olderBoard); }, /older bo
 var missingPick = { ...board, boardHash: "board-2", picks: [{ overallPick: 2, playerName: "Nikola Jokic" }] };
 assert.throws(function () { sandbox.yahooApplySnapshot(missingPick); }, /missing pick/);
 
+/* Sign-in flow: the Worker finds the user's slot, and may not know it yet. */
+sandbox._yahooAwaitingOrder = false;
+sandbox.liveSyncEnsure = function () { sandbox.ensured = (sandbox.ensured || 0) + 1; };
+sandbox.liveSyncStatus = function (m) { sandbox.status = m; };
+vm.runInNewContext(extractFn("yahooHandleBoard"), sandbox);
+sandbox.state = { view: "team", q: "", f: "All", sort: "cons", playoffStart: 20 };
+var waiting = { ...board, draftId: "478.l.999", userSlot: null, userTeamName: "Tony" };
+sandbox.yahooHandleBoard(waiting);
+assert.equal(sandbox._yahooAwaitingOrder, true, "a board with no slot waits for the draft order");
+assert.equal(sandbox.state.yahooLive, undefined, "nothing is applied until the slot is known");
+assert.match(sandbox.status, /Waiting for Yahoo to set the draft order/);
+assert.equal(sandbox.ensured, 1, "polling starts while waiting for the draft order");
+
+sandbox.yahooHandleBoard({ ...waiting, userSlot: 4 });
+assert.equal(sandbox._yahooAwaitingOrder, false);
+assert.equal(sandbox.state.draftPos, 4, "the slot from Yahoo becomes the user's draft position");
+assert.equal(sandbox.state.yahooLive.userTeamName, "Tony");
+assert.match(sandbox.status, /You're Tony, pick 4\./);
+
 console.log("yahoo live client tests passed");
