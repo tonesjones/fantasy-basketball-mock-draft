@@ -87,7 +87,7 @@ See **`docs/pick-coach.md`** for secret setup (Production vs Preview), pinned mo
 
 Primary: **[https://tony-draft-lab.pages.dev](https://tony-draft-lab.pages.dev)** (deploys from `main`).
 
-Local: open `index.html` directly, or serve this folder with any static server. Draft state is stored only in the browser that created it. A `DATA_VERSION` bump (most recently `2026-09-29b`, the Yahoo ADP update — see `docs/data-refresh-2026-09-29.md`) invalidates older saved drafts. Yahoo ADP is from the supplied 29 Sep workbook; Fantrax remains from Hashtag's 25 Sep table.
+Local: open index.html directly, or serve this folder with any static server. Draft state is stored only in the browser that created it. Each data refresh bumps `DATA_VERSION` in `app.js`, which drops older saved drafts. The current version is `2026-10-04`. Yahoo and Fantrax ADP use Hashtag Basketball's 4 October table. See `docs/data-refresh-2026-10-04.md` for changes and injury-review limitations.
 
 Run every logic check with:
 

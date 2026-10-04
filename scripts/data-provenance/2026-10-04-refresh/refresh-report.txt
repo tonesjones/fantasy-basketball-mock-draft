@@ -1,0 +1,48 @@
+Matched pool players: 257
+Value changes: 406 (30 moved >= 3)
+  Mark Williams adpF 113.3 -> 136.7 (consensus 111.3 -> 124.8)
+  Daniel Gafford adp 107.9 -> 123 (consensus 132.4 -> 159.7)
+  Jonathan Kuminga adpF 220 -> 207 (consensus 141.2 -> 144.4)
+  Khaman Maluach adpF 181.2 -> 170.2 (consensus 153.7 -> 150.3)
+  Rui Hachimura adp 107.7 -> 118.7 (consensus 132.6 -> 150.7)
+  Shaedon Sharpe adpF 190 -> 199.5 (consensus 190.0 -> 199.5)
+  Daniel Gafford adpF 229.1 -> 220.5 (consensus 132.4 -> 159.7)
+  Rui Hachimura adpF 236.3 -> 228.1 (consensus 132.6 -> 150.7)
+  Keaton Wagler adpF 219.5 -> 212.3 (consensus 149.4 -> 146.6)
+  Yaxel Lendeborg adpF 170.8 -> 163.8 (consensus 147.5 -> 144.7)
+  DeMar DeRozan adp 115.4 -> 108.9 (consensus 129.4 -> 124.0)
+  Kyle Filipowski adpF 206 -> 211.6 (consensus 140.2 -> 141.8)
+  Luke Kennard adp 104.1 -> 109.6 (consensus 104.1 -> 135.9)
+  Aaron Nesmith adpF 210.7 -> 205.7 (consensus 134.5 -> 135.6)
+  Bennedict Mathurin adpF 178.2 -> 182.8 (consensus 150.2 -> 149.7)
+  Nikola Vucevic adpF 195.2 -> 190.7 (consensus 143.0 -> 145.4)
+  AJ Green adp 104.2 -> 108.6 (consensus 127.8 -> 134.3)
+  Wendell Carter Jr. adp 114.1 -> 118.2 (consensus 145.7 -> 151.0)
+  Kon Knueppel adp 41.7 -> 45.8 (consensus 43.8 -> 46.3)
+  Christian Braun adpF 184.5 -> 180.4 (consensus 154.4 -> 154.5)
+  Devin Vassell adpF 157.3 -> 153.3 (consensus 142.0 -> 140.0)
+  Mikel Brown Jr. adpF 180.8 -> 176.9 (consensus 151.4 -> 151.3)
+  Pelle Larsson adpF 175 -> 178.9 (consensus 175.0 -> 178.9)
+  Jerami Grant adpF 209.1 -> 205.3 (consensus 148.4 -> 144.8)
+  Cam Johnson adpF 170.1 -> 166.6 (consensus 170.1 -> 166.6)
+  Herbert Jones adpF 204 -> 200.6 (consensus 201.0 -> 200.2)
+  Brandon Ingram adp 62.5 -> 65.8 (consensus 69.3 -> 71.6)
+  Al Horford adp 104.2 -> 107.5 (consensus 127.9 -> 132.7)
+  Ausar Thompson adp 88.4 -> 85.2 (consensus 84.7 -> 82.5)
+  Kelly Oubre Jr. adpF 232.4 -> 229.4 (consensus 144.5 -> 140.4)
+Newly published: 4
+  Luke Kennard adpF null -> 243.6
+  Gradey Dick adpF null -> 243.6
+  Goga Bitadze adpF null -> 243.9
+  Yang Hansen adpF null -> 244
+Now blank (will be nulled): 2
+  Adem Bona adp 104.6 -> null
+  Duncan Robinson adp 108.8 -> null
+Pool players absent from the table (values kept): 13
+  Donte DiVincenzo, Jonas Valanciunas, Clint Capela, Nicolas Batum, Jaden Ivey, Aaron Holiday, Jeremy Sochan, Haywood Highsmith, Ochai Agbaji, D'Angelo Russell, Cam Thomas, Jonathan Isaac, Jonathan Mogbo
+Table players with a Yahoo ADP not in the pool (add candidates): 2
+  Bronny James Jr. LAL Yahoo 105.1 Fantrax 242.6
+  Jordan Poole NO Yahoo 112.7 Fantrax 240.4
+Team / position differences (not written; review by hand): 2
+  Rob Dillingham: team CHA -> CHI, pos PG/SG -> PG/SG
+  Buddy Hield: team CHI -> CHA, pos SF/SG -> SF/SG
