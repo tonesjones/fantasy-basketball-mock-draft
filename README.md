@@ -93,7 +93,7 @@ Format the engine modules with `npm run format`. On every push to `main` and eve
 
 ### Data version
 
-Each data refresh bumps `DATA_VERSION` in `app.js`, which drops older saved drafts. The current version is `2026-09-29b`. It uses Yahoo ADP from the 29 Sep workbook and Fantrax ADP from Hashtag's 25 Sep table. See `docs/data-refresh-2026-09-29.md`.
+Each data refresh bumps `DATA_VERSION` in `app.js`, which drops older saved drafts. The current version is `2026-10-04`. Yahoo and Fantrax ADP use Hashtag Basketball's 4 October table. See `docs/data-refresh-2026-10-04.md` for changes and injury-review limitations.
 
 ### Preview cleanup
 

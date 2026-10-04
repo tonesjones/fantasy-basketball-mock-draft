@@ -123,7 +123,7 @@ function wireScarcityToggles(root){
 var TEAMS=12;
 var CORE=window.DraftCore;
 var BASE_SLOTS=["PG","SG","G","SF","PF","F","C","C","Util","Util","BN","BN","BN"];
-var DATA_VERSION="2026-09-29b";
+var DATA_VERSION="2026-10-04";
 var STORAGE_KEY="fantasy-basketball-mock-draft.v2";
 var HW=(typeof window!=="undefined"&&window.hatchWidget)?window.hatchWidget:null;
 var DEFAULTS={phase:"setup",draftPos:6,rounds:13,log:[],q:"",f:"All",view:"team",sort:"cons",puntCats:[],playoffStart:20,page:0,seed:123456789,rngState:123456789,userTurns:[],filtersOpen:false,scarcityOpen:false,focusPi:null};
@@ -246,9 +246,9 @@ function pickLabel(idx){var r=Math.floor(idx/TEAMS)+1;var w=idx%TEAMS+1;return "
 var HEALTH=window.DataHealth.audit(PLAYERS,typeof PDATA!=="undefined"?PDATA:{},CATS);
 function renderDataHealth(label){
   var h='<details class="setup-details"><summary><b>'+(label||'Data health')+'</b> &middot; '+(HEALTH.players-HEALTH.missingAdp.length)+'/'+HEALTH.players+' players with Yahoo ADP &middot; '+esc(DATA_VERSION)+'</summary>';
-  h+='<p class="muted">Yahoo\'s 29 September workbook publishes All Drafts ADP for 190 players, ending at an average pick of 121.4. ADP is an average pick number, so several players can share the same range. Later entries show dashes. In this app\'s pool, '+HEALTH.missingAdp.length+' players have no Yahoo ADP. That reflects the source\'s limited coverage, rather than a failed import. Players absent from the workbook kept their previous Yahoo values.</p>';
+  h+='<p class="muted">Hashtag Basketball\'s 4 October table publishes Yahoo ADP for 188 players, ending at an average pick of 123. ADP is an average pick number, so several players can share the same range. Later entries have no published Yahoo value. In this app\'s pool, '+HEALTH.missingAdp.length+' players have no Yahoo ADP. That reflects the source\'s limited coverage, rather than a failed import. The 13 pool players absent from the table kept their previous values.</p>';
   h+='<p class="muted">To cover later picks, computer teams use a Yahoo and Fantrax consensus, with Fantrax alone where Yahoo has no value. Crowded late-draft values carry less weight, and Fantrax ADPs above 200 are compressed. Players without either ADP follow all listed players, ordered by last season\'s rank. The Yahoo ADP column stays blank where Yahoo has no value; we do not invent Yahoo estimates.</p>';
-  h+='<p class="muted">Fantrax ADP, teams and positions come from Hashtag Basketball\'s 25 September snapshot. Built-in Rank adjusts consensus by up to 20 places toward 2025-26 production. Players flagged INJ receive no production adjustment. Tap an INJ badge for the injury, return outlook and source.</p>';
+  h+='<p class="muted">Yahoo and Fantrax ADP come from Hashtag Basketball\'s 4 October snapshot. Teams and positions retain the previously reviewed data. Built-in Rank adjusts consensus by up to 20 places toward 2025-26 production. Players flagged INJ receive no production adjustment. Tap an INJ badge for the injury, return outlook and source. Injury reports have individual dates; Suggs and Whitmore still need a current availability confirmation.</p>';
   h+='<p class="muted">Category scarcity and player strength tags use last season\'s per-game stats. Role arrows compare ADP with last season\'s rank. Neither predicts this season\'s production. For selected players who changed teams, Pick coach also names former teammates who may gain minutes or touches. These notes are curated, and the app has no projected minutes or ranks.</p>';
   h+='<p class="muted">Other gaps: '+HEALTH.missingLast.length+' players without a prior-season rank; '+HEALTH.untagged.length+' without category labels; '+HEALTH.placeholderTeams.length+' with an unknown team. Unavailable historical ranks stay blank. Category labels are informational; scarcity uses the underlying stats. These checks verify consistency within the app, but do not establish that the pool includes every NBA player.</p>';
   if(HEALTH.errors.length||HEALTH.missingData.length||HEALTH.orphanData.length)h+='<p>Data consistency issues: '+(HEALTH.errors.length+HEALTH.missingData.length+HEALTH.orphanData.length)+'. Run node audit-data.js for details.</p>';
@@ -1193,7 +1193,7 @@ function renderDraft(){
   h+='<div class="filters">';
   ["All","PG","SG","SF","PF","C"].forEach(function(f){h+='<button class="fchip'+(state.f===f?' sel':'')+'" data-f="'+f+'">'+f+'</button>';});
   h+='</div><div class="filters"><span class="muted">Sort:</span>';
-  var sorts=[["cons","Consensus","Yahoo + Fantrax ADP blend (each platform's thin late-draft tail counts less); what CPU teams draft from"],["rank","Rank","Draft Lab rank: consensus ADP nudged toward 2025-26 nine-cat production (up to 20 spots)"],["adp","ADP","Yahoo All Drafts ADP (29 Sep 2026 workbook)"],["last","Last · PER","2025-26 nine-category per-game rank (Basketball Monster / Hashtag)"],["lastTotal","Last · TOT","2025-26 nine-category TOTALS rank — derived from Basketball-Reference season totals, not a published rank"]];
+  var sorts=[["cons","Consensus","Yahoo + Fantrax ADP blend (each platform's thin late-draft tail counts less); what CPU teams draft from"],["rank","Rank","Draft Lab rank: consensus ADP nudged toward 2025-26 nine-cat production (up to 20 spots)"],["adp","ADP","Yahoo ADP (Hashtag Basketball, 4 Oct 2026)"],["last","Last · PER","2025-26 nine-category per-game rank (Basketball Monster / Hashtag)"],["lastTotal","Last · TOT","2025-26 nine-category TOTALS rank — derived from Basketball-Reference season totals, not a published rank"]];
   if(state.puntCats.length)sorts.push(["punt","Punt value","Historical "+puntCatCount()+"-category value, excluding "+puntLabel()]);
   sorts.forEach(function(s){h+='<button class="fchip'+((state.sort||"cons")===s[0]?' sel':'')+'" data-sort="'+s[0]+'" title="'+s[2]+'">'+s[1]+'</button>';});
   h+='</div></details>';

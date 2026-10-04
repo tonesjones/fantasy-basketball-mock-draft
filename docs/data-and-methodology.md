@@ -8,11 +8,11 @@ Moved out of the README so it can stay focused on using and running the app. Con
 
 The category-scarcity panel shows, for each of the nine categories, the share of draftable above-replacement per-game category value still on the board, color-coded green → red and updating live as picks happen. Each player's nine per-game category values (`cv`, stored in `player-data.js`) are BM-style z-scores against the frozen 225-player 2025-26 reference population (the 2026-09-12 derivation; the 26 players added 2026-09-13 who appeared in 2025-26 are z-scored on that same scale so every value stays comparable), in CATS9 order (PTS/REB/AST/STL/BLK/3PM/FG%/FT%/TO); FG%/FT% are volume-weighted and TO is inverted so positive means fewer turnovers. Replacement level is the mean `cv` of consensus ranks 150–170. It is a depletion gauge against last season's per-game production, not a projection model or a nine-category team evaluation.
 
-## Consensus ADP and built-in rank (2026-09-29)
+## Consensus ADP and built-in rank (2026-10-04)
 
 - **Consensus ADP** (`DraftCore.marketRank`, used by the CPU drafters, the Consensus sort, scarcity replacement level, Pick coach and punt advice): the mean of Yahoo and Fantrax ADP where both are in their reliable range. Each platform saturates late — Yahoo's list stops near 125 with ~80 players from 100 up, and Fantrax's rarely-drafted tail piles up at 200–244 — so a value's weight fades to 0.25 across its platform's saturated band (Yahoo 100–125, Fantrax 150–200) and Fantrax values past 200 are compressed (200 + excess/4). Players neither platform lists sort after all listed players, by last-season rank.
 - **Built-in Rank** (the PLAYERS order): consensus ADP − 0.4 × clamp(consensus − last-season rank, ±50), i.e. nudged up to 20 spots toward 2025-26 production; no nudge for INJ players, players without 2025-26 data, or unlisted players. Regenerate with `node scripts/rebuild-rank.js`; `test-rank-order.js` fails if it is stale.
-- **Refreshing ADP**: Yahoo values were refreshed from the user-supplied 29 Sep Yahoo workbook's All Drafts column; Fantrax remains at the 25 Sep Hashtag snapshot. See `docs/data-refresh-2026-09-29.md` and `docs/adp-refresh-2026-09-28.md` for provenance and commands. **Never use ESPN ADP or rankings** (including blended columns that include ESPN).
+- **Refreshing ADP**: Yahoo and Fantrax values use Hashtag Basketball's 4 October table. See `docs/data-refresh-2026-10-04.md` for provenance and commands. **Never use ESPN ADP or rankings** (including blended columns that include ESPN).
 
 Full rationale and evidence: `docs/adp-rankings-review-2026-09-28.md`.
 
@@ -38,7 +38,7 @@ Live at **[tony-draft-lab-preview.pages.dev](https://tony-draft-lab-preview.page
 
 The setup and draft screens include a **Data health** disclosure with coverage counts and limitations. Hovering a scarcity category chip lists the top three remaining contributors in that category.
 
-A red **INJ** badge next to a player's name marks 10 players with unresolved injuries as of 29 September 2026. Hovering the badge shows the injury, evidence/context, expected return date, and source. See `docs/data-refresh-2026-09-29.md` for the latest source check and outstanding gaps.
+A red **INJ** badge marks 12 players. The 4 October review added Ingram and Harris; older records retain their individual source dates. Suggs and Whitmore need current availability confirmation. Tap or hover the badge for details. See `docs/data-refresh-2026-10-04.md` for evidence and limitations.
 
 ```bash
 node audit-data.js
