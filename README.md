@@ -82,6 +82,7 @@ Each verdict carries a source label:
 To test lean verdicts on a preview or local host, add `?leanDemo=1` to the URL. `docs/pick-coach.md` covers secret setup, the pinned model (`jev-1.13.0`), CORS, the request payload, and the UI contract.
 
 ## Develop
+Local: open index.html directly, or serve this folder with any static server. Draft state is stored only in the browser that created it. Each data refresh bumps `DATA_VERSION` in `app.js`, which drops older saved drafts. The current version is `2026-10-04`. Yahoo and Fantrax ADP use Hashtag Basketball's 4 October table. See `docs/data-refresh-2026-10-04.md` for changes and injury-review limitations.
 
 Run every logic check:
 

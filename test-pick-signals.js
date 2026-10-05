@@ -71,10 +71,8 @@ t("consensus matches DraftCore market rank", function () {
   PLAYERS.forEach(function (p) { assert.strictEqual(S.consensus(p), sandbox.DraftCore.marketRank(p), p.n); });
 });
 t("consensus falls back to one source", function () {
-  var p = PLAYERS.filter(function (x) { return x.adp == null && x.adpF != null && x.adpF <= 150; })[0]
-    || PLAYERS.filter(function (x) { return x.adp != null && x.adpF == null; })[0];
-  assert.ok(p, "need a single-platform player");
-  assert.strictEqual(S.consensus(p), p.adp != null ? p.adp : p.adpF, p.n);
+  assert.strictEqual(S.consensus({ adp: 80, adpF: null }), 80);
+  assert.strictEqual(S.consensus({ adp: null, adpF: 120 }), 120);
 });
 
 // --- loader sanity (fail loudly) ---

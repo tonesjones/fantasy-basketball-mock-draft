@@ -31,5 +31,7 @@ assert.equal(injuryBundle.PLAYERS.find(p=>p.n==='Brandon Miller').inj,null,'clea
 assert.ok(injuryBundle.PLAYERS.find(p=>p.n==='Dereck Lively II').inj,'uncleared player stays flagged');
 assert.ok(injuryBundle.PLAYERS.find(p=>p.n==='Kristaps Porzingis').inj,'indefinite absence stays flagged');
 assert.ok(injuryBundle.PLAYERS.find(p=>p.n==='Kon Knueppel').inj,'unresolved opening-night availability stays flagged');
-assert.equal(Object.keys(injuryBundle.INJ).length,10);
+assert.ok(injuryBundle.PLAYERS.find(p=>p.n==='Brandon Ingram').inj,'confirmed opening-night absence stays flagged');
+assert.ok(injuryBundle.PLAYERS.find(p=>p.n==='Tobias Harris').inj,'unresolved calf injury stays flagged');
+assert.equal(Object.keys(injuryBundle.INJ).length,12);
 console.log(`Data health tests passed; ${report.players} bundled players have matching data records.`);
