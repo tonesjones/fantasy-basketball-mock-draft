@@ -10,7 +10,6 @@ node_modules/
 
 # Codex / agent worktrees and scratch
 .codex-*/
-yh-sync.json
 .audit/
 *.orig
 *.rej

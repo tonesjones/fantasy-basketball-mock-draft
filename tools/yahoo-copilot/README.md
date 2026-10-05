@@ -20,34 +20,23 @@ clicks in the draft room himself.
   `PLAYERS` literal from `index.html` in a vm sandbox — exactly the way
   the browser and the test suites do — then ranks available players by
   true value and evaluates the top candidates at the given pick.
-- `sync.py` — compact board codec for Draft Lab's Yahoo Live view.
-  `encode_sync(teams, slot, rounds, yahoo_names)` ->
-  `yh1.<teams>.<slot>.<rounds>.~b64,~b64,...`; `decode_sync` tolerates a
-  full `#`-link; `sync_code_for_state(state)` builds a code from a poll
-  state; `sync_link(base_url, ...)` builds a tappable link. ~2.5KB for a
-  full 140-pick board. The page maps names to its pool itself
-  (diacritic-insensitive), so off-pool Yahoo picks ride along as names.
-- `publish.py` — in-app sync transport (Tony's call 2026-09-22: sync lives
-  in the app, not in chat). `run --state state.json --dir <repo-root>
-  --project NAME --account ACCT [--interval 20] [--max-mins 180]` polls
-  Yahoo, encodes the board, writes `yh-sync.json` into the deploy dir,
-  and redeploys via `cf.py` direct upload (only changed files go up).
-  The page fetches `yh-sync.json` every ~15s during a Yahoo Live draft
-  and auto-applies newer boards. `create-project --project NAME --account
-  ACCT` does the one-time Pages project setup. Chat codes / `#yh1` links
-  / the manual Sync-board paste remain as fallback.
+- `worker/`: the Cloudflare Worker behind the Draft Lab Yahoo site. Each
+  user signs in with their own Yahoo account. See `worker/README.md`.
 
-## Draft Lab Yahoo Live view (index.html)
+## Draft Lab Yahoo Live view (app.js)
 
-Setup screen: start an empty board from the teams/slot/rounds selects
-(auto-sync fills it in once the publisher is running), or paste a sync
-code/link as a fallback (`#yh1.` fragments auto-load). Mid-draft, a "Sync
-board" disclosure under the turn bar shows auto-sync status plus a manual
-paste fallback. Yahoo mode: no CPU picks, no draft buttons — Tony clicks in
-the Yahoo room; Draft Lab mirrors the board, his roster, and shows the
-engine's take on his turns. Picks outside the 270-player pool consume the
-correct pick slot, show the Yahoo name, and stay out of roster math.
-State persists in localStorage so a refresh resumes mid-draft.
+On the setup screen, a user clicks **Sign in with Yahoo**, pastes their
+draft-room URL, and clicks **Connect draft**. Draft Lab takes the user's team
+and pick from Yahoo, so there is no slot to choose. If Yahoo hasn't set the
+draft order yet, the page waits and keeps checking.
+
+During the draft, the **Sync board** disclosure under the turn bar shows the
+user's team and pick, the sync status, and **Disconnect Yahoo**. Yahoo mode
+has no CPU picks and no active draft buttons. The user picks in the Yahoo
+room, and Draft Lab mirrors the board and the user's roster and shows the
+engine's take on their turns. A pick outside the 270-player pool still takes
+its pick slot and shows the Yahoo name, but stays out of roster math. The
+draft persists in `localStorage`, so a refresh resumes mid-draft.
 
 ## Auth
 

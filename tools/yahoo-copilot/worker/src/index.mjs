@@ -1,22 +1,33 @@
 const YAHOO_API = "https://fantasysports.yahooapis.com";
 const YAHOO_TOKEN_URL = "https://api.login.yahoo.com/oauth2/get_token";
-const SESSION_KEY = "watch:active";
-const OAUTH_REFRESH_KEY = "oauth:refresh-token";
 const OAUTH_STATE_PREFIX = "oauth:state:";
-const SESSION_TTL_SECONDS = 8 * 60 * 60;
+const LOGIN_PREFIX = "login:";
+const SESSION_PREFIX = "session:";
+const USER_PREFIX = "user:";
+const WATCH_PREFIX = "watch:";
+const WATCH_TTL_SECONDS = 8 * 60 * 60;
+const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60;
+/* KV's minimum expiration. The page redeems the code immediately after the redirect. */
+const LOGIN_CODE_TTL_SECONDS = 60;
 const DEFAULT_ORIGIN = "https://tony-draft-lab-yahoo.pages.dev";
 
-let tokenCache = null;
+/* Access tokens per Yahoo user, kept only for the life of this isolate. */
+const tokenCache = new Map();
+
+class SignedOutError extends Error {}
+
+function pageOrigin(env) {
+  return env.PAGE_ORIGIN || DEFAULT_ORIGIN;
+}
 
 function corsHeaders(request, env) {
   const origin = request.headers.get("Origin");
-  const allowed = env.PAGE_ORIGIN || DEFAULT_ORIGIN;
   const headers = {
     "Cache-Control": "no-store",
     "Content-Type": "application/json; charset=utf-8",
     Vary: "Origin",
   };
-  if (origin === allowed) headers["Access-Control-Allow-Origin"] = origin;
+  if (origin === pageOrigin(env)) headers["Access-Control-Allow-Origin"] = origin;
   return headers;
 }
 
@@ -44,50 +55,98 @@ function html(status, body) {
 }
 
 function oauthPage(message) {
-  return `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Draft Lab Yahoo setup</title><style>body{font:16px system-ui;max-width:540px;margin:10vh auto;padding:24px;color:#18202b}input,button{box-sizing:border-box;width:100%;padding:12px;margin:8px 0}button{cursor:pointer;font-weight:700}.note{color:#596579;font-size:14px}</style><h1>Draft Lab Yahoo setup</h1>${message}`;
+  return `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Draft Lab Yahoo sign-in</title><style>body{font:16px system-ui;max-width:540px;margin:10vh auto;padding:24px;color:#18202b}</style><h1>Draft Lab Yahoo sign-in</h1>${message}`;
 }
 
-function randomState() {
+function randomToken() {
   const bytes = crypto.getRandomValues(new Uint8Array(32));
+  return base64Url(bytes);
+}
+
+function base64Url(bytes) {
   return btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
-async function sameSecret(actual, expected) {
-  if (!actual || !expected) return false;
-  const enc = new TextEncoder();
-  const [a, b] = await Promise.all([
-    crypto.subtle.digest("SHA-256", enc.encode(actual)),
-    crypto.subtle.digest("SHA-256", enc.encode(expected)),
-  ]);
-  const av = new Uint8Array(a);
-  const bv = new Uint8Array(b);
-  let diff = av.length ^ bv.length;
-  for (let i = 0; i < Math.max(av.length, bv.length); i++) {
-    diff |= (av[i] || 0) ^ (bv[i] || 0);
-  }
-  return diff === 0;
+function bytesFromBase64(value) {
+  const raw = atob(String(value).replace(/-/g, "+").replace(/_/g, "/"));
+  return Uint8Array.from(raw, (c) => c.charCodeAt(0));
 }
 
-async function authorized(request, env) {
-  const header = request.headers.get("Authorization") || "";
-  const match = /^Bearer (.+)$/.exec(header);
-  return sameSecret(match && match[1], env.WATCH_TOKEN);
+async function sha256(value) {
+  const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return [...new Uint8Array(bytes)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+async function encryptionKey(env) {
+  const raw = env.TOKEN_ENC_KEY ? bytesFromBase64(env.TOKEN_ENC_KEY) : null;
+  if (!raw || (raw.length !== 16 && raw.length !== 32)) {
+    throw new Error("TOKEN_ENC_KEY must be a base64 16- or 32-byte key.");
+  }
+  return crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["encrypt", "decrypt"]);
+}
+
+/* The Yahoo user ID is bound as additional data, so a stored token only decrypts under its own user. */
+async function sealRefreshToken(env, guid, refreshToken) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const sealed = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv, additionalData: new TextEncoder().encode(guid) },
+    await encryptionKey(env),
+    new TextEncoder().encode(refreshToken),
+  );
+  return { iv: base64Url(iv), ct: base64Url(new Uint8Array(sealed)) };
+}
+
+async function openRefreshToken(env, guid, record) {
+  const plain = await crypto.subtle.decrypt(
+    { name: "AES-GCM", iv: bytesFromBase64(record.iv), additionalData: new TextEncoder().encode(guid) },
+    await encryptionKey(env),
+    bytesFromBase64(record.ct),
+  );
+  return new TextDecoder().decode(plain);
+}
+
+async function saveUser(env, guid, refreshToken) {
+  const sealed = await sealRefreshToken(env, guid, refreshToken);
+  await env.YAHOO_SESSIONS.put(`${USER_PREFIX}${guid}`, JSON.stringify({ ...sealed, updatedAt: new Date().toISOString() }));
+}
+
+async function limited(request, env, reason) {
+  if (!env.AUTH_LIMITER) return false;
+  const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+  const result = await env.AUTH_LIMITER.limit({ key: `${reason}:${ip}` });
+  return !result.success;
 }
 
 async function rejectUnauthorized(request, env) {
-  if (env.AUTH_LIMITER) {
-    const colo = request.cf && request.cf.colo ? request.cf.colo : "unknown";
-    const limited = await env.AUTH_LIMITER.limit({ key: `bad-auth:${colo}` });
-    if (!limited.success) {
-      return json(request, env, 429, errorBody("rate_limited", "Too many failed authorization attempts."));
-    }
+  if (await limited(request, env, "bad-session")) {
+    return json(request, env, 429, errorBody("rate_limited", "Too many failed sign-in attempts."));
   }
-  return json(request, env, 401, errorBody("unauthorized", "A valid watch token is required."));
+  return json(request, env, 401, errorBody("signed_out", "Sign in with Yahoo to continue."));
+}
+
+function bearer(request) {
+  const match = /^Bearer (.+)$/.exec(request.headers.get("Authorization") || "");
+  return match ? match[1] : "";
+}
+
+/* Returns the signed-in Yahoo user ID, or null. A session whose user disconnected is removed. */
+async function sessionUser(request, env) {
+  const token = bearer(request);
+  if (!token) return null;
+  const key = `${SESSION_PREFIX}${await sha256(token)}`;
+  const raw = await env.YAHOO_SESSIONS.get(key);
+  if (!raw) return null;
+  const { guid } = JSON.parse(raw);
+  if (!(await env.YAHOO_SESSIONS.get(`${USER_PREFIX}${guid}`))) {
+    await env.YAHOO_SESSIONS.delete(key);
+    return null;
+  }
+  return { guid, sessionKey: key };
 }
 
 function ensureAllowedOrigin(request, env) {
   const origin = request.headers.get("Origin");
-  return !origin || origin === (env.PAGE_ORIGIN || DEFAULT_ORIGIN);
+  return !origin || origin === pageOrigin(env);
 }
 
 function mlidFromInput(value) {
@@ -111,12 +170,7 @@ function mlidFromInput(value) {
 
 function parseWatchInput(raw) {
   if (!raw || typeof raw !== "object") throw new Error("Request body must be JSON.");
-  const mlid = mlidFromInput(raw.roomUrl || raw.mlid);
-  const slot = Number(raw.userSlot ?? raw.slot);
-  if (!Number.isInteger(slot) || slot < 1 || slot > 20) {
-    throw new Error("Draft slot must be an integer from 1 through 20.");
-  }
-  return { mlid, slot };
+  return { mlid: mlidFromInput(raw.roomUrl || raw.mlid) };
 }
 
 function dicts(node, out = []) {
@@ -139,19 +193,8 @@ function leagueSub(payload, name) {
   return found[name];
 }
 
-async function getAccessToken(env, fetchImpl, force = false) {
-  if (env.YAHOO_ACCESS_TOKEN && !force) return env.YAHOO_ACCESS_TOKEN;
-  if (!force && tokenCache && tokenCache.expiresAt > Date.now() + 60_000) return tokenCache.value;
-  const storedRefresh = env.YAHOO_SESSIONS ? await env.YAHOO_SESSIONS.get(OAUTH_REFRESH_KEY) : null;
-  const refreshToken = storedRefresh || env.YAHOO_REFRESH_TOKEN;
-  if (!env.YAHOO_CLIENT_ID || !env.YAHOO_CLIENT_SECRET || !refreshToken) {
-    throw new Error("Yahoo OAuth secrets are not configured.");
-  }
+async function requestToken(env, fetchImpl, params) {
   const basic = btoa(`${env.YAHOO_CLIENT_ID}:${env.YAHOO_CLIENT_SECRET}`);
-  const body = new URLSearchParams({
-    grant_type: "refresh_token",
-    refresh_token: refreshToken,
-  });
   const response = await fetchImpl(YAHOO_TOKEN_URL, {
     method: "POST",
     headers: {
@@ -159,36 +202,51 @@ async function getAccessToken(env, fetchImpl, force = false) {
       Authorization: `Basic ${basic}`,
       "Content-Type": "application/x-www-form-urlencoded",
     },
-    body,
+    body: new URLSearchParams(params),
   });
   const data = await response.json().catch(() => ({}));
+  return { response, data };
+}
+
+function cacheAccessToken(guid, data) {
+  tokenCache.set(guid, {
+    value: data.access_token,
+    expiresAt: Date.now() + Math.max(60, Number(data.expires_in) || 3600) * 1000,
+  });
+}
+
+async function getAccessToken(env, fetchImpl, guid, force = false) {
+  const cached = tokenCache.get(guid);
+  if (!force && cached && cached.expiresAt > Date.now() + 60_000) return cached.value;
+  if (!env.YAHOO_CLIENT_ID || !env.YAHOO_CLIENT_SECRET) throw new Error("Yahoo OAuth secrets are not configured.");
+  const raw = await env.YAHOO_SESSIONS.get(`${USER_PREFIX}${guid}`);
+  if (!raw) throw new SignedOutError("Sign in with Yahoo to continue.");
+  const refreshToken = await openRefreshToken(env, guid, JSON.parse(raw));
+  const { response, data } = await requestToken(env, fetchImpl, {
+    grant_type: "refresh_token",
+    refresh_token: refreshToken,
+  });
+  /* Yahoo answers 400 or 401 when the user revoked Draft Lab or the refresh token expired. */
+  if (response.status === 400 || response.status === 401) {
+    await env.YAHOO_SESSIONS.delete(`${USER_PREFIX}${guid}`);
+    throw new SignedOutError("Yahoo sign-in expired. Sign in with Yahoo again.");
+  }
   if (!response.ok || !data.access_token) {
     throw new Error(`Yahoo token refresh failed with HTTP ${response.status}.`);
   }
-  tokenCache = {
-    value: data.access_token,
-    expiresAt: Date.now() + Math.max(60, Number(data.expires_in) || 3600) * 1000,
-  };
-  if (data.refresh_token && data.refresh_token !== storedRefresh) {
-    await env.YAHOO_SESSIONS.put(OAUTH_REFRESH_KEY, data.refresh_token);
-  }
-  return tokenCache.value;
+  cacheAccessToken(guid, data);
+  if (data.refresh_token && data.refresh_token !== refreshToken) await saveUser(env, guid, data.refresh_token);
+  return data.access_token;
 }
 
 async function beginOAuth(request, env) {
-  if (!env.YAHOO_CLIENT_ID || !env.YAHOO_CLIENT_SECRET || !env.YAHOO_SESSIONS) {
-    return html(503, oauthPage("<p>Cloudflare is missing the Yahoo client credentials or KV binding.</p>"));
+  if (!env.YAHOO_CLIENT_ID || !env.YAHOO_CLIENT_SECRET || !env.YAHOO_SESSIONS || !env.TOKEN_ENC_KEY) {
+    return html(503, oauthPage("<p>Yahoo sign-in is not configured.</p>"));
   }
-  const form = await request.formData();
-  if (!(await sameSecret(String(form.get("watchToken") || ""), env.WATCH_TOKEN))) {
-    if (env.AUTH_LIMITER) {
-      const colo = request.cf && request.cf.colo ? request.cf.colo : "unknown";
-      const limited = await env.AUTH_LIMITER.limit({ key: `bad-oauth:${colo}` });
-      if (!limited.success) return html(429, oauthPage("<p>Too many failed attempts. Wait a minute and try again.</p>"));
-    }
-    return html(401, oauthPage("<p>The watch token was not accepted.</p><p><a href=\"/oauth/start\">Try again</a></p>"));
+  if (await limited(request, env, "oauth-start")) {
+    return html(429, oauthPage("<p>Too many sign-in attempts. Wait a minute and try again.</p>"));
   }
-  const state = randomState();
+  const state = randomToken();
   const redirectUri = `${new URL(request.url).origin}/oauth/callback`;
   await env.YAHOO_SESSIONS.put(`${OAUTH_STATE_PREFIX}${state}`, JSON.stringify({ redirectUri }), { expirationTtl: 600 });
   const auth = new URL("https://api.login.yahoo.com/oauth2/request_auth");
@@ -199,42 +257,91 @@ async function beginOAuth(request, env) {
   return Response.redirect(auth.toString(), 303);
 }
 
+async function yahooGuid(data, env, fetchImpl) {
+  if (data.xoauth_yahoo_guid) return String(data.xoauth_yahoo_guid);
+  const response = await fetchImpl(`${YAHOO_API}/fantasy/v2/users;use_login=1?format=json`, {
+    headers: { Accept: "application/json", Authorization: `Bearer ${data.access_token}` },
+  });
+  const payload = await response.json().catch(() => ({}));
+  const guid = response.ok ? first(payload.fantasy_content && payload.fantasy_content.users, "guid") : null;
+  if (!guid) throw new Error("Yahoo did not identify the signed-in user.");
+  return String(guid);
+}
+
 async function finishOAuth(request, env, fetchImpl) {
   const url = new URL(request.url);
   const state = url.searchParams.get("state") || "";
   const code = url.searchParams.get("code") || "";
-  if (url.searchParams.get("error")) return html(400, oauthPage("<p>Yahoo authorization was cancelled.</p>"));
-  if (!state || !code) return html(400, oauthPage("<p>Yahoo did not return a complete authorization response.</p>"));
+  if (url.searchParams.get("error")) return html(400, oauthPage("<p>Yahoo sign-in was cancelled.</p>"));
+  if (!state || !code) return html(400, oauthPage("<p>Yahoo did not return a complete sign-in response.</p>"));
   const stateKey = `${OAUTH_STATE_PREFIX}${state}`;
   const saved = await env.YAHOO_SESSIONS.get(stateKey);
-  if (!saved) return html(400, oauthPage("<p>This authorization link is invalid or has expired. Start again.</p>"));
+  if (!saved) return html(400, oauthPage("<p>This sign-in link is invalid or has expired. Start again.</p>"));
   await env.YAHOO_SESSIONS.delete(stateKey);
   const { redirectUri } = JSON.parse(saved);
-  const basic = btoa(`${env.YAHOO_CLIENT_ID}:${env.YAHOO_CLIENT_SECRET}`);
-  const response = await fetchImpl(YAHOO_TOKEN_URL, {
-    method: "POST",
-    headers: { Accept: "application/json", Authorization: `Basic ${basic}`, "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ grant_type: "authorization_code", redirect_uri: redirectUri, code }),
+  const { response, data } = await requestToken(env, fetchImpl, {
+    grant_type: "authorization_code",
+    redirect_uri: redirectUri,
+    code,
   });
-  const data = await response.json().catch(() => ({}));
   if (!response.ok || !data.access_token || !data.refresh_token) {
-    return html(502, oauthPage(`<p>Yahoo token exchange failed (HTTP ${response.status}). Start again.</p>`));
+    return html(502, oauthPage(`<p>Yahoo sign-in failed (HTTP ${response.status}). Start again.</p>`));
   }
-  await env.YAHOO_SESSIONS.put(OAUTH_REFRESH_KEY, data.refresh_token);
-  tokenCache = { value: data.access_token, expiresAt: Date.now() + Math.max(60, Number(data.expires_in) || 3600) * 1000 };
-  return html(200, oauthPage("<p><strong>Yahoo is connected.</strong></p><p>You can close this tab and connect your draft from Draft Lab.</p><p class=\"note\">The Yahoo tokens were stored inside Cloudflare and were not shown in the browser.</p>"));
+  let guid;
+  try {
+    guid = await yahooGuid(data, env, fetchImpl);
+  } catch (error) {
+    return html(502, oauthPage(`<p>${error.message} Start again.</p>`));
+  }
+  await saveUser(env, guid, data.refresh_token);
+  cacheAccessToken(guid, data);
+  const loginCode = randomToken();
+  await env.YAHOO_SESSIONS.put(`${LOGIN_PREFIX}${loginCode}`, JSON.stringify({ guid }), {
+    expirationTtl: LOGIN_CODE_TTL_SECONDS,
+  });
+  return Response.redirect(`${pageOrigin(env)}/#yhlogin=${loginCode}`, 303);
 }
 
-async function yahooGet(path, env, fetchImpl) {
+/* Trades the one-time code from the sign-in redirect for a long-lived session token. */
+async function redeemLogin(request, env) {
+  const body = await request.json().catch(() => ({}));
+  const code = String((body && body.code) || "");
+  const key = `${LOGIN_PREFIX}${code}`;
+  const raw = code ? await env.YAHOO_SESSIONS.get(key) : null;
+  if (!raw) {
+    if (await limited(request, env, "bad-login")) {
+      return json(request, env, 429, errorBody("rate_limited", "Too many failed sign-in attempts."));
+    }
+    return json(request, env, 401, errorBody("signed_out", "That sign-in link expired. Sign in with Yahoo again."));
+  }
+  await env.YAHOO_SESSIONS.delete(key);
+  const { guid } = JSON.parse(raw);
+  const token = randomToken();
+  await env.YAHOO_SESSIONS.put(`${SESSION_PREFIX}${await sha256(token)}`, JSON.stringify({ guid }), {
+    expirationTtl: SESSION_TTL_SECONDS,
+  });
+  return json(request, env, 201, { ok: true, token });
+}
+
+async function disconnect(env, user) {
+  await Promise.all([
+    env.YAHOO_SESSIONS.delete(`${USER_PREFIX}${user.guid}`),
+    env.YAHOO_SESSIONS.delete(`${WATCH_PREFIX}${user.guid}`),
+    env.YAHOO_SESSIONS.delete(user.sessionKey),
+  ]);
+  tokenCache.delete(user.guid);
+}
+
+async function yahooGet(path, env, fetchImpl, guid) {
   const call = async (force) => {
-    const token = await getAccessToken(env, fetchImpl, force);
+    const token = await getAccessToken(env, fetchImpl, guid, force);
     const url = `${YAHOO_API}${path}${path.includes("?") ? "&" : "?"}format=json`;
     return fetchImpl(url, {
       headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
     });
   };
   let response = await call(false);
-  if (response.status === 401 && !env.YAHOO_ACCESS_TOKEN) response = await call(true);
+  if (response.status === 401) response = await call(true);
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(`Yahoo API returned HTTP ${response.status}.`);
   return data;
@@ -248,12 +355,27 @@ function numberedValues(object) {
     .map((key) => object[key]);
 }
 
-function parseLeagueInfo(metaPayload, settingsPayload, teamsPayload, slot) {
+/* Team names by draft position, plus the signed-in user's team. Its draft position is null until Yahoo sets the order. */
+function parseTeams(teamsPayload) {
+  const names = {};
+  let own = null;
+  numberedValues(leagueSub(teamsPayload, "teams")).forEach((item) => {
+    const team = item.team || item;
+    const draftPosition = Number(first(team, "draft_position")) || null;
+    const name = first(team, "name");
+    if (draftPosition && name) names[String(draftPosition)] = String(name);
+    if (String(first(team, "is_owned_by_current_login") || "0") === "1") {
+      own = { teamKey: String(first(team, "team_key") || ""), name: name ? String(name) : "", draftPosition };
+    }
+  });
+  return { teamNames: names, own };
+}
+
+function parseLeagueInfo(metaPayload, settingsPayload, teamsPayload) {
   const league = metaPayload.fantasy_content.league;
   const meta = Array.isArray(league) ? league.find((item) => item && !Array.isArray(item)) || {} : league || {};
   const teams = Number(first(meta, "num_teams"));
   if (!Number.isInteger(teams) || teams < 2 || teams > 20) throw new Error("Yahoo returned an invalid team count.");
-  if (slot > teams) throw new Error(`Draft slot must be between 1 and ${teams}.`);
   const settings = leagueSub(settingsPayload, "settings");
   const settingsObject = Array.isArray(settings) ? settings.find((item) => item && typeof item === "object") || {} : settings;
   if (String(first(settingsObject, "is_auction_draft") || "0") === "1") {
@@ -267,15 +389,9 @@ function parseLeagueInfo(metaPayload, settingsPayload, teamsPayload, slot) {
     if (position !== "IL" && position !== "IL+") rounds += Number(entry.roster_position.count) || 1;
   });
   if (!rounds) rounds = 13;
-  const names = {};
-  const teamCollection = leagueSub(teamsPayload, "teams");
-  numberedValues(teamCollection).forEach((item) => {
-    const team = item.team || item;
-    const draftPosition = Number(first(team, "draft_position"));
-    const name = first(team, "name");
-    if (draftPosition && name) names[String(draftPosition)] = String(name);
-  });
-  return { teams, rounds, teamNames: names };
+  const { teamNames, own } = parseTeams(teamsPayload);
+  if (!own) throw new Error("Your Yahoo account has no team in this draft. Join the draft in Yahoo first.");
+  return { teams, rounds, teamNames, own };
 }
 
 function parseDraftResults(payload) {
@@ -293,7 +409,7 @@ function parseDraftResults(payload) {
     .sort((a, b) => a.overallPick - b.overallPick);
 }
 
-async function resolvePlayerNames(leagueKey, keys, known, env, fetchImpl) {
+async function resolvePlayerNames(leagueKey, keys, known, env, fetchImpl, guid) {
   const names = { ...(known || {}) };
   const missing = [...new Set(keys.filter((key) => !names[key]))];
   for (let i = 0; i < missing.length; i += 25) {
@@ -302,6 +418,7 @@ async function resolvePlayerNames(leagueKey, keys, known, env, fetchImpl) {
       `/fantasy/v2/league/${encodeURIComponent(leagueKey)}/players;player_keys=${chunk.map(encodeURIComponent).join(",")}`,
       env,
       fetchImpl,
+      guid,
     );
     const players = leagueSub(payload, "players");
     numberedValues(players).forEach((item) => {
@@ -315,73 +432,86 @@ async function resolvePlayerNames(leagueKey, keys, known, env, fetchImpl) {
   return names;
 }
 
-async function sha256(value) {
-  const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
-  return [...new Uint8Array(bytes)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+async function putWatch(env, guid, watch) {
+  await env.YAHOO_SESSIONS.put(`${WATCH_PREFIX}${guid}`, JSON.stringify(watch), { expirationTtl: WATCH_TTL_SECONDS });
 }
 
-async function startWatch(input, env, fetchImpl) {
-  const game = await yahooGet("/fantasy/v2/game/nba", env, fetchImpl);
+async function startWatch(input, env, fetchImpl, guid) {
+  const game = await yahooGet("/fantasy/v2/game/nba", env, fetchImpl, guid);
   const gameKey = String(first(game.fantasy_content && game.fantasy_content.game, "game_key") || "");
   if (!/^\d+$/.test(gameKey)) throw new Error("Yahoo did not return the current NBA game key.");
   const leagueKey = `${gameKey}.l.${input.mlid}`;
   const encoded = encodeURIComponent(leagueKey);
   const [meta, settings, teams] = await Promise.all([
-    yahooGet(`/fantasy/v2/league/${encoded}`, env, fetchImpl),
-    yahooGet(`/fantasy/v2/league/${encoded}/settings`, env, fetchImpl),
-    yahooGet(`/fantasy/v2/league/${encoded}/teams`, env, fetchImpl),
+    yahooGet(`/fantasy/v2/league/${encoded}`, env, fetchImpl, guid),
+    yahooGet(`/fantasy/v2/league/${encoded}/settings`, env, fetchImpl, guid),
+    yahooGet(`/fantasy/v2/league/${encoded}/teams`, env, fetchImpl, guid),
   ]);
-  const info = parseLeagueInfo(meta, settings, teams, input.slot);
-  const session = {
+  const info = parseLeagueInfo(meta, settings, teams);
+  const watch = {
     draftId: leagueKey,
-    slot: input.slot,
+    slot: info.own.draftPosition,
+    teamName: info.own.name,
     teams: info.teams,
     rounds: info.rounds,
     teamNames: info.teamNames,
     playerNames: {},
     createdAt: new Date().toISOString(),
   };
-  await env.YAHOO_SESSIONS.put(SESSION_KEY, JSON.stringify(session), { expirationTtl: SESSION_TTL_SECONDS });
-  return session;
+  await putWatch(env, guid, watch);
+  return watch;
 }
 
-async function loadBoard(env, fetchImpl) {
-  const raw = await env.YAHOO_SESSIONS.get(SESSION_KEY);
+async function loadBoard(env, fetchImpl, guid) {
+  const raw = await env.YAHOO_SESSIONS.get(`${WATCH_PREFIX}${guid}`);
   if (!raw) return null;
-  const session = JSON.parse(raw);
+  const watch = JSON.parse(raw);
+  let changed = false;
+  if (!watch.slot) {
+    const { teamNames, own } = parseTeams(
+      await yahooGet(`/fantasy/v2/league/${encodeURIComponent(watch.draftId)}/teams`, env, fetchImpl, guid),
+    );
+    if (own && own.draftPosition) {
+      Object.assign(watch, { slot: own.draftPosition, teamName: own.name, teamNames });
+      changed = true;
+    }
+  }
   const payload = await yahooGet(
-    `/fantasy/v2/league/${encodeURIComponent(session.draftId)}/draftresults`,
+    `/fantasy/v2/league/${encodeURIComponent(watch.draftId)}/draftresults`,
     env,
     fetchImpl,
+    guid,
   );
   const picks = parseDraftResults(payload);
   const names = await resolvePlayerNames(
-    session.draftId,
+    watch.draftId,
     picks.map((pick) => pick.yahooPlayerKey),
-    session.playerNames,
+    watch.playerNames,
     env,
     fetchImpl,
+    guid,
   );
-  const namesChanged = Object.keys(names).length !== Object.keys(session.playerNames || {}).length;
-  if (namesChanged) {
-    session.playerNames = names;
-    await env.YAHOO_SESSIONS.put(SESSION_KEY, JSON.stringify(session), { expirationTtl: SESSION_TTL_SECONDS });
+  if (Object.keys(names).length !== Object.keys(watch.playerNames || {}).length) {
+    watch.playerNames = names;
+    changed = true;
   }
+  if (changed) await putWatch(env, guid, watch);
   const boardPicks = picks.map((pick) => ({
     ...pick,
     playerName: names[pick.yahooPlayerKey] || pick.yahooPlayerKey,
     playerIndex: null,
   }));
   return {
-    draftId: session.draftId,
+    draftId: watch.draftId,
     fetchedAt: new Date().toISOString(),
-    teams: session.teams,
-    rounds: session.rounds,
-    userSlot: session.slot,
-    teamNames: session.teamNames || {},
+    teams: watch.teams,
+    rounds: watch.rounds,
+    userSlot: watch.slot,
+    userTeamName: watch.teamName || "",
+    teamNames: watch.teamNames || {},
     pickCount: boardPicks.length,
     boardHash: await sha256(JSON.stringify(boardPicks)),
-    complete: boardPicks.length >= session.teams * session.rounds,
+    complete: boardPicks.length >= watch.teams * watch.rounds,
     picks: boardPicks,
   };
 }
@@ -390,10 +520,7 @@ export function createWorker(fetchImpl = fetch) {
   return {
     async fetch(request, env) {
       const url = new URL(request.url);
-      if (url.pathname === "/oauth/start" && request.method === "GET") {
-        return html(200, oauthPage('<p>Enter the same private watch token configured in Cloudflare. You will then approve Draft Lab in Yahoo.</p><form method="post"><label>Watch token<input name="watchToken" type="password" autocomplete="off" required></label><button type="submit">Authorize with Yahoo</button></form><p class="note">Your Yahoo client secret and OAuth tokens never enter this page.</p>'));
-      }
-      if (url.pathname === "/oauth/start" && request.method === "POST") return beginOAuth(request, env);
+      if (url.pathname === "/oauth/start" && request.method === "GET") return beginOAuth(request, env);
       if (url.pathname === "/oauth/callback" && request.method === "GET") return finishOAuth(request, env, fetchImpl);
       if (request.method === "OPTIONS") {
         if (!ensureAllowedOrigin(request, env)) return json(request, env, 403, errorBody("origin_denied", "Origin is not allowed."));
@@ -404,35 +531,43 @@ export function createWorker(fetchImpl = fetch) {
         return new Response(null, { status: 204, headers });
       }
       if (url.pathname === "/health" && request.method === "GET") {
-        const storedRefresh = env.YAHOO_SESSIONS ? await env.YAHOO_SESSIONS.get(OAUTH_REFRESH_KEY) : null;
         return json(request, env, 200, {
           ok: true,
           configured: {
             sessions: Boolean(env.YAHOO_SESSIONS),
-            watchToken: Boolean(env.WATCH_TOKEN),
-            yahooOAuth: Boolean(env.YAHOO_ACCESS_TOKEN || (env.YAHOO_CLIENT_ID && env.YAHOO_CLIENT_SECRET && (storedRefresh || env.YAHOO_REFRESH_TOKEN))),
+            yahooOAuth: Boolean(env.YAHOO_CLIENT_ID && env.YAHOO_CLIENT_SECRET),
+            tokenKey: Boolean(env.TOKEN_ENC_KEY),
           },
         });
       }
       if (!ensureAllowedOrigin(request, env)) return json(request, env, 403, errorBody("origin_denied", "Origin is not allowed."));
-      if (!(await authorized(request, env))) return rejectUnauthorized(request, env);
+      if (url.pathname === "/api/session" && request.method === "POST") return redeemLogin(request, env);
+      const user = await sessionUser(request, env);
+      if (!user) return rejectUnauthorized(request, env);
       try {
+        if (url.pathname === "/api/me" && request.method === "GET") {
+          return json(request, env, 200, { ok: true, signedIn: true });
+        }
+        if (url.pathname === "/api/disconnect" && request.method === "POST") {
+          await disconnect(env, user);
+          return json(request, env, 200, { ok: true });
+        }
         if (url.pathname === "/api/watch" && request.method === "POST") {
-          const raw = await request.json();
-          const input = parseWatchInput(raw);
-          await startWatch(input, env, fetchImpl);
-          const board = await loadBoard(env, fetchImpl);
+          const input = parseWatchInput(await request.json());
+          await startWatch(input, env, fetchImpl, user.guid);
+          const board = await loadBoard(env, fetchImpl, user.guid);
           return json(request, env, 201, { ok: true, ...board });
         }
         if (url.pathname === "/api/board" && request.method === "GET") {
-          const board = await loadBoard(env, fetchImpl);
+          const board = await loadBoard(env, fetchImpl, user.guid);
           if (!board) return json(request, env, 404, errorBody("no_watch", "Start a Yahoo watch session first."));
           return json(request, env, 200, { ok: true, ...board });
         }
         return json(request, env, 404, errorBody("not_found", "Route not found."));
       } catch (error) {
+        if (error instanceof SignedOutError) return json(request, env, 401, errorBody("signed_out", error.message));
         const message = error instanceof Error ? error.message : "Request failed.";
-        const badInput = /Enter a Yahoo|must use|does not contain|Draft slot|Auction/.test(message);
+        const badInput = /Enter a Yahoo|must use|does not contain|no team in this draft|Auction/.test(message);
         return json(request, env, badInput ? 400 : 502, errorBody(badInput ? "invalid_request" : "upstream_error", message));
       }
     },

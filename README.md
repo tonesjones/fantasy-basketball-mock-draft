@@ -152,7 +152,7 @@ Checks and tooling:
 
 ## Yahoo live draft
 
-Connect a Yahoo mock or live draft from the setup screen: Draft Lab mirrors the board through the `yahoo-draft-copilot` Cloudflare Worker (`tools/yahoo-copilot/worker/`) and gives advice while you pick in Yahoo. See `docs/yahoo-worker-plan.md` and `tools/yahoo-copilot/README.md`.
+Draft Lab can follow your own Yahoo mock or live draft. On the setup screen, click **Sign in with Yahoo**, paste the draft-room URL, and click **Connect draft**. Draft Lab finds your team and pick, mirrors the board, and gives advice while you pick in Yahoo. Anyone with a Yahoo account can sign in. Each person's draft is read with their own Yahoo account, through the `yahoo-draft-copilot` Cloudflare Worker. See `tools/yahoo-copilot/worker/README.md` for setup and `tools/yahoo-copilot/README.md` for the command-line copilot.
 
 ## More docs
 

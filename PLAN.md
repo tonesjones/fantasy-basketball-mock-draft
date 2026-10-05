@@ -101,8 +101,17 @@ Not planned: traded picks and keeper leagues.
 - Done: review rechecked; plan written.
 - Item 1: merged `main` (PR into `test/yahoo-draft-copilot`). Tests, worker
   tests, format check and data audit pass. Data files match `main`. Checked
-  locally on desktop and phone with a saved Yahoo board. On phones, the
-  Engine's take line now gets its own row; it overlapped the next-pick line
-  under main's new phone header. Waiting on the owner's live Yahoo check on
-  the branch preview.
-- Next: item 2.
+  locally on desktop and phone with a saved Yahoo board. Waiting on the
+  owner's live Yahoo check on the branch preview.
+- Items 2-4: built on `claude/yahoo-multiuser`, stacked on item 1. Worker
+  and page tests cover sign-in, encrypted tokens, single-use codes, per-user
+  watches, slot detection, waiting for the draft order, disconnect, and
+  revoked Yahoo access. The `yh1` manual paste fallback went with `sync.py`,
+  since nothing produces those codes anymore. Not yet tested against real
+  Yahoo: needs `TOKEN_ENC_KEY` on the Worker and a `wrangler deploy`.
+- 5 October: #32 squash-merged. Its conflict resolution with the October 4
+  data refresh nested two `renderDataHealth` functions, so the live Data
+  health panel shows `undefined`. #34 fixes it and adds a test. #33 is
+  rebased onto the new base and mergeable.
+- Next: owner adds `TOKEN_ENC_KEY`, deploys the Worker with the page, and
+  runs the two-account check.
