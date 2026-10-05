@@ -10,9 +10,12 @@
  *          adjusted by damped edges:
  *          - last-season actuals gap (produced better/worse than market)
  *          - role up/down (movers-outlook heuristic)
- *          - vacated usage, NETTED against incoming talent (a departure only
- *            opens usage if nobody better arrives to absorb it)
- *          - playoff schedule for the user's selected 3-week window
+ *          - vacated usage, NETTED against every incoming arrival (a departure
+ *            only opens usage if nobody better arrives to absorb it)
+ *          - returning teammates (a star who missed much of last season is
+ *            back, so teammates' inflated 2025-26 numbers are discounted)
+ *          - playoff schedule for the user's selected 3-week window, vs the
+ *            league average for that window
  *   valueAtPick = pick - V(x): positive = projects better than this slot.
  *
  * Verdicts: take | wait | pass | reach
@@ -55,8 +58,13 @@
    * A departure only opens usage if the team doesn't import someone to absorb
    * it. Position-aware: "minutes" reasons need positional overlap; "usage"
    * reasons are absorbed by any high-usage arrival (consensus < 60).
-   * Returns {gainerName: {v: +5|0|-5, note}}.
+   * The best absorbing arrival sets the base (+5 open / 0 wash / -5 loss);
+   * every OTHER arrival good enough to absorb (consensus < departure + 10)
+   * costs a further EXTRA_ARRIVAL, capped at VAC_FLOOR overall. Before this,
+   * Maxey's net loss counted Jaylen Brown but not LeBron James.
+   * Returns {gainerName: {v, note}}.
    */
+  var EXTRA_ARRIVAL = -3, VAC_FLOOR = -10;
   function netVacated(players, moves, vacated) {
     var byName = {};
     players.forEach(function (p) { byName[p.n] = p; });
@@ -71,7 +79,7 @@
         var team = gainer.t;
         var gPos = gainer.p || [];
         var isMinutes = /minutes/i.test(g.reason || "");
-        var bestArr = null, bestArrCons = Infinity;
+        var arrivals = [];
         Object.keys(moves || {}).forEach(function (n) {
           if (n === g.name) return;
           var m = moves[n];
@@ -84,19 +92,63 @@
           } else {
             if (c >= 60) return;
           }
-          if (c < bestArrCons) { bestArrCons = c; bestArr = n; }
+          arrivals.push({ n: n, c: c });
         });
+        arrivals.sort(function (a, b) { return a.c - b.c || (a.n < b.n ? -1 : 1); });
         var base = dep + " vacates (" + g.reason + ")";
-        if (bestArr == null) {
+        var best = arrivals[0];
+        if (!best || best.c >= depCons + 10) {
           out[g.name] = { v: 5, note: base };
-        } else if (bestArrCons < depCons - 10) {
-          out[g.name] = { v: -5, note: base + ", but " + bestArr + " arrives — net usage LOSS" };
-        } else if (bestArrCons < depCons + 10) {
-          out[g.name] = { v: 0, note: base + ", offset by " + bestArr + " arrival — wash" };
-        } else {
-          out[g.name] = { v: 5, note: base };
+          return;
         }
+        var extras = arrivals.slice(1).filter(function (a) { return a.c < depCons + 10; });
+        var v = best.c < depCons - 10 ? -5 : 0;
+        v = Math.max(VAC_FLOOR, v + EXTRA_ARRIVAL * extras.length);
+        var who = [best.n].concat(extras.map(function (a) { return a.n; })).join(" and ");
+        var many = extras.length > 0;
+        out[g.name] = {
+          v: v,
+          note: base + (v < 0
+            ? ", but " + who + (many ? " arrive" : " arrives") + " — net usage LOSS"
+            : ", offset by " + who + " arrival — wash")
+        };
       });
+    });
+    return out;
+  }
+
+  /* Returning teammates: a star who missed much of 2025-26 comes back and
+   * takes usage from teammates whose numbers were built without him.
+   * Detection is data-driven: per-game rank <= RET_PER_GAME but totals rank
+   * at least RET_GAP worse (he missed games), still on the same team, not
+   * INJ, and still a real usage absorber this season (consensus <= RET_MAX_CONS).
+   * Only teammates who OUTPRODUCED their market last season are docked
+   * (their actuals edge is what the star's absence inflated), and only those
+   * who were on the team then (non-movers) with consensus <= 100.
+   * RET_EDGE per returning star, capped at RET_FLOOR.
+   * Returns {teammateName: {v, note}}.
+   */
+  var RET_PER_GAME = 60, RET_GAP = 40, RET_MAX_CONS = 60, RET_EDGE = -4, RET_FLOOR = -6;
+  function returningTeammates(players, moves) {
+    moves = moves || {};
+    function moved(p) { return !!(moves[p.n] && moves[p.n].teamPrev && moves[p.n].teamPrev !== moves[p.n].teamCurr); }
+    var stars = players.filter(function (s) {
+      return !s.inj && s.last != null && s.lastTotal != null && s.last <= RET_PER_GAME &&
+        s.lastTotal - s.last >= RET_GAP && consensus(s) <= RET_MAX_CONS && !moved(s);
+    });
+    var out = {};
+    players.forEach(function (p) {
+      if (p.inj || moved(p)) return;
+      var c = consensus(p), a = actuals(p);
+      if (c > 100 || a == null || a >= c) return;
+      var back = stars.filter(function (s) { return s.t === p.t && s.n !== p.n; });
+      if (!back.length) return;
+      out[p.n] = {
+        v: Math.max(RET_FLOOR, RET_EDGE * back.length),
+        note: back.map(function (s) { return s.n; }).join(" and ") +
+          " back (missed much of 2025-26) — last season's numbers came without " +
+          (back.length > 1 ? "them" : "him")
+      };
     });
     return out;
   }
@@ -109,9 +161,27 @@
       return v ? root.PlayoffCore.total(v) : null;
     } catch (e) { return null; }
   }
+  /* League-average playoff games for the window (~10.7 for weeks 20-22). */
+  var _avgCache = {};
+  function playoffAverage(startWeek) {
+    var w = startWeek || 20;
+    if (_avgCache[w] != null) return _avgCache[w];
+    var data = root.PlayoffData, sum = 0, n = 0;
+    if (!data || !data.teams) return 10;
+    Object.keys(data.teams).forEach(function (t) {
+      var g = playoffGamesFor(t, w);
+      if (g != null) { sum += g; n++; }
+    });
+    return (_avgCache[w] = n ? sum / n : 10);
+  }
+  /* Each playoff game above/below the league average is worth PLAYOFF_W
+     spots, capped at PLAYOFF_CAP games (so +/-6 at most). Was 0.8 per game
+     against a fixed 10, which moved a 9-game team (CLE) by under one spot. */
+  var PLAYOFF_W = 1.5, PLAYOFF_CAP = 4;
 
   /* True-value rank estimate.
-   * ctx: {moves, netVac, playoffStart} — netVac from netVacated().
+   * ctx: {moves, netVac, returning, playoffStart} — netVac from netVacated(),
+   * returning from returningTeammates().
    */
   function trueValue(p, ctx) {
     ctx = ctx || {};
@@ -141,13 +211,21 @@
       edges.push({ k: "vacated", v: nv.v, note: nv.note });
     }
 
-    // 4. Playoff schedule: more games = more value. Avg ~10 games.
+    // 4. Returning teammate (star back from missed time).
+    var rt = ctx.returning && ctx.returning[p.n];
+    if (rt && rt.v !== 0) {
+      edge += rt.v;
+      edges.push({ k: "returning", v: rt.v, note: rt.note });
+    }
+
+    // 5. Playoff schedule vs the league average for the selected window.
     var pg = playoffGamesFor(p.t, ctx.playoffStart);
     if (pg != null) {
-      var pe = dampen(pg - 10, 4, 0.8);
+      var avg = playoffAverage(ctx.playoffStart);
+      var pe = dampen(pg - avg, PLAYOFF_CAP, PLAYOFF_W);
       if (Math.abs(pe) >= 0.5) {
         edge += pe;
-        edges.push({ k: "playoff", v: +pe.toFixed(1), note: pg + " games in your playoff window" });
+        edges.push({ k: "playoff", v: +pe.toFixed(1), note: pg + " games in your playoff window (league avg " + avg.toFixed(1) + ")" });
       }
     }
 
@@ -287,6 +365,8 @@
     consensus: consensus,
     actuals: actuals,
     netVacated: netVacated,
+    returningTeammates: returningTeammates,
+    playoffAverage: playoffAverage,
     trueValue: trueValue,
     positionalNeed: positionalNeed,
     evaluate: evaluate

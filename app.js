@@ -450,9 +450,13 @@ function buildPickSignals(pl, pickNumber, nextPick, openSlots, taken) {
     if (!window._netVacCache && typeof MOVES !== "undefined" && typeof VACATED_USAGE !== "undefined") {
       window._netVacCache = PS.netVacated(PLAYERS, MOVES, VACATED_USAGE);
     }
+    if (!window._returningCache && PS.returningTeammates) {
+      window._returningCache = PS.returningTeammates(PLAYERS, typeof MOVES !== "undefined" ? MOVES : {});
+    }
     var ctx = {
       moves: (typeof MOVES !== "undefined") ? MOVES : {},
       netVac: window._netVacCache || {},
+      returning: window._returningCache || {},
       playoffStart: (typeof state !== "undefined" && state.playoffStart) || 20
     };
     return PS.evaluate(pl, {

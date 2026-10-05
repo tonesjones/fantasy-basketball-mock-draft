@@ -1,5 +1,28 @@
 # Changelog
 
+## Pick value: stacked arrivals, returning stars, playoff weight (2026-10-04)
+Three fixes to the true-value engine (`pick-signals.js`). Market data and the
+built-in Rank order are unchanged.
+- **Every arrival counts.** Vacated-usage netting used only the single best
+  arrival. Each further arrival good enough to absorb the departed usage now
+  costs another 3 spots (floor -10). Maxey goes from -5 (Brown) to -8 (Brown
+  and LeBron).
+- **Returning stars.** New `returning` edge: a star who missed much of
+  2025-26 (per-game rank 60 or better, totals rank at least 40 worse, same
+  team, consensus 60 or better) docks teammates who outproduced their market
+  last season, 4 spots per star (floor -6). Data-driven, no curation. Fires for
+  Maxey and Edgecombe (Embiid), White and Pritchard (Tatum), Keyonte George
+  (Markkanen, Jackson Jr.) and Buzelis (Giddey).
+- **Playoff schedule weighs more.** Each game above or below the window's
+  league average (10.7 for weeks 20-22, was a fixed 10) is worth 1.5 spots
+  (was 0.8), capped at 4 games. Mitchell (CLE, 9 games) goes from -0.8 to -2.6.
+- **Effect at the top** (1,000 simulated drafts per slot, defaults): Maxey
+  falls from #11 to #19 in value and out of round 1; slots 6-10 become Flagg,
+  slot 11 Jalen Johnson or Flagg, slot 12 Durant + Haliburton. Slots 1-5 are
+  unchanged.
+- The "wait" verdict test no longer pins one player at pick 40; it asserts
+  the mechanic fires for someone on that board.
+
 ## Phone draft room refresh (2026-10-02)
 Details: `docs/mobile-ui.md`. Desktop unchanged apart from the toast font
 fix below.

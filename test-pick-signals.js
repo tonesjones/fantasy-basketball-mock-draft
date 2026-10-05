@@ -41,6 +41,7 @@ function P(n) { var p = byName[n]; assert.ok(p, "player missing: " + n); return 
 var ctx = {
   moves: sandbox.MOVES,
   netVac: S.netVacated(PLAYERS, sandbox.MOVES, sandbox.VACATED_USAGE),
+  returning: S.returningTeammates(PLAYERS, sandbox.MOVES),
   playoffStart: 20,
 };
 
@@ -129,6 +130,34 @@ t("vacated-usage net LOSS WORSENS rank (Tony's PHI catch)", function () {
   var noVac = S.trueValue(p, { moves: ctx.moves, netVac: {}, playoffStart: 20 }).V;
   assert.ok(withVac > noVac, "net loss should raise V: with=" + withVac + " without=" + noVac);
 });
+t("vacated netting stacks every absorbing arrival (Brown AND LeBron)", function () {
+  var nv = ctx.netVac["Tyrese Maxey"];
+  assert.ok(nv.v < -5, "second arrival should deepen the loss: " + JSON.stringify(nv));
+  assert.ok(/Jaylen Brown/.test(nv.note) && /LeBron James/.test(nv.note), "note should name both: " + nv.note);
+  assert.ok(Object.keys(ctx.netVac).every(function (n) { return ctx.netVac[n].v >= -10; }), "floor is -10");
+});
+t("returning star docks teammates who outproduced without him (Embiid -> Maxey)", function () {
+  var rt = ctx.returning["Tyrese Maxey"];
+  assert.ok(rt && rt.v < 0 && /Joel Embiid/.test(rt.note), "Maxey should carry a returning-Embiid edge: " + JSON.stringify(rt));
+  var p = P("Tyrese Maxey");
+  var withRt = S.trueValue(p, ctx).V;
+  var noRt = S.trueValue(p, { moves: ctx.moves, netVac: ctx.netVac, returning: {}, playoffStart: 20 }).V;
+  assert.ok(withRt > noRt, "returning star should raise V: with=" + withRt + " without=" + noRt);
+});
+t("returning edge skips teammates who underproduced and the star himself", function () {
+  assert.ok(!ctx.returning["Joel Embiid"], "star is not docked by himself");
+  Object.keys(ctx.returning).forEach(function (n) {
+    var p = P(n), a = S.actuals(p);
+    assert.ok(a != null && a < S.consensus(p), n + " was docked but did not outproduce market");
+    assert.ok(ctx.returning[n].v >= -6, n + ": returning edge below floor");
+  });
+});
+t("playoff edge is measured against the window's league average", function () {
+  var avg = S.playoffAverage(20);
+  assert.ok(avg > 10 && avg < 11.5, "weeks 20-22 average should be ~10.7, got " + avg);
+  var e = S.trueValue(P("Donovan Mitchell"), ctx).edges.filter(function (x) { return x.k === "playoff"; })[0];
+  assert.ok(e && e.v <= -2, "CLE's 9-game window should cost Mitchell at least 2 spots: " + JSON.stringify(e));
+});
 t("actuals outperformance IMPROVES rank", function () {
   var p = P("Mikal Bridges"); // actuals ~39.5 vs cons 74.1
   var v = S.trueValue(p, ctx).V;
@@ -178,8 +207,15 @@ t("big value that won't survive is take", function () {
   assert.ok(r.valueAtPick > 10, "valueAtPick " + r.valueAtPick);
 });
 t("acceptable value with urgent better alternative is wait", function () {
-  var r = S.evaluate(P("Donovan Clingan"), { pick: 40, nextPick: 64, available: availAt(40), openSlots: OPEN, ctx: ctx });
-  assert.strictEqual(r.verdict, "wait", JSON.stringify(r.reasons));
+  // Not pinned to one player: data refreshes and new edges shift who sits
+  // exactly on the +6 threshold. The mechanic must fire for someone at 40.
+  var avail = availAt(40), r = null;
+  avail.some(function (p) {
+    var x = S.evaluate(p, { pick: 40, nextPick: 64, available: avail, openSlots: OPEN, ctx: ctx });
+    if (x.verdict === "wait" && x.valueAtPick >= -2) { r = x; return true; }
+    return false;
+  });
+  assert.ok(r, "expected at least one acceptable-value 'wait' at pick 40");
   assert.ok(/won't survive to pick 64/.test(r.reasons.join(" ")), "should name the urgent alternative: " + JSON.stringify(r.reasons));
 });
 t("way below value with better alternative is pass", function () {
