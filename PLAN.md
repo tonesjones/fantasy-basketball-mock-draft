@@ -109,5 +109,9 @@ Not planned: traded picks and keeper leagues.
   revoked Yahoo access. The `yh1` manual paste fallback went with `sync.py`,
   since nothing produces those codes anymore. Not yet tested against real
   Yahoo: needs `TOKEN_ENC_KEY` on the Worker and a `wrangler deploy`.
+- 5 October: #32 squash-merged. Its conflict resolution with the October 4
+  data refresh nested two `renderDataHealth` functions, so the live Data
+  health panel shows `undefined`. #34 fixes it and adds a test. #33 is
+  rebased onto the new base and mergeable.
 - Next: owner adds `TOKEN_ENC_KEY`, deploys the Worker with the page, and
   runs the two-account check.
