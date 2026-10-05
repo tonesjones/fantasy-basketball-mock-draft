@@ -1,0 +1,36 @@
+/* Phone redesign: player sheet. Spec: docs/mobile-redesign.md */
+@media (max-width:700px){
+  #md .mobile-player-sheet{background:#152036;color:#eef2f7;border:0;border-top:1px solid #26344f;border-radius:20px 20px 0 0;padding:0;font-family:var(--dl-sans);font-variant-numeric:tabular-nums;
+    transform:translateY(100%);opacity:0;
+    transition:transform 240ms cubic-bezier(.2,.8,.2,1),opacity 240ms ease,display 240ms allow-discrete,overlay 240ms allow-discrete;transition-behavior:allow-discrete}
+  #md .mobile-player-sheet[open]{display:flex;flex-direction:column;transform:translateY(0);opacity:1;height:85dvh;overflow:hidden}
+  @starting-style{#md .mobile-player-sheet[open]{transform:translateY(100%);opacity:0}}
+  #md .mobile-player-sheet::backdrop{background:#0009;opacity:0;transition:opacity 240ms ease,display 240ms allow-discrete,overlay 240ms allow-discrete;transition-behavior:allow-discrete}
+  #md .mobile-player-sheet[open]::backdrop{opacity:1}
+  @starting-style{#md .mobile-player-sheet[open]::backdrop{opacity:0}}
+  #md .mobile-sheet-drag{flex:none;touch-action:none;cursor:grab}
+  #md .mobile-sheet-grip{display:flex;justify-content:center;padding:8px 0 4px}
+  #md .mobile-sheet-grip span{width:36px;height:4px;border-radius:2px;background:#26344f}
+  #md .mobile-sheet-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding:0 4px 10px 16px;border-bottom:1px solid #26344f}
+  #md .mobile-sheet-titlebox{flex:1;min-width:0;padding-top:4px}
+  #md .mobile-sheet-name{margin:0;font:600 20px/1.25 var(--dl-sans);color:#eef2f7;overflow-wrap:anywhere}
+  #md .mobile-sheet-sub{margin:2px 0 0;font-size:14px;color:#9aa8bd;display:flex;flex-wrap:wrap;gap:0 12px}
+  #md .mobile-player-sheet .mobile-sheet-close{display:flex;align-items:center;justify-content:center;flex:none;min-width:44px;min-height:44px;margin:0;padding:0 12px;background:none;border:0;color:#9aa8bd;font:500 15px var(--dl-sans);text-transform:none;letter-spacing:0}
+  #md .mobile-player-sheet button:focus-visible{outline:2px solid #f0b45a;outline-offset:2px}
+  #md .mobile-player-sheet .side{flex:1;min-height:0;overflow:auto;padding:12px 16px calc(84px + env(safe-area-inset-bottom));background:none;color:#eef2f7;overscroll-behavior:contain}
+  #md .mobile-player-sheet .pick-coach{position:relative;z-index:6}
+  #md .mobile-player-sheet .pc-head{position:static;background:none;padding:0}
+  #md .mobile-player-sheet .pc-identity,#md .mobile-player-sheet .pc-name,#md .mobile-player-sheet .pc-meta{display:none}
+  #md .mobile-player-sheet .mobile-player-extra .muted{color:#9aa8bd}
+  #md .mobile-player-sheet .pc-draft{position:fixed;left:0;right:0;bottom:0;width:100%;min-height:48px;box-sizing:content-box;margin:0;border:0;border-radius:0;background:#f0b45a;color:#1a1206;font:600 16px var(--dl-sans);text-transform:none;letter-spacing:0;box-shadow:0 -1px 0 #26344f;padding:0 16px env(safe-area-inset-bottom);height:48px;z-index:5}
+  #md .mobile-player-sheet .pc-alt{display:inline-flex;align-items:center;min-height:44px;min-width:44px}
+  #md .mobile-player-sheet summary{display:flex;align-items:center;min-height:44px}
+  #md .mobile-player-sheet .pc-draft:disabled{opacity:.5}
+}
+@media (max-width:700px) and (prefers-reduced-motion:reduce){
+  #md .mobile-player-sheet,#md .mobile-player-sheet::backdrop{transition:none}
+}
+@media(max-width:700px){
+  /* Coach card already shows playoff pips; avoid repeating them above it. */
+  #md .mobile-player-sheet .mobile-player-extra .playoffbadge{display:none}
+}

@@ -225,36 +225,51 @@ function advance(){
 function userDraft(pi){
   if(state.yahooLive)return; /* picks happen in Yahoo; Draft Lab only mirrors */
   if(!isUserTurn()||!CORE.validPlayerIndex(PLAYERS,state.log,pi))return;
+  if(isMobileDraft())closeMobileSheet();
   var checkpoint={log:state.log.slice(),rngState:state.rngState};
   var name=PLAYERS[pi].n;
   var next=simulateToUser(state.log.concat([pi]),state.rngState);
+  if(isMobileDraft()&&next.log.length>=totalPicks())mobileView="team";
   var cpu=next.log.length-(checkpoint.log.length+1);
   _pendingLive="You drafted "+name+". "+(cpu>0?cpu+" CPU pick"+(cpu===1?"":"s")+" followed. ":"");
-  setState({log:next.log,rngState:next.rngState,userTurns:state.userTurns.concat([checkpoint]).slice(-20),phase:next.log.length>=totalPicks()?"done":"draft",page:0});
+  setState({log:next.log,rngState:next.rngState,userTurns:state.userTurns.concat([checkpoint]).slice(-20),phase:next.log.length>=totalPicks()?"done":"draft",page:isMobileDraft()?state.page:0});
   showPickMoment(name,checkpoint.log.length);
 }
 function showPickMoment(name,pickIndex){
   var old=el("mdpickmoment");if(old)old.remove();
   var panel=document.createElement("div");panel.id="mdpickmoment";panel.className="pick-moment";
   var grade=draftGrades().filter(function(g){return g.team===userTeam();})[0];
-  var heading=document.createElement("strong");heading.textContent="Your pick #"+(pickIndex+1);
+  var heading=document.createElement("strong");heading.textContent=isMobileDraft()?name+" drafted":"Your pick #"+(pickIndex+1);
   var player=document.createElement("span");player.textContent=name;
   var note=document.createElement("small");note.textContent=grade&&grade.rated?"Team grade "+grade.grade+" · historical 9-cat":"Added to your team";
-  panel.append(heading,player,note);
+  /* Phones: header-only toast; "Undo pick" stays reachable in the pick header. */
+  if(isMobileDraft())panel.append(heading);else panel.append(heading,player,note);
   document.body.append(panel);
   setTimeout(function(){panel.remove();},2400);
 }
 function undoUserPick(){
+  var moment=el("mdpickmoment");if(moment)moment.remove();
   var history=state.userTurns.slice(),checkpoint=history.pop();if(!checkpoint)return;
-  setState({log:checkpoint.log,rngState:checkpoint.rngState,userTurns:history,phase:"draft",page:0});
+  setState({log:checkpoint.log,rngState:checkpoint.rngState,userTurns:history,phase:"draft",page:isMobileDraft()?state.page:0});
 }
-function restartDraft(){clearSaved();state=freshState();save();render();}
+function restartDraft(){mobilePuntPreview=null;mobileRosterMode="slots";mobileView="players";clearSaved();state=freshState();save();render();}
+/* Phone header Restart needs a second tap within 3s, so a stray tap can't wipe the draft. */
+var restartArmTimer=null;
+function onRestartClick(e){
+  var b=e.currentTarget;
+  if(!isMobileDraft()||b.classList.contains("armed")){clearTimeout(restartArmTimer);restartDraft();return;}
+  b.classList.add("armed");b.textContent="Tap again to restart";announceLive("Tap Restart again to clear this draft.");
+  restartArmTimer=setTimeout(function(){if(b.isConnected){b.classList.remove("armed");b.textContent="Restart";}},3000);
+}
 /* Escape ANY data interpolated into innerHTML strings (names, notes, anything from an API). Text from the network goes in via textContent. */
 function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");}
 function posBadges(p){return p.map(function(x){return x;}).join("/");}
 function pickLabel(idx){var r=Math.floor(idx/TEAMS)+1;var w=idx%TEAMS+1;return "R"+r+" P"+w;}
 
 var HEALTH=window.DataHealth.audit(PLAYERS,typeof PDATA!=="undefined"?PDATA:{},CATS);
+function renderDataHealth(label){
+  var h='<details class="setup-details"><summary><b>'+(label||'Data health')+'</b> &middot; '+(HEALTH.players-HEALTH.missingAdp.length)+'/'+HEALTH.players+' players with Yahoo ADP &middot; '+esc(DATA_VERSION)+'</summary>';
+  h+='<p class="muted">Yahoo\'s 29 September workbook publishes All Drafts ADP for 190 players, ending at an average pick of 121.4. ADP is an average pick number, so several players can share the same range. Later entries show dashes. In this app\'s pool, '+HEALTH.missingAdp.length+' players have no Yahoo ADP. That reflects the source\'s limited coverage, rather than a failed import. Players absent from the workbook kept their previous Yahoo values.</p>';
 function renderDataHealth(){
   var h='<details class="setup-details"><summary><b>Data health</b> &middot; '+(HEALTH.players-HEALTH.missingAdp.length)+'/'+HEALTH.players+' players with Yahoo ADP &middot; '+esc(DATA_VERSION)+'</summary>';
   h+='<p class="muted">Hashtag Basketball\'s 4 October table publishes Yahoo ADP for 188 players, ending at an average pick of 123. ADP is an average pick number, so several players can share the same range. Later entries have no published Yahoo value. In this app\'s pool, '+HEALTH.missingAdp.length+' players have no Yahoo ADP. That reflects the source\'s limited coverage, rather than a failed import. The 13 pool players absent from the table kept their previous values.</p>';
@@ -331,6 +346,17 @@ function setFocusPi(pi,opts){
   refreshPickCoach();
 }
 function evaluatePlayer(pi){
+  if(isMobileDraft()){
+    rememberMobileScroll();
+    mobileView="players";
+    mobileSheetPlayer=pi;
+    var mobileIndex=visibleCandidateIndexes().indexOf(pi),mobilePatch={view:"coach",focusPi:pi};
+    if(mobileIndex<0){mobilePatch.q=PLAYERS[pi].n;mobilePatch.f="All";mobileIndex=0;}
+    mobilePatch.page=Math.floor(mobileIndex/50);
+    if(mobilePatch.page!==state.page)mobileScroll.players=0;
+    setState(mobilePatch);
+    return;
+  }
   var cands=visibleCandidateIndexes(),index=cands.indexOf(pi),patch={focusPi:pi,view:"coach"};
   if(index<0){patch.q=PLAYERS[pi].n;patch.f="All";index=0;}
   patch.page=Math.floor(Math.max(0,index)/50);
@@ -350,10 +376,11 @@ function revealFocusedRow(pi){
   }
   if(row){var r=row.getBoundingClientRect(),box=list.getBoundingClientRect(),meta=list.querySelector('.listmeta'),top=box.top+(meta?meta.getBoundingClientRect().height:0);if(r.height>=box.bottom-top||r.top<top)list.scrollTop+=r.top-top;else if(r.bottom>box.bottom)list.scrollTop+=r.bottom-box.bottom;}
 }
-function pickCoachShellHtml(){
+/* waitText: shown while it isn't your turn (a finished phone draft passes its own). */
+function pickCoachShellHtml(waitText){
   return '<section id="pick-coach" class="pick-coach" aria-label="Pick coach">'
     +'<p class="pc-empty muted" hidden>Select a player to evaluate.</p>'
-    +'<p class="pc-wait muted" hidden>Available on your turn.</p>'
+    +'<p class="pc-wait muted" hidden>'+(waitText||'Available on your turn.')+'</p>'
     +'<p class="pc-loading muted" hidden>Evaluating…</p>'
     +'<div class="pc-card" hidden>'
     +'<div class="pc-head"><div class="pc-identity"><div class="pc-name"></div><div class="pc-meta muted"></div><div class="pc-source muted" hidden></div></div><button class="draftbtn pc-draft" type="button" disabled>Draft</button></div>'
@@ -1052,12 +1079,13 @@ function yahooAdvice(){
 function renderSetup(){
   clearPlayoffHost();
   var h='<div class="season">Your draft room</div><h2>Build your next <span class="grad">contender.</span></h2>';
-  h+='<div class="muted">12 teams, snake draft. 270-player pool from early 2026-27 preseason rankings. You draft your slot; the other 11 teams auto-pick.</div>';
+  var phone=mobileQuery.matches;
+  h+='<div class="muted">'+(phone?'12 teams. Snake draft. Pick your spot. We draft the other teams.':'12 teams, snake draft. 270-player pool from early 2026-27 preseason rankings. You draft your slot; the other 11 teams auto-pick.')+'</div>';
   h+='<h3>Your draft position</h3><div class="setup-pos">';
   for(var i=1;i<=12;i++)h+='<button class="posbtn'+(state.draftPos===i?' sel':'')+'" data-pos="'+i+'">'+i+'</button>';
   h+='</div><h3>Rounds</h3><select id="mdrounds">';
   [10,11,12,13,14,15].forEach(function(r){h+='<option value="'+r+'"'+(state.rounds===r?' selected':'')+'>'+r+' rounds</option>';});
-  h+='</select><div class="setup-actions"><button class="bigbtn" id="mdstart">Start Mock Draft</button></div>';
+  h+='</select><div class="setup-actions"><button class="bigbtn" id="mdstart">'+(phone?'Start draft':'Start Mock Draft')+'</button></div>';
   h+='<hr class="setup-div"><h3>Yahoo live draft</h3><div class="muted">Connect a Yahoo mock or live draft. Draft Lab reads the room through its private Cloudflare Worker, removes every Yahoo pick from this board, and gives advice only while the board is fresh. The token stays in this browser tab.</div>';
   h+='<div class="yhrow"><input id="yhroom" type="url" placeholder="Yahoo draft-room URL" aria-label="Yahoo draft-room URL"></div>';
   h+='<div class="yhrow"><input id="yhtoken" type="password" autocomplete="off" placeholder="Watch token" aria-label="Watch token"><select id="yhslot" aria-label="Your draft slot">';
@@ -1066,7 +1094,7 @@ function renderSetup(){
   h+='<details class="yhsync"><summary>Manual sync fallback</summary><div class="muted">If Yahoo access is unavailable, paste the existing yh1 sync code.</div><div class="yhrow"><textarea id="yhcode" rows="3" placeholder="Paste a yh1 sync code or link" aria-label="Draft sync code"></textarea><button class="ghostbtn" id="yhmanual">Load code</button></div></details>';
   h+='<div class="muted" style="margin-top:8px">Drafts save automatically in this browser. Data version: '+DATA_VERSION+'. · <button type="button" class="textlink" id="mdclear">Clear saved draft</button></div>';
   h+=playoffSettingsHtml();
-  h+=renderDataHealth();
+  h+=renderDataHealth(phone?'Data &amp; sources':'');
   el("mdapp").innerHTML=h;
   el("mdapp").querySelectorAll(".posbtn").forEach(function(b){b.addEventListener("click",function(){setState({draftPos:parseInt(b.getAttribute("data-pos"),10)});});});
   el("mdrounds").addEventListener("change",function(e){setState({rounds:parseInt(e.target.value,10)});});
@@ -1097,6 +1125,202 @@ function sortLabel(s){
 /* Mobile dock: coach collapsed to a compact strip by default so the player
  * list keeps most of the screen; the handle expands the full card. */
 var coachDockOpen=false;
+var mobileView=state.phase==="done"?"team":"players",mobileScroll={},mobileSheetPlayer=null,mobileReturnFocus=null;
+var mobileQuery=window.matchMedia("(max-width:700px)");
+function isMobileDraft(){return mobileQuery.matches&&(state.phase==="draft"||state.phase==="done");}
+function rememberMobileScroll(){
+  var pane=document.querySelector("[data-mobile-pane]");
+  if(pane)mobileScroll[pane.dataset.mobilePane]=pane.scrollTop;
+}
+function closeMobileSheet(){
+  var sheet=el("mdplayersheet");
+  if(sheet&&sheet.open)sheet.close();
+  mobileSheetPlayer=null;
+  if(mobileReturnFocus&&mobileReturnFocus.isConnected)mobileReturnFocus.focus({preventScroll:true});
+}
+var mobileRosterMode="slots",mobileMatchSort="value",mobilePuntPreview=null,mobilePastAdpOpen=false;
+/* Phone home for the desktop "Past ADP and still available" box: one collapsed row above the list. */
+function mobilePastAdpHtml(){
+  var rows=pastAdpRows();if(!rows.length)return '';
+  var h='<details class="m-past-adp" id="mdpastadp"'+(mobilePastAdpOpen?' open':'')+'><summary>Past ADP <span class="muted">· '+rows.length+' still available</span></summary><div class="m-past-adp-panel"><ol>';
+  rows.forEach(function(r){h+='<li><button type="button" data-past-adp-pi="'+r.pi+'"><b>'+esc(r.name)+'</b><span>ADP '+r.adp+' · value '+r.value.toFixed(1)+'</span></button></li>';});
+  return h+'</ol><p class="muted">Consensus ADP is behind the current pick. Ranked by 2025–26 nine-category value, not a projection.</p></div></details>';
+}
+function mobileOutlook(grades){
+  var next=nextUserPickIdx();
+  return DA.categoryOutlook({grades:grades,userTeam:userTeam(),players:PLAYERS,pdata:PDATA,log:state.log,nextPick:next,followingPick:next<0?-1:followingUserPickIdx(next)});
+}
+function mobileSnapshot(grades){
+  var outlook=mobileOutlook(grades);
+  var h='<section class="m-snapshot"><h3>All nine categories</h3><p class="muted">Last season’s value per picked player. '+(outlook.ready?'Compared with the room.':'Early read — your roster is still forming.')+'</p>';
+  outlook.rows.forEach(function(row){
+    var label=outlook.ready?({surplus:'Clear lead',strong:'Strong',weak:'Needs help','in-mix':'In the mix'})[row.status]:'Early';
+    h+='<div class="m-category '+row.status+'"><b>'+CATS9[row.ci]+'</b><span>'+label+(state.puntCats.indexOf(CATS9[row.ci])>=0?' · punted':'')+'</span><strong>'+(outlook.knownPicks?'#'+row.rank:'—')+'</strong></div>';
+  });
+  return h+'<p class="muted">Historical stats, not projections. Missing player data uses market-implied values. Lower turnovers rate higher.</p></section>';
+}
+function mobileTeamHtml(){
+  var entries=CORE.teamEntries(PLAYERS,state.log,userTeam(),TEAMS),ros=myRoster();
+  var h='<h3>My team <span class="muted">'+entries.length+'/'+state.rounds+'</span></h3>';
+  if(state.phase==="done")h+=mobileGradeCard(draftGrades().filter(function(g){return g.team===userTeam();})[0])+'<button type="button" class="bigbtn m-run-back" id="mdmobilerunback">Run it back</button>';
+  h+='<div class="m-roster-toggle" role="group" aria-label="Roster view">';
+  [['slots','By position'],['picks','Pick order'],['board','Board']].forEach(function(v){h+='<button type="button" class="ghostbtn" data-mobile-roster="'+v[0]+'" aria-pressed="'+(mobileRosterMode===v[0])+'">'+v[1]+'</button>';});
+  h+='</div><div class="rlist">';
+  if(mobileRosterMode==='picks'){
+    if(!entries.length)h+='<p class="muted">No picks yet.</p>';
+    entries.forEach(function(e){h+='<div class="rrow"><span class="rpick">'+pickLabel(e.index)+'</span><span class="pname">'+esc(e.player.n)+injBadge(e.player)+'<small>'+esc(e.player.t)+' · '+esc(e.player.p.join('/'))+'</small></span></div>';});
+  }else{
+    ros.slots.forEach(function(e){h+='<div class="rrow"><span class="rpick">'+e.slot+'</span><span class="pname">'+(e.player?esc(e.player.player.n)+injBadge(e.player.player)+'<small>'+esc(e.player.player.t)+' · '+esc(e.player.player.p.join('/'))+'</small>':'<span class="muted">Open</span>')+'</span></div>';});
+    ros.overflow.forEach(function(e){h+='<div class="rrow"><span class="rpick">Extra</span><span class="pname">'+esc(e.player.n)+injBadge(e.player)+'</span></div>';});
+  }
+  return h+'</div>'+mobileSnapshot(draftGrades())+playoffRoster(entries.map(function(e){return {pi:e.pi};}));
+}
+/* Your own grade: the phone views have no grades table, so show it on its own card. */
+function mobileGradeCard(me){
+  if(!me||!(me.rated+me.unrated))return '<p class="muted m-grade-empty">Your grade appears after your first pick.</p>';
+  return '<section class="m-grade-card"><b class="gradebadge g-'+me.grade.charAt(0)+'">'+me.grade+'</b><span><strong>Your team · #'+me.rank+' of '+TEAMS+'</strong><small>Team value '+me.score.toFixed(1)+' · historical 9-cat, not a projection</small></span></section>';
+}
+function mobileMatchupHtml(){
+  var grades=draftGrades(),me=grades.filter(function(g){return g.team===userTeam();})[0];
+  var rows=grades.filter(function(g){return g.team!==userTeam();}).map(function(g){var mu=catMatchup(me.cats,g.cats);return {g:g,mu:mu,w:mu.filter(function(v){return v==='win';}).length,l:mu.filter(function(v){return v==='loss';}).length};});
+  rows.sort(function(a,b){return mobileMatchSort==='number'?a.g.team-b.g.team:mobileMatchSort==='difficulty'?a.w-b.w||b.l-a.l||b.g.score-a.g.score:b.g.score-a.g.score;});
+  var h='<h3>How you match up</h3><p class="muted">Your category score against every opponent. Historical value comparison — not weekly win probabilities.</p>'+mobileGradeCard(me);
+  if(!(me.rated+me.unrated))return h+'<p class="muted m-match-empty">Matchups appear after your first pick.</p>';
+  h+='<p class="m-strategy">'+(state.puntCats.length?'Punting '+esc(puntLabel())+'. All nine categories still count.':'Balanced · all nine categories count.')+'</p>';
+  h+='<label class="m-sort">Sort by <select id="mdmatchsort">';
+  [['value','Team value'],['difficulty','Toughest matchup'],['number','Team number']].forEach(function(v){h+='<option value="'+v[0]+'"'+(mobileMatchSort===v[0]?' selected':'')+'>'+v[1]+'</option>';});
+  h+='</select></label><p class="muted">'+(mobileMatchSort==='value'?'Highest opponent value first.':'difficulty'===mobileMatchSort?'Fewest category edges for you first.':'Team number order.')+'</p>';
+  rows.forEach(function(row){var g=row.g,ties=9-row.w-row.l;
+    h+='<details class="m-matchup"><summary><span>'+esc(teamName(g.team))+'<small>Team value '+g.score.toFixed(1)+' · '+(g.rated+g.unrated)+' picks</small></span><b class="'+(row.w>row.l?'m-gain':row.w<row.l?'m-weak':'')+'">'+row.w+'–'+row.l+'</b><small>Your score'+(ties?' · '+ties+' even':'')+'</small></summary><div class="m-match-cats">';
+    CATS9.forEach(function(cat,ci){h+='<div class="'+row.mu[ci]+'"><b>'+cat+'</b><span>'+({win:'Your edge',loss:'Their edge',even:'Even'})[row.mu[ci]]+'</span><small>'+me.cats[ci].toFixed(1)+' vs '+g.cats[ci].toFixed(1)+(state.puntCats.indexOf(cat)>=0?' · punted':'')+'</small></div>';});
+    h+='</div>'+((g.unrated||me.unrated)?'<p class="muted">'+me.unrated+' of your players and '+g.unrated+' opponents lack category data; those players use market-implied values.</p>':'')+'</details>';
+  });
+  return h+'<details class="m-method"><summary>How scoring works</summary><p class="muted">Sum of last season’s per-game category z-scores across each roster. A difference above 0.5 is an edge; within ±0.5 is even. Scores are your category edges and losses, with ties shown separately. Missing data uses the mean of ten rated players nearest in consensus ADP. Starters and bench count equally; pick counts, injuries, schedules and role changes can affect the comparison. These are not forecast box scores or probabilities.</p></details>';
+}
+function mobilePuntHtml(){
+  var grades=draftGrades(),cats=mobilePuntPreview==null?state.puntCats.slice():mobilePuntPreview;
+  var taken={};state.log.forEach(function(pi){taken[pi]=true;});
+  /* Same recommendation rule as the desktop Punt advice box (PuntCore.suggest). */
+  var next=nextUserPickIdx(),choice=PuntCore.suggest(grades,userTeam(),PLAYERS,PDATA,taken,next,next<0?-1:followingUserPickIdx(next),state.puntCats);
+  var h='<h3>Punt strategy</h3><p class="muted">Start with one category. Add another when the tradeoff helps.</p><p class="m-strategy">Committed: <b>'+(state.puntCats.length?esc(puntLabel()):'Balanced')+'</b></p><h4>Punts to consider</h4>';
+  if(!choice)h+='<p class="muted">'+(state.puntCats.length>=PuntCore.MAX_PUNTS?'Three punts committed. Remove one to explore another.':next<0?'Draft complete. No remaining picks to guide.':state.puntCats.length?'No additional punt stands out: you are not trailing most teams in another category.':'No punt recommendation yet. It needs three picks, category data for at least two of yours, and a weak category against other teams.')+'</p>';
+  else{
+    h+='<button class="m-punt-recommend ghostbtn" data-mobile-punt-explore="'+choice.cat+'"><b>Explore '+choice.cat+'</b><span>Your per-pick value trails '+choice.below+' of '+choice.peers+' comparable teams.'+(choice.missing?' '+choice.missing+' of your picks lack category data.':'')+'</span></button>';
+    if(choice.also.length)h+='<p class="muted">Also trailing: '+choice.also.slice(0,2).join(', ')+'.</p>';
+  }
+  h+='<p class="muted">Updates after every pick.</p><h4>Explore your options</h4><div class="m-punt-options" role="group" aria-label="Categories to punt">';
+  CATS9.forEach(function(cat){var on=cats.indexOf(cat)>=0;h+='<button type="button" class="ghostbtn" data-mobile-punt="'+cat+'" aria-pressed="'+on+'"'+(!on&&cats.length>=PuntCore.MAX_PUNTS?' disabled':'')+'>'+cat+'</button>';});
+  h+='</div><p class="muted">Exploring: '+(cats.length?esc(PuntCore.label(cats)):'Balanced')+'. '+(sameCats(cats,state.puntCats)?'Matches your committed strategy.':'Commit to apply these changes.')+'</p><div class="m-punt-actions"><button class="bigbtn" id="mdmobilepuntcommit"'+(sameCats(cats,state.puntCats)?' disabled':'')+'>'+(cats.length?'Commit '+esc(PuntCore.label(cats)):'Commit balanced')+'</button><button class="ghostbtn" id="mdmobilepuntclear">Clear punts</button></div>';
+  if(cats.length===3)h+='<p class="muted">With three punts, you need five wins from the remaining six categories.</p>';
+  /* Same two lists as the desktop Punt advice box: take now vs can likely wait. */
+  var following=next<0?-1:followingUserPickIdx(next),card=function(row){var pl=PLAYERS[row.pi];return '<button class="m-punt-player" data-mobile-punt-player="'+row.pi+'"><span><b>'+esc(pl.n)+'</b><small>'+esc(pl.p.join('/'))+' · ADP '+consRank(pl).toFixed(1)+' · available rank #'+row.baseRank+' → #'+row.puntRank+'</small></span><strong class="'+(row.gain>0?'m-gain':row.gain<0?'m-weak':'')+'">'+(row.gain>0?'+':'')+row.gain+'<small>rank change</small></strong></button>';};
+  h+='<h4>'+(next<0?'Draft complete':'Consider at pick #'+(next+1))+'</h4>';
+  if(!cats.length)h+='<p class="muted">Select a punt to compare available-player ranks.</p>';
+  else if(next>=0){
+    var rows=PuntCore.rankings(PLAYERS,PDATA,taken,cats),near=PuntCore.nearTermRisers(rows,PLAYERS,next,following).slice(0,6),later=PuntCore.laterRisers(rows,PLAYERS,next,following).slice(0,4);
+    h+='<p class="muted">Players who rise under this punt and are unlikely to last until your following pick.</p>';
+    if(!near.length)h+='<p class="muted">No punt risers look urgent for this pick.</p>';
+    near.forEach(function(row){h+=card(row);});
+    if(later.length){h+='<h4>Watch for later</h4><p class="muted">Rising players whose ADP suggests they may still be there at pick #'+(following+1)+'. ADP is not a guarantee.</p>';later.forEach(function(row){h+=card(row);});}
+  }
+  return h+'<details class="m-method"><summary>How punt value works</summary><p class="muted">A category is recommended when your per-pick value trails more than half of the comparable teams (teams with at least two rated players). Phone and desktop use the same rule. Ties go to the punt that lifts more players near your next picks. Value uses existing historical category values, excluding all selected punts. Rank changes compare rated, available players. Up to three punts; TO values are inverted so fewer turnovers rate higher. Coach verdicts still count all nine categories. Missing category data cannot support a punt ranking.</p></details>';
+}
+function wireMobileSide(root){
+  var sort=root.querySelector('#mdmatchsort');if(sort)sort.addEventListener('change',function(){mobileMatchSort=sort.value;rememberMobileScroll();renderSide();el('mdside').scrollTop=mobileScroll[mobileView]||0;});
+  root.querySelectorAll('[data-mobile-roster]').forEach(function(b){b.addEventListener('click',function(){mobileRosterMode=b.dataset.mobileRoster;if(mobileRosterMode==='board'){mobileView='board';setState({view:'board'});}else{mobileView='team';setState({view:'team'});}});});
+  root.querySelectorAll('[data-mobile-punt]').forEach(function(b){b.addEventListener('click',function(){var cat=b.dataset.mobilePunt,cats=mobilePuntPreview==null?state.puntCats.slice():mobilePuntPreview.slice(),i=cats.indexOf(cat);if(i>=0)cats.splice(i,1);else if(cats.length<PuntCore.MAX_PUNTS)cats.push(cat);mobilePuntPreview=PuntCore.normalize(cats);var top=root.scrollTop;renderSide();root.scrollTop=top;var again=root.querySelector('[data-mobile-punt="'+cat+'"]');if(again)again.focus({preventScroll:true});});});
+  root.querySelectorAll('[data-mobile-punt-explore]').forEach(function(b){b.addEventListener('click',function(){mobilePuntPreview=PuntCore.normalize(state.puntCats.concat([b.dataset.mobilePuntExplore]));renderSide();});});
+  var commit=root.querySelector('#mdmobilepuntcommit');if(commit)commit.addEventListener('click',function(){var cats=mobilePuntPreview||state.puntCats;mobilePuntPreview=null;setState({puntCats:cats,sort:!cats.length&&state.sort==='punt'?'cons':state.sort});});
+  var clear=root.querySelector('#mdmobilepuntclear');if(clear)clear.addEventListener('click',function(){mobilePuntPreview=null;setState({puntCats:[],sort:state.sort==='punt'?'cons':state.sort});});
+  var runBack=root.querySelector('#mdmobilerunback');if(runBack)runBack.addEventListener('click',restartDraft);
+  root.querySelectorAll('[data-mobile-punt-player]').forEach(function(b){b.addEventListener('click',function(){evaluatePlayer(Number(b.dataset.mobilePuntPlayer));});});
+  wireInjToggles(root);
+}
+/* player-averages.js (81 KB, display-only) loads the first time a phone opens a player sheet; desktop never fetches it.
+   averagesLoad: null (not started or done), "loading", or "failed" (the next sheet open retries). */
+var averagesLoad=null;
+function loadPlayerAverages(onDone){
+  if(window.PlayerAverages||averagesLoad==="loading")return;
+  averagesLoad="loading";
+  var tag=document.createElement("script");tag.src="player-averages.js";
+  tag.onload=function(){averagesLoad=null;onDone();};
+  tag.onerror=function(){averagesLoad="failed";tag.remove();onDone();};
+  document.head.append(tag);
+}
+function mobilePlayerStats(pl){
+  var cv=PDATA[pl.n]&&PDATA[pl.n].cv;
+  var h='<section class="m-player-profile"><h4>Category profile</h4>';
+  if(cv){var ranked=CATS9.map(function(cat,ci){return {cat:cat,value:cv[ci]};}).sort(function(a,b){return b.value-a.value;});
+    h+='<div class="m-strength-pair"><div><small>Strengths</small><b>'+(ranked.filter(function(v){return v.value>0;}).slice(0,2).map(function(v){return v.cat;}).join(' · ')||'None above average')+'</b></div><div><small>Weaknesses</small><b class="m-weak">'+(ranked.filter(function(v){return v.value<0;}).slice(-2).map(function(v){return v.cat;}).join(' · ')||'None below average')+'</b></div></div><p class="muted">Last season’s category values. TO is inverted; lower turnovers is better.</p>';
+  }else h+='<p class="muted">Category strengths and weaknesses unavailable: no historical category data.</p>';
+  var data=window.PlayerAverages,stats=data&&data.players[pl.n];
+  h+='<h4>Per-game averages</h4>';
+  if(!data)h+='<p class="muted m-avg-wait">'+(averagesLoad==="failed"?'Per-game averages unavailable right now.':'Loading per-game averages…')+'</p>';
+  else if(stats){h+='<p class="muted">'+esc(data.season)+' actuals · not a season forecast. '+stats.g+' games.</p><dl class="m-per-game">';
+    [['FT · made / attempted',stats.ftm.toFixed(1)+' / '+stats.fta.toFixed(1)],['FG · made / attempted',stats.fgm.toFixed(1)+' / '+stats.fga.toFixed(1)],['3PM',stats.threes],['Points',stats.pts],['Rebounds',stats.reb],['Assists',stats.ast],['Steals',stats.stl],['Blocks',stats.blk],['Turnovers',stats.to]].forEach(function(stat){h+='<div><dt>'+stat[0]+'</dt><dd>'+(typeof stat[1]==='number'?stat[1].toFixed(1):stat[1])+'</dd></div>';});
+    h+='</dl><p class="muted"><a href="'+esc(data.source)+'" target="_blank" rel="noopener">Stat source</a> · Season averages; not projected production.</p>';
+  }else h+='<p class="muted">No recorded 2025–26 NBA season averages available.</p>';
+  return h+'<p class="m-strategy">'+(state.puntCats.length?'Punting '+esc(puntLabel())+' · Coach verdict counts all nine categories.':'Balanced · all nine categories count.')+'</p><button class="ghostbtn m-manage-punts" id="mdsheetpunts">Manage punts</button></section>';
+}
+function wireMobileDraft(){
+  var root=el("md"),avail=document.querySelector("#md .avail"),side=el("mdside");
+  root.dataset.mobileView=mobileView;
+  var pane=mobileView==="players"?el("mdplist"):side;
+  pane.dataset.mobilePane=mobileView;
+  pane.scrollTop=mobileScroll[mobileView]||0;
+  var nav=document.createElement("nav");nav.className="mobile-nav";nav.setAttribute("aria-label","Draft navigation");
+  [["players","Players"],["team","My team"],["grades","Analysis"],["punt","Punts"]].forEach(function(v){
+    var b=document.createElement("button");b.type="button";b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="'+({players:'M3 3h18v18H3zM3 12h18M9 3v5h6V3',team:'M5 21v-3a7 7 0 0 1 14 0v3M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8',grades:'M4 20V10M12 20V4M20 20v-7',punt:'M4 21V3m0 0h15l-4 5 4 5H4'})[v[0]]+'"/></svg><span>'+v[1]+'</span>';b.setAttribute("aria-current",(mobileView===v[0]||mobileView==='board'&&v[0]==='team')?"page":"false");
+    b.addEventListener("click",function(){rememberMobileScroll();closeMobileSheet();mobileView=v[0];if(v[0]==='team'&&mobileRosterMode==='board')mobileRosterMode='slots';setState({view:(v[0]==="players"||v[0]==="punt")?"coach":v[0]});});nav.append(b);
+  });el("mdapp").append(nav);
+
+  var pastAdp=el("mdpastadp");
+  if(pastAdp){
+    pastAdp.addEventListener("toggle",function(){mobilePastAdpOpen=pastAdp.open;});
+    pastAdp.querySelectorAll("[data-past-adp-pi]").forEach(function(b){b.addEventListener("click",function(){mobilePastAdpOpen=false;evaluatePlayer(Number(b.dataset.pastAdpPi));});});
+  }
+  var filters=el("mdfilters"),filterClose=document.createElement("button");
+  filterClose.type="button";filterClose.className="ghostbtn mobile-filter-close";filterClose.textContent="Done";
+  filterClose.addEventListener("click",function(){filters.open=false;el("mdq").focus();});filters.append(filterClose);
+  if(mobileView!=="players")return;
+  var sheet=document.createElement("dialog");sheet.id="mdplayersheet";sheet.className="mobile-player-sheet";sheet.setAttribute("aria-label","Player details and draft advice");
+  var grip=document.createElement("div");grip.className="mobile-sheet-grip";grip.setAttribute("aria-hidden","true");grip.innerHTML="<span></span>";
+  var head=document.createElement("div");head.className="mobile-sheet-head";
+  var titleBox=document.createElement("div");titleBox.className="mobile-sheet-titlebox mobile-player-info";
+  var close=document.createElement("button");close.type="button";close.className="mobile-sheet-close";close.textContent="Close";close.setAttribute("aria-label","Close player details");
+  close.addEventListener("click",closeMobileSheet);head.append(titleBox,close);
+  var drag=document.createElement("div");drag.className="mobile-sheet-drag";drag.append(grip,head);
+  sheet.append(drag,side);el("mdapp").append(sheet);
+  (function(){var y0=null,dy=0;
+    function reset(){sheet.style.transition="";sheet.style.transform="";}
+    drag.addEventListener("pointerdown",function(e){if(e.target.closest("button"))return;y0=e.clientY;dy=0;sheet.style.transition="none";try{drag.setPointerCapture(e.pointerId);}catch(_){}});
+    drag.addEventListener("pointermove",function(e){if(y0==null)return;dy=Math.max(0,e.clientY-y0);sheet.style.transform="translateY("+dy+"px)";});
+    function end(){if(y0==null)return;var d=dy;y0=null;dy=0;if(d>80){reset();closeMobileSheet();}else{sheet.style.transition="transform 180ms ease-out";sheet.style.transform="translateY(0)";setTimeout(reset,200);}}
+    drag.addEventListener("pointerup",end);drag.addEventListener("pointercancel",end);
+  })();
+  sheet.addEventListener("cancel",function(e){e.preventDefault();closeMobileSheet();});
+  sheet.addEventListener("click",function(e){if(e.target===sheet){var r=sheet.getBoundingClientRect();if(e.clientY<r.top||e.clientY>r.bottom||e.clientX<r.left||e.clientX>r.right)closeMobileSheet();}});
+  if(mobileSheetPlayer!=null){
+    var pl=PLAYERS[mobileSheetPlayer],info=document.createElement("div");info.className="mobile-player-extra";
+    titleBox.innerHTML='<h3 class="mobile-sheet-name">'+esc(pl.n)+'</h3><p class="mobile-sheet-sub"><span>'+esc(pl.t)+'</span><span>'+esc(pl.p.join("/"))+'</span><span>ADP '+(pl.adp==null?'—':pl.adp)+'</span></p>'+(pl.inj?'<p class="mobile-injury m-injury-alert">'+esc(pl.inj.injury)+' · '+esc(pl.inj.ret)+'</p>':'');
+    sheet.setAttribute("aria-label",pl.n+" details and draft advice");
+    var sheetPi=mobileSheetPlayer,fillInfo=function(){
+      info.innerHTML=mobilePlayerStats(pl)+(pl.inj?'<p class="mobile-injury">'+esc(injTitle(pl.inj))+'</p>':'');
+      var manage=el('mdsheetpunts');if(manage)manage.addEventListener('click',function(){closeMobileSheet();mobileView='punt';setState({view:'coach'});});
+    };
+    side.append(info);fillInfo();
+    /* Refresh only the stats block once the averages arrive, so sheet scroll and focus stay put. */
+    loadPlayerAverages(function(){if(mobileSheetPlayer===sheetPi&&info.isConnected)fillInfo();});
+    var draftButton=side.querySelector(".pc-draft");
+    if(draftButton)draftButton.textContent="Draft "+pl.n;
+    mobileReturnFocus=avail.querySelector('.prow[data-pi="'+mobileSheetPlayer+'"]')||el("mdq");
+    sheet.showModal();
+  }
+}
+function syncMobileViewport(){el('md').style.setProperty('--mobile-height',(window.visualViewport?window.visualViewport.height:window.innerHeight)+'px');}
+if(window.visualViewport)window.visualViewport.addEventListener('resize',syncMobileViewport);
+window.addEventListener('resize',syncMobileViewport);syncMobileViewport();
+mobileQuery.addEventListener("change",function(){rememberMobileScroll();closeMobileSheet();render();});
 function setCoachDockOpen(open){
   coachDockOpen=!!open;
   var root=document.getElementById("md");
@@ -1109,7 +1333,7 @@ function setCoachDockOpen(open){
   }
 }
 function syncCoachDock(){
-  var on=state.phase==="draft"&&state.view==="coach"&&isUserTurn();
+  var on=!isMobileDraft()&&state.phase==="draft"&&state.view==="coach"&&isUserTurn();
   var root=document.getElementById("md");
   var cols=document.querySelector("#md .cols");
   if(root){
@@ -1132,30 +1356,33 @@ function updateCoachDockPeek(name){
   lab.textContent=name?("Pick coach \u00b7 "+name):"Pick coach";
 }
 function renderDraft(){
+  rememberMobileScroll();
+  if(isMobileDraft())state.view=(mobileView==="players"||mobileView==="punt")?"coach":mobileView;
   var idx=state.log.length,round=Math.floor(idx/TEAMS)+1,team=idx<totalPicks()?teamForPick(idx):-1;
   var h='<div class="turnbar">';
   var liveCore="";
+  var totRounds=Math.round(totalPicks()/TEAMS);
   if(state.yahooLive)h+='<span class="livechip">LIVE · Yahoo draft</span>';
   if(state.phase==="done"){h+='<span><b>Draft complete.</b></span>';liveCore="Draft complete.";}
   else if(isUserTurn()&&state.yahooLive){
-    h+='<span class="you">YOUR PICK — make it in Yahoo</span><span class="muted">Round '+round+', overall pick '+(idx+1)+' of '+totalPicks()+'</span>';
+    h+='<span class="pickhead on"><span class="pknum">Pick '+(idx+1)+'</span><span class="pkline"><span class="you">Your pick — make it in Yahoo</span><span class="muted">Round '+round+' of '+totRounds+'</span></span></span>';
     var freshYahoo=yahooBoardFresh(),adv=freshYahoo?yahooAdvice():null;
-    if(!freshYahoo)h+='<span class="nextpick">Waiting for a fresh Yahoo board.</span>';
-    else if(adv)h+='<span class="nextpick">Engine\u2019s take: <b>'+esc(adv.name)+'</b> ('+adv.verdict+', '+(adv.valueAtPick>0?"+":"")+adv.valueAtPick+')</span>';
+    if(!freshYahoo)h+='<span class="nextpick yhadvice">Waiting for a fresh Yahoo board.</span>';
+    else if(adv)h+='<span class="nextpick yhadvice">Engine’s take: <b>'+esc(adv.name)+'</b> ('+adv.verdict+', '+(adv.valueAtPick>0?"+":"")+adv.valueAtPick+')</span>';
     liveCore="Your pick in Yahoo. Round "+round+", overall pick "+(idx+1)+(freshYahoo?(". Engine's take: "+(adv?adv.name:"—")+"."):". Advice unavailable until Yahoo syncs.");
   }
-  else if(isUserTurn()){h+='<span class="you">YOUR PICK</span><span class="muted">Round '+round+', overall pick '+(idx+1)+' of '+totalPicks()+'</span>';liveCore="Your pick. Round "+round+", overall pick "+(idx+1)+" of "+totalPicks()+".";}
-  else{h+='<span><b>'+esc(teamName(team))+'</b> is picking...</span><span class="muted">Round '+round+', overall pick '+(idx+1)+'</span>';liveCore=teamName(team)+" is picking. Round "+round+", overall pick "+(idx+1)+".";}
+  else if(isUserTurn()){h+='<span class="pickhead on"><span class="pknum">Pick '+(idx+1)+'</span><span class="pkline"><span class="you">'+(isMobileDraft()?'Your pick':'You\'re on the clock')+'</span><span class="muted">Round '+round+' of '+totRounds+'</span></span></span>';liveCore="Your pick. Round "+round+", overall pick "+(idx+1)+" of "+totalPicks()+".";}
+  else{h+='<span class="pickhead"><span class="pknum">Pick '+(idx+1)+'</span><span class="pkline"><span><b>'+esc(teamName(team))+'</b> is picking...</span><span class="muted">Round '+round+' of '+totRounds+'</span></span></span>';liveCore=teamName(team)+" is picking. Round "+round+", overall pick "+(idx+1)+".";}
   var nxt=nextUserPickIdx();
   if(nxt>=0&&!isUserTurn())h+='<span class="nextpick">Your next pick: <b>#'+(nxt+1)+'</b> ('+(nxt-idx)+' picks away)</span>';
   if(nxt>=0&&isUserTurn()){var nxt2=-1,tot2=totalPicks();for(var j=nxt+1;j<tot2;j++)if(teamForPick(j)===userTeam()){nxt2=j;break;}
     if(nxt2>=0)h+='<span class="nextpick">Your next pick: <b>#'+(nxt2+1)+'</b> ('+(nxt2-nxt)+' picks away)</span>';}
-  h+='<span style="flex:1"></span>';
-  if(state.userTurns.length&&!state.yahooLive)h+='<button class="ghostbtn" id="mdundo">Undo my last pick</button>';
+  h+='<span class="turnbar-spacer" style="flex:1"></span>';
+  if(state.userTurns.length&&!state.yahooLive)h+='<button class="ghostbtn" id="mdundo">'+(isMobileDraft()?'Undo pick':'Undo my last pick')+'</button>';
   if(state.phase!=="done"&&!isUserTurn()&&!state.yahooLive)h+='<button class="ghostbtn" id="mdsim">Sim to my pick</button>';
   h+='<button class="ghostbtn" id="mdnew">Restart</button></div>';
   if(state.yahooLive&&state.phase!=="done")h+='<details class="yhsync"><summary>Sync board</summary><div class="muted" id="yhsyncstatus" role="status">'+(state.yahooLive.worker?'Yahoo auto-sync is on.':'Manual sync mode.')+'</div><div class="yhrow"><textarea id="yhcode2" rows="2" placeholder="Manual fallback: paste a yh1 sync code" aria-label="Manual sync code"></textarea><button class="ghostbtn" id="yhsync">Sync</button></div></details>';
-  h+=renderScarcity();
+  if(!isMobileDraft())h+=renderScarcity(); /* scarcity is desktop-only: no room for it on phones */
   h+=viewTabsHtml();
   var glance=state.view==="board"||state.view==="grades"||state.view==="coach";
   h+='<div class="cols'+(glance?' glance':'')+'"><div class="avail">';
@@ -1169,7 +1396,9 @@ function renderDraft(){
   var sorts=[["cons","Consensus","Yahoo + Fantrax ADP blend (each platform's thin late-draft tail counts less); what CPU teams draft from"],["rank","Rank","Draft Lab rank: consensus ADP nudged toward 2025-26 nine-cat production (up to 20 spots)"],["adp","ADP","Yahoo ADP (Hashtag Basketball, 4 Oct 2026)"],["last","Last · PER","2025-26 nine-category per-game rank (Basketball Monster / Hashtag)"],["lastTotal","Last · TOT","2025-26 nine-category TOTALS rank — derived from Basketball-Reference season totals, not a published rank"]];
   if(state.puntCats.length)sorts.push(["punt","Punt value","Historical "+puntCatCount()+"-category value, excluding "+puntLabel()]);
   sorts.forEach(function(s){h+='<button class="fchip'+((state.sort||"cons")===s[0]?' sel':'')+'" data-sort="'+s[0]+'" title="'+s[2]+'">'+s[1]+'</button>';});
-  h+='</div></details><div class="plist" id="mdplist"></div><div id="mdpager"></div></div>';
+  h+='</div></details>';
+  if(isMobileDraft()&&state.phase==="draft")h+=mobilePastAdpHtml();
+  h+='<div class="plist" id="mdplist"></div><div id="mdpager"></div></div>';
   h+='<div class="side" id="mdside"></div></div>';
   el("mdapp").innerHTML=h;
   announceLive((_pendingLive||"")+liveCore);
@@ -1179,16 +1408,17 @@ function renderDraft(){
   el("mdapp").querySelectorAll("[data-sort]").forEach(function(b){b.addEventListener("click",function(){setState({sort:b.getAttribute("data-sort"),page:0,filtersOpen:true});});});
   var fd=el("mdfilters");
   if(fd)fd.addEventListener("toggle",function(){state.filtersOpen=fd.open;save();});
-  wireScarcityToggles(el("mdapp"));
+  if(!isMobileDraft())wireScarcityToggles(el("mdapp"));
   var q=el("mdq");q.addEventListener("input",function(){state.q=q.value;state.page=0;save();renderList();if(state.view==="coach"){var fp=resolveFocusPi();if(fp!==state.focusPi)setFocusPi(fp,{rerenderList:true});else refreshPickCoach();}});
   q.addEventListener("keydown",function(e){e.stopPropagation();});
   var sim=el("mdsim");if(sim)sim.addEventListener("click",advance);
   var undo=el("mdundo");if(undo)undo.addEventListener("click",undoUserPick);
-  el("mdnew").addEventListener("click",restartDraft);
+  el("mdnew").addEventListener("click",onRestartClick);
   var yhs=el("yhsync");if(yhs)yhs.addEventListener("click",function(){yahooLoadCode(el("yhcode2").value);});
   renderList();renderSide();
   syncCoachDock();
-  if(state.view==="coach")revealFocusedRow(state.focusPi);
+  if(isMobileDraft())wireMobileDraft();
+  if(state.view==="coach"&&!isMobileDraft())revealFocusedRow(state.focusPi);
   if(state.view==="coach")refreshPickCoach();
   liveSyncEnsure();
 }
@@ -1222,7 +1452,7 @@ function renderList(){
     i=cands[k];var pl2=PLAYERS[i];
     var pr=puntByPi[i];
     var rlabel=srt==="punt"?(pr?pr.puntRank:"—"):(srt==="cons"?consRank(pl2).toFixed(1):pl2.r);
-    var sub='<span>ADP '+disp(pl2.adp)+'</span><span>Last '+disp(pl2.last)+'</span><span>Tot '+disp(pl2.lastTotal)+'</span><span>MPG '+(pl2.mpg==null?'—':pl2.mpg.toFixed(1))+'</span><span>'+posBadges(pl2.p)+'</span>'+playoffBadge(pl2);
+    var sub='<span>ADP '+disp(pl2.adp)+'</span><span>Last '+disp(pl2.last)+'</span><span>Tot '+disp(pl2.lastTotal)+'</span><span>MPG '+(pl2.mpg==null?'—':pl2.mpg.toFixed(1))+'</span><span>'+posBadges(pl2.p)+'</span>'+playoffBadge(pl2)+'<span class="rt">'+esc(pl2.t)+'</span>';
     var mvRow=moverRoleChipHtml(pl2, false);if(mvRow)sub+=mvRow;
     if(pl2.c.length)sub+='<span>'+pl2.c.slice(0,4).join(" · ")+'</span>';
     if(state.puntCats.length)sub+=pr?'<span title="Historical available-player ranks, nine-category vs excluding '+puntLabel()+'">Punt '+state.puntCats.join('+')+': #'+pr.baseRank+' → #'+pr.puntRank+(pr.gain>0?' (+'+pr.gain+')':'')+'</span>':'<span>Punt value: unknown (no 2025-26 category data)</span>';
@@ -1258,8 +1488,11 @@ function myRoster(){
 }
 function renderSide(){
   var s=el("mdside");if(!s)return;
+  if(isMobileDraft()&&mobileView!=="players"&&mobileView!=="board"){
+    s.innerHTML=mobileView==='punt'?mobilePuntHtml():mobileView==='grades'?mobileMatchupHtml():mobileTeamHtml();wireMobileSide(s);return;
+  }
   if(state.view==="coach"){
-    s.innerHTML='<button type="button" class="pc-dock-handle" id="pc-dock-handle" aria-controls="pick-coach" aria-expanded="'+(coachDockOpen?'true':'false')+'"><span class="pc-dock-grip" aria-hidden="true"></span><span class="pc-dock-label">Pick coach</span><span class="pc-dock-more muted">'+(coachDockOpen?'Less':'More')+'</span></button><h3 class="pc-side-title">Pick coach</h3><p class="muted pc-advisory">Advice only. Drafting always takes a separate click.</p>'+pickCoachShellHtml()+renderPastAdp()+renderPuntStrategy(draftGrades());
+    s.innerHTML='<button type="button" class="pc-dock-handle" id="pc-dock-handle" aria-controls="pick-coach" aria-expanded="'+(coachDockOpen?'true':'false')+'"><span class="pc-dock-grip" aria-hidden="true"></span><span class="pc-dock-label">Pick coach</span><span class="pc-dock-more muted">'+(coachDockOpen?'Less':'More')+'</span></button><h3 class="pc-side-title">Pick coach</h3><p class="muted pc-advisory">Advice only. Drafting always takes a separate click.</p>'+pickCoachShellHtml(isMobileDraft()&&state.phase==="done"?'Draft complete. Undo a pick to resume drafting.':'')+(isMobileDraft()?"":renderPastAdp()+renderPuntStrategy(draftGrades()));
     s.querySelector('#pc-dock-handle').addEventListener('click',function(){setCoachDockOpen(!coachDockOpen);});
     s.querySelector('.pc-alt').addEventListener('click',function(e){var pi=parseInt(e.currentTarget.dataset.pi,10);if(isFinite(pi))evaluatePlayer(pi);});
     s.querySelector('.pc-draft').addEventListener('click',function(e){var pi=parseInt(e.currentTarget.dataset.pi,10);if(isUserTurn()&&pi===resolveFocusPi())userDraft(pi);});
@@ -1270,7 +1503,7 @@ function renderSide(){
   if(state.view==="grades"){s.innerHTML=renderGrades();wireInjToggles(s);return;}
   if(state.view==="board"){
     var h='<h3>Draft board</h3><div class="boardwrap"><table class="board"><tr><th>Rd</th>';
-    for(var t=0;t<TEAMS;t++)h+='<th>'+esc(teamName(t))+'</th>';
+    for(var t=0;t<TEAMS;t++)h+='<th>'+esc(teamName(t))+(isMobileDraft()&&t===userTeam()?'<small>Your team</small>':'')+'</th>';
     h+='</tr>';
     for(var r=0;r<state.rounds;r++){
       h+='<tr><td><b>'+(r+1)+'</b></td>';
@@ -1284,6 +1517,10 @@ function renderSide(){
       h+='</tr>';
     }
     s.innerHTML=h+'</table></div><p class="muted"><span class="vdelta g">+12</span> value: picked 12 spots later than ADP &nbsp;·&nbsp; <span class="vdelta b">-8</span> reach: picked 8 spots earlier than ADP &nbsp;·&nbsp; no number: picked at ADP or no ADP data</p>';
+    if(isMobileDraft()){var back=document.createElement('button');back.type='button';back.className='ghostbtn';back.textContent='Back to roster';back.addEventListener('click',function(){mobileRosterMode='slots';mobileView='team';setState({view:'team'});});s.prepend(back);
+      /* Phones show ~2 team columns: start the board on your column. */
+      var wrap=s.querySelector('.boardwrap'),heads=wrap.querySelectorAll('tr:first-child th'),mine=heads[userTeam()+1];
+      if(mine)wrap.scrollLeft=Math.max(0,mine.offsetLeft-heads[0].offsetWidth);}
     wireInjToggles(s);return;
   }else{
     var mine=[];state.log.forEach(function(pi,idx){if(teamForPick(idx)===userTeam())mine.push({pi:pi,idx:idx});});
@@ -1303,15 +1540,19 @@ function renderSide(){
   }
   wireInjToggles(s);
 }
-function renderPastAdp(){
+/* Available players whose consensus ADP is behind the current pick, best 2025-26 value first. */
+function pastAdpRows(){
   var taken={};state.log.forEach(function(pi){taken[pi]=true;});
   var rows=PLAYERS.map(function(p,pi){
     var cv=PDATA[p.n]&&PDATA[p.n].cv,adp=consRank(p);
     if(taken[pi]||!Array.isArray(cv)||cv.length!==9||!isFinite(adp))return null;
     var value=cv.reduce(function(sum,n){return sum+n;},0);
-    return {name:p.n,adp:Math.round(adp*10)/10,value:Math.round(value*10)/10,late:state.log.length+1>adp};
+    return {pi:pi,name:p.n,adp:Math.round(adp*10)/10,value:Math.round(value*10)/10,late:state.log.length+1>adp};
   }).filter(Boolean);
-  var best=rows.filter(function(r){return r.late;}).sort(function(a,b){return b.value-a.value;}).slice(0,8);
+  return rows.filter(function(r){return r.late;}).sort(function(a,b){return b.value-a.value;}).slice(0,8);
+}
+function renderPastAdp(){
+  var best=pastAdpRows();
   var h='<section class="past-adp"><h3>Past ADP and still available</h3><p class="muted">Available players whose consensus ADP is behind the current pick, ranked by 2025–26 nine-category value. Historical value is not a 2026–27 projection.</p>';
   if(best.length)h+='<ol class="value-leaders">'+best.map(function(r){return '<li>'+esc(r.name)+' · ADP '+r.adp+' · value '+r.value.toFixed(1)+'</li>';}).join('')+'</ol>';
   else h+='<p class="muted">No players past ADP yet.</p>';
@@ -1433,6 +1674,7 @@ function wirePuntControls(root){
 }
 function renderDone(){
   cancelPickCoach();
+  if(isMobileDraft()){renderDraft();return;}
   var h='<h2>Draft complete</h2><div class="muted">Final roster from pick #'+state.draftPos+' ('+state.rounds+' rounds, 12 teams)</div>';
   h+='<button class="bigbtn" id="mdnew2">Run it back</button>';
   if(state.userTurns.length)h+='<button class="ghostbtn" id="mdundo2" style="margin-left:8px">Undo my last pick</button>';
@@ -1449,7 +1691,8 @@ function playoffBadge(pl){
  var v=window.PlayoffCore.counts(window.PlayoffData,pl.t,state.playoffStart);
  if(!v)return '<span class="playoffbadge">Playoffs \u2014 team unknown</span>';
  var r=window.PlayoffCore.rating(v);
- return '<span class="playoffbadge '+r+'" title="Schedule quality: '+r+' (2 games in a week = bad, 3 = ok, 4+ = good)">Playoffs W1 '+v[0]+' \u00b7 W2 '+v[1]+' \u00b7 W3 '+v[2]+' = '+window.PlayoffCore.total(v)+'</span>';
+ function pw(i){return '<span class="pw g'+Math.min(4,v[i])+'"><span class="pwk">W'+(i+1)+' </span><span class="pwn">'+v[i]+'</span></span>';}
+ return '<span class="playoffbadge '+r+'" title="Schedule quality: '+r+' (2 games in a week = bad, 3 = ok, 4+ = good)"><span class="pwx">Playoffs </span>'+pw(0)+'<span class="pwx"> \u00b7 </span>'+pw(1)+'<span class="pwx"> \u00b7 </span>'+pw(2)+'<span class="pwx"> = '+window.PlayoffCore.total(v)+'</span></span>';
 }
 function playoffRoster(mine){
  mine=mine.filter(function(m){return m.pi>=0;});
@@ -1487,6 +1730,8 @@ function wirePlayoffSettings(root){
 }
 function render(){
   clearPlayoffHost();
+  document.body.classList.toggle("mobile-drafting",isMobileDraft());
+  el("md").classList.toggle("mobile-draft",isMobileDraft());
   document.body.classList.toggle("dl-on-clock",state.phase==="draft"&&isUserTurn());
   if(state.phase==="setup")renderSetup();
   else if(state.phase==="done")renderDone();
