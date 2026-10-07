@@ -39,7 +39,7 @@ The preview site, [tony-draft-lab-preview.pages.dev](https://tony-draft-lab-prev
 
 ### Draft on a phone
 
-Phones get their own draft room with four bottom tabs:
+On phones, the draft room has four bottom tabs:
 
 - **Players**, with a collapsed **Past ADP** row.
 - **My team**: roster, category snapshot, and draft board.
@@ -82,6 +82,7 @@ Each verdict carries a source label:
 To test lean verdicts on a preview or local host, add `?leanDemo=1` to the URL. `docs/pick-coach.md` covers secret setup, the pinned model (`jev-1.13.0`), CORS, the request payload, and the UI contract.
 
 ## Develop
+Open `index.html` locally or serve this folder with a static server. Draft state stays in the browser that created it. Each data refresh updates `DATA_VERSION` in `app.js`; a version change clears older saved drafts. The current version is `2026-10-06`. Yahoo and Fantrax ADP use Hashtag Basketball's 6 October table. See `docs/data-refresh-2026-10-06.md` for the changes and injury-review limits.
 
 Run every logic check:
 
@@ -90,10 +91,6 @@ npm test        # or: node run-tests.js
 ```
 
 Format the engine modules with `npm run format`. On every push to `main` and every pull request, GitHub Actions runs `npm run format:check`, the tests, and `audit-data.js`.
-
-### Data version
-
-Each data refresh bumps `DATA_VERSION` in `app.js`, which drops older saved drafts. The current version is `2026-10-04`. Yahoo and Fantrax ADP use Hashtag Basketball's 4 October table. See `docs/data-refresh-2026-10-04.md` for changes and injury-review limitations.
 
 ### Preview cleanup
 
@@ -156,6 +153,8 @@ Draft Lab can follow your own Yahoo mock or live draft. On the setup screen, cli
 ## More docs
 
 - `docs/data-and-methodology.md`: category values, scarcity math, grades, the data audit, and refresh history.
+- `docs/three-makeover-checkpoint.md`: current visual-update decisions, verification, and release boundary.
+- `docs/data-refresh-2026-10-06.md`: current player-data changes, sources, and review limits.
 - `docs/adp-rankings-review-2026-09-28.md`: a graded review of the ADP and ranking pipeline, and how to refresh it.
 - `docs/pick-coach.md`: Pick coach design, secrets, and rate limiting.
 - `docs/yahoo-worker-plan.md`, `docs/yahoo-draft-copilot-approach.md`, `docs/yahoo-copilot-review-2026-10-03.md`: Yahoo live-draft design and review.

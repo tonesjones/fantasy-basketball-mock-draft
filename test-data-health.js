@@ -33,7 +33,13 @@ assert.ok(injuryBundle.PLAYERS.find(p=>p.n==='Kristaps Porzingis').inj,'indefini
 assert.ok(injuryBundle.PLAYERS.find(p=>p.n==='Kon Knueppel').inj,'unresolved opening-night availability stays flagged');
 assert.ok(injuryBundle.PLAYERS.find(p=>p.n==='Brandon Ingram').inj,'confirmed opening-night absence stays flagged');
 assert.ok(injuryBundle.PLAYERS.find(p=>p.n==='Tobias Harris').inj,'unresolved calf injury stays flagged');
-assert.equal(Object.keys(injuryBundle.INJ).length,12);
+for(const name of ['Coby White','Max Strus','Nic Claxton','Grant Williams']) {
+  assert.ok(injuryBundle.PLAYERS.find(p=>p.n===name).inj, name+' has a current injury flag');
+}
+for(const name of ['Jalen Suggs','Cam Whitmore']) {
+  assert.equal(injuryBundle.PLAYERS.find(p=>p.n===name).inj,null,name+' has no supported ongoing injury flag');
+}
+assert.equal(Object.keys(injuryBundle.INJ).length,14);
 /* The setup screen's panel must return HTML. A bad merge once nested a second renderDataHealth inside the first, so it returned undefined. */
 {
   const src=require('fs').readFileSync(__dirname+'/app.js','utf8');
