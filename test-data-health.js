@@ -40,4 +40,18 @@ for(const name of ['Jalen Suggs','Cam Whitmore']) {
   assert.equal(injuryBundle.PLAYERS.find(p=>p.n===name).inj,null,name+' has no supported ongoing injury flag');
 }
 assert.equal(Object.keys(injuryBundle.INJ).length,14);
+/* The setup screen's panel must return HTML. A bad merge once nested a second renderDataHealth inside the first, so it returned undefined. */
+{
+  const src=require('fs').readFileSync(__dirname+'/app.js','utf8');
+  const start=src.indexOf('function renderDataHealth(');
+  assert.equal(src.indexOf('function renderDataHealth(',start+1),-1,'renderDataHealth is declared once');
+  let i=src.indexOf('{',start),depth=0;
+  for(;i<src.length;i++){if(src[i]==='{')depth++;else if(src[i]==='}'&&--depth===0)break;}
+  const sandbox={HEALTH:{players:2,missingAdp:[],missingLast:[],untagged:[],placeholderTeams:[],errors:[],missingData:[],orphanData:[]},DATA_VERSION:'v',esc:String};
+  require('node:vm').runInNewContext(src.slice(start,i+1),sandbox);
+  const html=sandbox.renderDataHealth('Data &amp; sources');
+  assert.equal(typeof html,'string');
+  assert.ok(html.startsWith('<details')&&html.endsWith('</details>'),'panel is one closed details block');
+  assert.ok(html.includes('<b>Data &amp; sources</b>'),'the label argument reaches the summary');
+}
 console.log(`Data health tests passed; ${report.players} bundled players have matching data records.`);
