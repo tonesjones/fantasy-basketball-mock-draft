@@ -1,0 +1,23 @@
+Matched pool players: 256
+Value changes: 360 (6 moved >= 3)
+  Davion Mitchell adpF 151.4 -> 139.8 (consensus 140.5 -> 132.7)
+  Mark Williams adpF 136.7 -> 141.8 (consensus 124.8 -> 127.9)
+  Rui Hachimura adpF 228.1 -> 223.4 (consensus 150.7 -> 148.7)
+  Jonathan Kuminga adpF 207 -> 202.4 (consensus 144.4 -> 143.6)
+  Daniel Gafford adpF 220.5 -> 217.1 (consensus 159.7 -> 160.3)
+  Khaman Maluach adpF 170.2 -> 167 (consensus 150.3 -> 149.2)
+Newly published: 3
+  Cam Johnson adp null -> 112.5
+  Mike Conley adpF null -> 243.3
+  Jordan Clarkson adpF null -> 243.6
+Now blank (will be nulled): 2
+  Morez Johnson Jr. adp 116.6 -> null
+  Aaron Wiggins adp 109 -> null
+Pool players absent from the table (values kept): 14
+  Donte DiVincenzo, Jonas Valanciunas, Clint Capela, Nicolas Batum, Jaden Ivey, Aaron Holiday, Jeremy Sochan, Caris LeVert, Haywood Highsmith, Ochai Agbaji, D'Angelo Russell, Cam Thomas, Jonathan Isaac, Jonathan Mogbo
+Table players with a Yahoo ADP not in the pool (add candidates): 2
+  Bronny James Jr. LAL Yahoo 104.5 Fantrax 242.3
+  Jordan Poole NO Yahoo 111 Fantrax 239.7
+Team / position differences (not written; review by hand): 2
+  Rob Dillingham: team CHA -> CHI, pos PG/SG -> PG/SG
+  Buddy Hield: team CHI -> CHA, pos SF/SG -> SF/SG

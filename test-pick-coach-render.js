@@ -4,7 +4,7 @@
  * index.html (the refreshPickCoach .then() body) plus the REAL
  * buildPickCoachWhy/moverWhyClause/vacatedWhyClause helpers, inside a vm
  * sandbox with a minimal DOM shim. Signals come from the REAL
- * pick-signals.js engine over the branch's 270-player data, and res comes
+ * pick-signals.js engine over the branch's 272-player data, and res comes
  * from the REAL pick-coach.js normalizeApiResult.
  * Run with: bun test-pick-coach-render.js
  */
@@ -31,7 +31,7 @@ var S = sandbox.PickSignals;
 var PickCoach = sandbox.PickCoach;
 assert.ok(S && PickCoach, "engine + coach loaded");
 var PLAYERS = sandbox.PLAYERS;
-assert.strictEqual(PLAYERS.length, 270, "270 players");
+assert.strictEqual(PLAYERS.length, 272, "272 players");
 
 var byName = {};
 PLAYERS.forEach(function (p) { byName[p.n] = p; });
