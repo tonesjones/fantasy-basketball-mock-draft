@@ -309,10 +309,9 @@ function setFocusPi(pi,opts){
       var row=list.querySelector('.prow[data-pi="'+next+'"]');
       if(row){
         row.classList.add("pc-focus");
-        row.setAttribute("aria-pressed","true");
       }
-      list.querySelectorAll(".prow[data-pi]").forEach(function(n){
-        if(n!==row)n.setAttribute("aria-pressed","false");
+      list.querySelectorAll(".pnamebtn[data-pi]").forEach(function(n){
+        n.setAttribute("aria-pressed",row&&n.getAttribute("data-pi")===String(next)?"true":"false");
       });
       list.scrollTop=keepScroll; /* coach-dock: preserve list scroll; do not scroll page to #pick-coach */
     }
@@ -367,6 +366,7 @@ function pickCoachShellHtml(waitText){
     +'<div class="pc-strengths" hidden></div>'
     +'<div class="pc-playoff muted" hidden></div>'
     +'<div class="pc-target muted" hidden></div>'
+    +'<div class="pc-avg"></div>'
     +'</div></section>';
 }
 function pcShow(root, which){
@@ -678,6 +678,16 @@ function fillPickCoachBoard(still, pl, payload){
     var badge=playoffBadge(pl);
     poEl.innerHTML=badge||"";
     poEl.hidden=!badge;
+  }
+  var avgEl=still.querySelector(".pc-avg");
+  /* Phone shows averages in the player sheet below the coach; desktop shows them here. */
+  if(avgEl&&isMobileDraft()){avgEl.innerHTML="";avgEl.hidden=true;}
+  else if(avgEl){
+    avgEl.hidden=false;
+    var pcPi=PLAYERS.indexOf(pl);
+    avgEl.innerHTML=playerAveragesHtml(pl);
+    /* Refresh only the averages block when the lazy script arrives, if this player is still focused. */
+    if(!window.PlayerAverages)loadPlayerAverages(function(){if(avgEl.isConnected&&resolveFocusPi()===pcPi)avgEl.innerHTML=playerAveragesHtml(pl);});
   }
 }
 /* Clear/Close call cue + punt warning. Close call = the verdict is marginal
@@ -1066,7 +1076,7 @@ function wireMobileSide(root){
   root.querySelectorAll('[data-mobile-punt-player]').forEach(function(b){b.addEventListener('click',function(){evaluatePlayer(Number(b.dataset.mobilePuntPlayer));});});
   wireInjToggles(root);
 }
-/* player-averages.js (81 KB, display-only) loads the first time a phone opens a player sheet; desktop never fetches it.
+/* player-averages.js (81 KB, display-only) loads the first time a player is opened (phone sheet or desktop Pick coach).
    averagesLoad: null (not started or done), "loading", or "failed" (the next sheet open retries). */
 var averagesLoad=null;
 function loadPlayerAverages(onDone){
@@ -1077,12 +1087,8 @@ function loadPlayerAverages(onDone){
   tag.onerror=function(){averagesLoad="failed";tag.remove();onDone();};
   document.head.append(tag);
 }
-function mobilePlayerStats(pl){
-  var cv=PDATA[pl.n]&&PDATA[pl.n].cv;
-  var h='<section class="m-player-profile"><h4>Category profile</h4>';
-  if(cv){var ranked=CATS9.map(function(cat,ci){return {cat:cat,value:cv[ci]};}).sort(function(a,b){return b.value-a.value;});
-    h+='<div class="m-strength-pair"><div><small>Strengths</small><b>'+(ranked.filter(function(v){return v.value>0;}).slice(0,2).map(function(v){return v.cat;}).join(' · ')||'None above average')+'</b></div><div><small>Weaknesses</small><b class="m-weak">'+(ranked.filter(function(v){return v.value<0;}).slice(-2).map(function(v){return v.cat;}).join(' · ')||'None below average')+'</b></div></div><p class="muted">Last season’s category values. TO is inverted; lower turnovers is better.</p>';
-  }else h+='<p class="muted">Category strengths and weaknesses unavailable: no historical category data.</p>';
+function playerAveragesHtml(pl){
+  var h='';
   var data=window.PlayerAverages,stats=data&&data.players[pl.n];
   h+='<h4>Per-game averages</h4>';
   if(!data)h+='<p class="muted m-avg-wait">'+(averagesLoad==="failed"?'Per-game averages unavailable right now.':'Loading per-game averages…')+'</p>';
@@ -1090,6 +1096,15 @@ function mobilePlayerStats(pl){
     [['FT · made / attempted',stats.ftm.toFixed(1)+' / '+stats.fta.toFixed(1)],['FG · made / attempted',stats.fgm.toFixed(1)+' / '+stats.fga.toFixed(1)],['3PM',stats.threes],['Points',stats.pts],['Rebounds',stats.reb],['Assists',stats.ast],['Steals',stats.stl],['Blocks',stats.blk],['Turnovers',stats.to]].forEach(function(stat){h+='<div><dt>'+stat[0]+'</dt><dd>'+(typeof stat[1]==='number'?stat[1].toFixed(1):stat[1])+'</dd></div>';});
     h+='</dl><p class="muted"><a href="'+esc(data.source)+'" target="_blank" rel="noopener">Stat source</a> · Season averages; not projected production.</p>';
   }else h+='<p class="muted">No recorded 2025–26 NBA season averages available.</p>';
+  return h;
+}
+function mobilePlayerStats(pl){
+  var cv=PDATA[pl.n]&&PDATA[pl.n].cv;
+  var h='<section class="m-player-profile"><h4>Category profile</h4>';
+  if(cv){var ranked=CATS9.map(function(cat,ci){return {cat:cat,value:cv[ci]};}).sort(function(a,b){return b.value-a.value;});
+    h+='<div class="m-strength-pair"><div><small>Strengths</small><b>'+(ranked.filter(function(v){return v.value>0;}).slice(0,2).map(function(v){return v.cat;}).join(' · ')||'None above average')+'</b></div><div><small>Weaknesses</small><b class="m-weak">'+(ranked.filter(function(v){return v.value<0;}).slice(-2).map(function(v){return v.cat;}).join(' · ')||'None below average')+'</b></div></div><p class="muted">Last season’s category values. TO is inverted; lower turnovers is better.</p>';
+  }else h+='<p class="muted">Category strengths and weaknesses unavailable: no historical category data.</p>';
+  h+=playerAveragesHtml(pl);
   return h+'<p class="m-strategy">'+(state.puntCats.length?'Punting '+esc(puntLabel())+' · Coach verdict accounts for your punts.':'Balanced · all nine categories count.')+'</p><button class="ghostbtn m-manage-punts" id="mdsheetpunts">Manage punts</button></section>';
 }
 function wireMobileDraft(){
@@ -1276,7 +1291,7 @@ function renderList(){
     if(pl2.c.length)sub+='<span>'+pl2.c.slice(0,4).join(" · ")+'</span>';
     if(state.puntCats.length)sub+=pr?'<span title="Historical available-player ranks, nine-category vs excluding '+puntLabel()+'">Punt '+state.puntCats.join('+')+': #'+pr.baseRank+' → #'+pr.puntRank+(pr.gain>0?' (+'+pr.gain+')':'')+'</span>':'<span>Punt value: unknown (no 2025-26 category data)</span>';
     var focusCls=(focusNow===i)?' pc-focus':'';
-    rows.push('<div class="prow'+focusCls+'" data-pi="'+i+'" role="button" tabindex="0" aria-label="Evaluate '+esc(pl2.n)+'" aria-pressed="'+(focusNow===i?'true':'false')+'"><div class="l1"><span class="prank">'+rlabel+'</span><span class="pname">'+esc(pl2.n)+' <span class="teamtag">'+esc(pl2.t)+'</span>'+injBadge(pl2)+'</span><button class="draftbtn" data-pi="'+i+'" aria-label="Draft '+esc(pl2.n)+'"'+(ut?'':' disabled')+'>Draft</button></div><div class="l2">'+sub+'</div></div>');
+    rows.push('<div class="prow'+focusCls+'" data-pi="'+i+'"><div class="l1"><span class="prank">'+rlabel+'</span><span class="pname"><button type="button" class="pnamebtn" data-pi="'+i+'" aria-label="Evaluate '+esc(pl2.n)+'" aria-pressed="'+(focusNow===i?'true':'false')+'">'+esc(pl2.n)+' <span class="teamtag">'+esc(pl2.t)+'</span></button>'+injBadge(pl2)+'</span><button class="draftbtn" data-pi="'+i+'" aria-label="Draft '+esc(pl2.n)+'"'+(ut?'':' disabled')+'>Draft</button></div><div class="l2">'+sub+'</div></div>');
   }
   if(!cands.length)rows.push('<div class="prow"><div class="l1"><span class="muted">No players match.</span></div></div>');
   el("mdplist").innerHTML=rows.join("");
@@ -1287,11 +1302,8 @@ function renderList(){
     row.addEventListener("click",function(e){
       if(e.target.closest&&e.target.closest(".draftbtn"))return;
       if(e.target.closest&&e.target.closest(".injtag"))return;
+      /* Name button keyboard Enter/Space arrives here as a click, so the row needs no key handler. */
       evaluatePlayer(parseInt(row.getAttribute("data-pi"),10));
-    });
-    row.addEventListener("keydown",function(e){
-      if(e.target.closest&&e.target.closest("button"))return;
-      if(e.key==="Enter"||e.key===" "){e.preventDefault();evaluatePlayer(parseInt(row.getAttribute("data-pi"),10));}
     });
   });
   wireInjToggles(el("mdplist"));
@@ -1311,7 +1323,7 @@ function renderSide(){
     s.innerHTML=mobileView==='punt'?mobilePuntHtml():mobileView==='grades'?mobileMatchupHtml():mobileTeamHtml();wireMobileSide(s);return;
   }
   if(state.view==="coach"){
-    s.innerHTML='<button type="button" class="pc-dock-handle" id="pc-dock-handle" aria-controls="pick-coach" aria-expanded="'+(coachDockOpen?'true':'false')+'"><span class="pc-dock-grip" aria-hidden="true"></span><span class="pc-dock-label">Pick coach</span><span class="pc-dock-more muted">'+(coachDockOpen?'Less':'More')+'</span></button><h3 class="pc-side-title">Pick coach</h3><p class="muted pc-advisory">Advice only. Drafting always takes a separate click.</p>'+pickCoachShellHtml(isMobileDraft()&&state.phase==="done"?'Draft complete. Undo a pick to resume drafting.':'')+(isMobileDraft()?"":renderPastAdp()+renderPuntStrategy(draftGrades()));
+    s.innerHTML='<button type="button" class="pc-dock-handle" id="pc-dock-handle" aria-controls="pick-coach" aria-expanded="'+(coachDockOpen?'true':'false')+'"><span class="pc-dock-grip" aria-hidden="true"></span><span class="pc-dock-label">Pick coach</span><span class="pc-dock-more muted">'+(coachDockOpen?'Less':'More')+'</span></button><h3 class="pc-side-title">Pick coach</h3><p class="muted pc-advisory">Advice only. Drafting always takes a separate click.</p>'+pickCoachShellHtml(isMobileDraft()&&state.phase==="done"?'Draft complete. Undo a pick to resume drafting.':'')+(isMobileDraft()?"":renderPuntStrategy(draftGrades())+renderPastAdp());
     s.querySelector('#pc-dock-handle').addEventListener('click',function(){setCoachDockOpen(!coachDockOpen);});
     s.querySelector('.pc-alt').addEventListener('click',function(e){var pi=parseInt(e.currentTarget.dataset.pi,10);if(isFinite(pi))evaluatePlayer(pi);});
     s.querySelector('.pc-draft').addEventListener('click',function(e){var pi=parseInt(e.currentTarget.dataset.pi,10);if(isUserTurn()&&pi===resolveFocusPi())userDraft(pi);});
@@ -1425,7 +1437,7 @@ function renderPuntStrategy(grades,previewCats,expanded){
     h+='<p><b>'+(have.length?'Consider also punting ':'Consider punting ')+choice.cat+'.</b> Your per-pick value trails '+choice.below+' of '+choice.peers+' comparable teams.'+(choice.missing?' '+choice.missing+' of your picks lack category data, so treat this as tentative.':'')+alsoTxt+' This is advice, not an automatic commitment.</p>';
   }else if(!have.length&&!choice&&!cats.length)h+='<p class="muted">No punt recommendation yet. It needs three picks, category data for at least two of yours, and a weak category against other teams.</p>';
   else if(have.length&&!choice&&!previewing&&!full)h+='<p class="muted">No additional punt stands out: you are not trailing most teams in another category.</p>';
-  h+='<details'+(expanded?' open':'')+'><summary>Explore punt values and choices</summary><p class="muted">Based on 2025-26 per-game values, not a 2026-27 projection. Pick up to '+PuntCore.MAX_PUNTS+' categories. TO is scored so fewer turnovers rate higher, so punting TO lifts high-usage players.</p>';
+  h+='<h4 class="puntpick">Explore punt values and choices</h4><p class="muted">Pick up to '+PuntCore.MAX_PUNTS+' categories to preview.</p>';
   h+='<div class="filters puntchips" role="group" aria-label="Categories to punt">';
   PuntCore.CATS.forEach(function(c){
     var on=cats.indexOf(c)>=0,blocked=!on&&cats.length>=PuntCore.MAX_PUNTS;
@@ -1434,7 +1446,7 @@ function renderPuntStrategy(grades,previewCats,expanded){
   h+='</div><div class="puntcontrols">';
   h+='<button class="ghostbtn" id="mdpuntcommit"'+(cats.length&&!sameCats(cats,have)?'':' disabled')+'>'+(have.length?'Update punt':'Commit punt')+'</button>';
   if(have.length)h+='<button class="ghostbtn" id="mdpuntclear">Clear punt</button>';
-  h+='</div>';
+  h+='</div><details class="puntnotes"><summary>How punt values work</summary><p class="muted">Based on 2025-26 per-game values, not a 2026-27 projection. TO is scored so fewer turnovers rate higher, so punting TO lifts high-usage players.</p></details>';
   if(cats.length===PuntCore.MAX_PUNTS)h+='<p class="muted">With '+cats.length+' punts you still need to win 5 of the remaining '+(9-cats.length)+' categories each week.</p>';
   h+=puntRadarHtml(grades,cats);
   if(cats.length){
@@ -1456,7 +1468,7 @@ function renderPuntStrategy(grades,previewCats,expanded){
     }else h+='<p class="muted">'+(next<0?'No picks remain.':'No qualifying position options near your next two picks. Use Punt value sort to explore the full board.')+'</p>';
     h+='<p class="muted">These are position alternatives, not a ranking to draft in order. Each player appears once by eligible position. Pick-now targets use consensus ADP before the midpoint to your following pick; later watches stop about one round after it. Ranks compare available players with category data only.</p>';
   }
-  return h+'</details></section>';
+  return h+'</section>';
 }
 function puntRadarHtml(grades,cats){
   var me=grades.filter(function(g){return g.team===userTeam();})[0];
