@@ -258,12 +258,17 @@ assert.strictEqual(fixCoachSug.verdict, "suggest", "coachFixture large value →
 // --- Fingerprint ---
 assert.strictEqual(
   PC.fingerprint({ player: "A", pickNumber: 10, logLen: 9 }),
-  "A|10|9"
+  "A|10|9|"
 );
 assert.strictEqual(
   PC.fingerprint({ player: "A", pickNumber: 10 }),
-  "A|10|9",
+  "A|10|9|",
   "logLen defaults from pickNumber-1"
+);
+assert.notStrictEqual(
+  PC.fingerprint({ player: "A", pickNumber: 10, logLen: 9, puntCats: ["FT%"] }),
+  PC.fingerprint({ player: "A", pickNumber: 10, logLen: 9, puntCats: [] }),
+  "committing a punt must not reuse the pre-punt cached verdict"
 );
 
 // --- softAdpClause fixtures (mirrored from index.html display layer) ---

@@ -260,7 +260,7 @@
     };
   }
 
-  /** Fingerprint: player + pick# + logLen (board identity for cache). */
+  /** Fingerprint: player + pick# + logLen + committed punts (board identity for cache). */
   function fingerprint(state) {
     var s = state || {};
     var player = String(s.player || "");
@@ -269,7 +269,8 @@
       s.logLen != null && s.logLen !== ""
         ? Number(s.logLen)
         : Math.max(0, pick - 1);
-    return player + "|" + pick + "|" + logLen;
+    var punts = Array.isArray(s.puntCats) ? s.puntCats.join("+") : "";
+    return player + "|" + pick + "|" + logLen + "|" + punts;
   }
 
   function cacheGet(key) {

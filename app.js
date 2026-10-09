@@ -456,8 +456,9 @@ function buildPickSignals(pl, pickNumber, nextPick, openSlots, taken) {
     }
     var puntShift = null, puntLabel = "";
     if (state.puntCats && state.puntCats.length) {
-      // Cache per (log length + punt set): evaluate runs per click.
-      var pk = state.log.length + "|" + state.puntCats.join("+");
+      // Cache per (draft log + punt set): evaluate runs per click. The full
+      // log, not its length, so an undo + different pick can't reuse it.
+      var pk = state.log.join(",") + "|" + state.puntCats.join("+");
       if (!window._puntShiftCache || window._puntShiftCache.key !== pk) {
         var ps = {};
         PuntCore.rankings(PLAYERS, PDATA, taken, state.puntCats).forEach(function (row) {
