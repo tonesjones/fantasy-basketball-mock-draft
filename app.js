@@ -449,6 +449,7 @@ function buildPickCoachPayload(pi){
     notableAvailable:notable,
     recentlyTaken:recently,
     scarcityRem:rem,
+    puntCats:state.puntCats.slice(),
     mover:!!pl.mover,
     roleDelta:pl.roleDelta||null,
     roleNote:pl.roleNote||null,
