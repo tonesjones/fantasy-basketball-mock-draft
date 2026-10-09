@@ -474,7 +474,23 @@ function buildPickSignals(pl, pickNumber, nextPick, openSlots, taken) {
     if (!window._netVacCache && typeof MOVES !== "undefined" && typeof VACATED_USAGE !== "undefined") {
       window._netVacCache = PS.netVacated(PLAYERS, MOVES, VACATED_USAGE);
     }
+    var puntShift = null, puntLabel = "";
+    if (state.puntCats && state.puntCats.length) {
+      // Cache per (log length + punt set): evaluate runs per click.
+      var pk = state.log.length + "|" + state.puntCats.join("+");
+      if (!window._puntShiftCache || window._puntShiftCache.key !== pk) {
+        var ps = {};
+        PuntCore.rankings(PLAYERS, PDATA, taken, state.puntCats).forEach(function (row) {
+          ps[PLAYERS[row.pi].n] = row.baseRank - row.puntRank;
+        });
+        window._puntShiftCache = { key: pk, shift: ps, label: PuntCore.label(state.puntCats) };
+      }
+      puntShift = window._puntShiftCache.shift;
+      puntLabel = window._puntShiftCache.label;
+    }
     var ctx = {
+      puntShift: puntShift,
+      puntLabel: puntLabel,
       moves: (typeof MOVES !== "undefined") ? MOVES : {},
       netVac: window._netVacCache || {},
       playoffStart: (typeof state !== "undefined" && state.playoffStart) || 20
@@ -689,7 +705,7 @@ function renderCoachCall(still,res){
   var basis=still.querySelector(".pc-basis");
   if(basis){
     var punt=(typeof state!=="undefined"&&state&&state.puntCats&&state.puntCats.length)?PuntCore.label(state.puntCats):"";
-    basis.textContent=punt?("Heads up: you're punting "+punt+", but this verdict still counts all 9 categories"):"";
+    basis.textContent=punt?("Verdict adjusted for your "+punt+" punt"):"";
     basis.hidden=!punt;
   }
   var box=still.querySelector(".pc-call");
@@ -777,8 +793,7 @@ function refreshPickCoach(){
     var detVerdict=isDet?String(res.signals.verdict).toLowerCase():null;
     // Deterministic: verdict already computed from signals — honor it directly,
     // never reclassify via confidence gates. Jev's opinion is shown separately.
-    // Fixture / leanDemo / forceConf: honor res.verdict — NEVER reclassify via confs
-    // (confs can classify differently than the forced Soft lean / suggest paint).
+    // coachFixture: honor res.verdict — NEVER reclassify via confs.
     // Live: PickCoach.classifyVerdict uses TEMP max(scoreConf,choiceConf) + score/ADP floors.
     var verdict;
     if(isDet){
@@ -789,7 +804,7 @@ function refreshPickCoach(){
     }else if(softFail){
       verdict="uncertain";
     }else if(res.fixture||res.fallback==="fixture"){
-      // honor-res.verdict for fixtures (leanDemo / forceConf / coachFixture)
+      // honor-res.verdict for fixtures (coachFixture)
       verdict=(res.verdict==="suggest"||res.verdict==="lean"||res.verdict==="uncertain")?res.verdict:"uncertain";
     }else if(window.PickCoach&&typeof window.PickCoach.classifyVerdict==="function"){
       verdict=window.PickCoach.classifyVerdict(scN,ccN,{
@@ -1205,7 +1220,7 @@ function mobilePuntHtml(){
     near.forEach(function(row){h+=card(row);});
     if(later.length){h+='<h4>Watch for later</h4><p class="muted">Rising players whose ADP suggests they may still be there at pick #'+(following+1)+'. ADP is not a guarantee.</p>';later.forEach(function(row){h+=card(row);});}
   }
-  return h+'<details class="m-method"><summary>How punt value works</summary><p class="muted">A category is recommended when your per-pick value trails more than half of the comparable teams (teams with at least two rated players). Phone and desktop use the same rule. Ties go to the punt that lifts more players near your next picks. Value uses existing historical category values, excluding all selected punts. Rank changes compare rated, available players. Up to three punts; TO values are inverted so fewer turnovers rate higher. Coach verdicts still count all nine categories. Missing category data cannot support a punt ranking.</p></details>';
+  return h+'<details class="m-method"><summary>How punt value works</summary><p class="muted">A category is recommended when your per-pick value trails more than half of the comparable teams (teams with at least two rated players). Phone and desktop use the same rule. Ties go to the punt that lifts more players near your next picks. Value uses existing historical category values, excluding all selected punts. Rank changes compare rated, available players. Up to three punts; TO values are inverted so fewer turnovers rate higher. Coach verdicts account for your committed punts. Missing category data cannot support a punt ranking.</p></details>';
 }
 function wireMobileSide(root){
   var sort=root.querySelector('#mdmatchsort');if(sort)sort.addEventListener('change',function(){mobileMatchSort=sort.value;rememberMobileScroll();renderSide();el('mdside').scrollTop=mobileScroll[mobileView]||0;});
@@ -1242,7 +1257,7 @@ function mobilePlayerStats(pl){
     [['FT · made / attempted',stats.ftm.toFixed(1)+' / '+stats.fta.toFixed(1)],['FG · made / attempted',stats.fgm.toFixed(1)+' / '+stats.fga.toFixed(1)],['3PM',stats.threes],['Points',stats.pts],['Rebounds',stats.reb],['Assists',stats.ast],['Steals',stats.stl],['Blocks',stats.blk],['Turnovers',stats.to]].forEach(function(stat){h+='<div><dt>'+stat[0]+'</dt><dd>'+(typeof stat[1]==='number'?stat[1].toFixed(1):stat[1])+'</dd></div>';});
     h+='</dl><p class="muted"><a href="'+esc(data.source)+'" target="_blank" rel="noopener">Stat source</a> · Season averages; not projected production.</p>';
   }else h+='<p class="muted">No recorded 2025–26 NBA season averages available.</p>';
-  return h+'<p class="m-strategy">'+(state.puntCats.length?'Punting '+esc(puntLabel())+' · Coach verdict counts all nine categories.':'Balanced · all nine categories count.')+'</p><button class="ghostbtn m-manage-punts" id="mdsheetpunts">Manage punts</button></section>';
+  return h+'<p class="m-strategy">'+(state.puntCats.length?'Punting '+esc(puntLabel())+' · Coach verdict accounts for your punts.':'Balanced · all nine categories count.')+'</p><button class="ghostbtn m-manage-punts" id="mdsheetpunts">Manage punts</button></section>';
 }
 function wireMobileDraft(){
   var root=el("md"),avail=document.querySelector("#md .avail"),side=el("mdside");
@@ -1605,7 +1620,7 @@ function renderPuntStrategy(grades,previewCats,expanded){
     var lbl=puntLabel(cats),rows=PuntCore.rankings(PLAYERS,PDATA,taken,cats);
     var near=PuntCore.nearTermRisers(rows,PLAYERS,next,following);
     var later=PuntCore.laterRisers(rows,PLAYERS,next,following);
-    h+='<p class="muted">Punt '+esc(lbl)+': historical '+puntCatCount(cats)+'-category value. Coach advice above still uses all 9 categories.</p>';
+    h+='<p class="muted">Punt '+esc(lbl)+': historical '+puntCatCount(cats)+'-category value. Coach verdicts account for committed punts, not this preview.</p>';
     h+='<b>'+(next<0?'Draft complete':'Consider at pick #'+(next+1)+' if you punt '+esc(lbl))+'</b>';
     if(!near.length&&next>=0)h+='<p class="muted">No available punt risers look urgent for this pick. The watches below are for later, not for this turn.</p>';
     if(near.length||later.length){

@@ -30,11 +30,15 @@ assert.ok(PC, "PickCoach exported");
 
 // QA query fixtures must never be activatable on the production host.
 var previewQa = loadPickCoach({
-  location: { protocol: "https:", hostname: "tony-draft-lab-preview.pages.dev", search: "?leanDemo=1" },
+  location: { protocol: "https:", hostname: "tony-draft-lab-preview.pages.dev", search: "?coachFixture=1" },
 });
-assert.strictEqual(previewQa.readCoachQaMode().mode, "leanDemo");
+assert.strictEqual(previewQa.readCoachQaMode().mode, "coachFixture");
+var noQa = loadPickCoach({
+  location: { protocol: "https:", hostname: "tony-draft-lab-preview.pages.dev", search: "?other=1" },
+});
+assert.strictEqual(noQa.readCoachQaMode(), null, "unknown queries are ignored");
 var prodQa = loadPickCoach({
-  location: { protocol: "https:", hostname: "tony-draft-lab.pages.dev", search: "?leanDemo=1" },
+  location: { protocol: "https:", hostname: "tony-draft-lab.pages.dev", search: "?coachFixture=1" },
 });
 assert.strictEqual(prodQa.readCoachQaMode(), null, "production host must ignore QA fixture queries");
 
@@ -239,25 +243,12 @@ assert.strictEqual(PC.sourceLabel(soft), "Unavailable");
 assert.strictEqual(PC.sourceLabel(value), "Stub · offline");
 assert.strictEqual(PC.sourceLabel(kept), "Jev");
 
-// --- QA fixtures: leanDemo / coachFixture / forceConf (never Jev) ---
-var fixLean = PC.fixtureResult({ player: "Edwards", pickNumber: 5, adp: 8 }, { mode: "leanDemo", band: "lean" });
-assert.strictEqual(fixLean.verdict, "lean");
-assert.strictEqual(fixLean.model, "stub");
-assert.strictEqual(fixLean.fallback, "fixture");
-// leanDemo confs are fixed mid paint values; band comes from honor-res.verdict
-assert.strictEqual(fixLean.scoreConfidence, 0.38);
-assert.strictEqual(fixLean.choiceConfidence, 0.36);
-
-var fixSuggest = PC.fixtureResult({ player: "Jokic", pickNumber: 1, adp: 1 }, { mode: "forceConf", band: "suggest" });
-assert.strictEqual(fixSuggest.verdict, "suggest");
-assert.ok(/^Stub\/Fixture/.test(PC.sourceLabel(fixSuggest)));
-
-var fixUnc = PC.fixtureResult({ player: "X", pickNumber: 50, adp: 50 }, { mode: "forceConf", band: "uncertain" });
-assert.strictEqual(fixUnc.verdict, "uncertain");
-
+// --- QA fixture: coachFixture (never Jev) ---
 var fixCoachLean = PC.fixtureResult({ player: "Edwards", pickNumber: 10, adp: 5 }, { mode: "coachFixture", band: null });
 assert.strictEqual(fixCoachLean.verdict, "lean", "coachFixture mid gap → lean");
 assert.notStrictEqual(fixCoachLean.model, "jev-1.13.0");
+assert.strictEqual(fixCoachLean.fallback, "fixture");
+assert.ok(/^Stub\/Fixture/.test(PC.sourceLabel(fixCoachLean)));
 
 var fixCoachSug = PC.fixtureResult({ player: "Y", pickNumber: 40, adp: 20 }, { mode: "coachFixture", band: null });
 assert.strictEqual(fixCoachSug.verdict, "suggest", "coachFixture large value → suggest");

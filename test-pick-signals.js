@@ -224,6 +224,30 @@ t("every verdict names numbers", function () {
     });
   });
 });
+t("punt: riser gets positive punt edge and lower V", function () {
+  var p = P("Jayson Tatum");
+  var base = S.trueValue(p, ctx);
+  var pu = S.trueValue(p, Object.assign({}, ctx, { puntShift: { "Jayson Tatum": 20 }, puntLabel: "FT%" }));
+  var e = pu.edges.filter(function (x) { return x.k === "punt"; })[0];
+  assert.ok(e && e.v > 0, "expected positive punt edge: " + JSON.stringify(pu.edges));
+  assert.ok(/rises 20 spots punting FT%/.test(e.note), e.note);
+  assert.ok(pu.V < base.V, "punt V " + pu.V + " should be below " + base.V);
+});
+t("punt: no punt or tiny shift -> no punt edge", function () {
+  var p = P("Jayson Tatum");
+  assert.ok(!S.trueValue(p, ctx).edges.some(function (x) { return x.k === "punt"; }));
+  var tiny = S.trueValue(p, Object.assign({}, ctx, { puntShift: { "Jayson Tatum": 1 } }));
+  assert.ok(!tiny.edges.some(function (x) { return x.k === "punt"; }), "|e|<1 skipped");
+  var capped = S.trueValue(p, Object.assign({}, ctx, { puntShift: { "Jayson Tatum": 200 } }));
+  assert.strictEqual(capped.edges.filter(function (x) { return x.k === "punt"; })[0].v, 20, "cap 40 * w 0.5");
+});
+t("punt: verdict can flip from pass to take", function () {
+  var opts = { pick: 10, nextPick: 34, available: availAt(10), openSlots: OPEN };
+  var no = S.evaluate(P("Jayson Tatum"), Object.assign({ ctx: ctx }, opts));
+  assert.strictEqual(no.verdict, "pass");
+  var yes = S.evaluate(P("Jayson Tatum"), Object.assign({ ctx: Object.assign({}, ctx, { puntShift: { "Jayson Tatum": 80 }, puntLabel: "FT%" }) }, opts));
+  assert.strictEqual(yes.verdict, "take", JSON.stringify(yes.reasons));
+});
 
 console.log("\ntest-pick-signals: " + pass + " passed, " + fail + " failed");
 process.exit(fail ? 1 : 0);
