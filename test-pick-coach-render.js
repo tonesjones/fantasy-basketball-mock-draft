@@ -97,6 +97,10 @@ vm.runInNewContext([
   "function esc(s){return String(s);}",
   "function renderPickCoachStrengths(){return \"\";}",
   "function playoffBadge(){return \"\";}",
+  "function playerAveragesHtml(){return \"\";}",
+  "function loadPlayerAverages(){}",
+  "function resolveFocusPi(){return null;}",
+  "function isMobileDraft(){return false;}",
   "function isUserTurn(){return true;}",
   "function updateCoachDockPeek(){}",
   "var state={puntCats:[]};",
@@ -280,9 +284,9 @@ t("luka pass + jev-wait: source says checked by Jev", function () {
 sandbox.state.puntCats = ["FT%"];
 var sPunt = paintCard(resC, l.pl, 1);
 sandbox.state.puntCats = [];
-t("punting: categories line becomes a punt warning", function () {
+t("punting: categories line says the verdict is punt-adjusted", function () {
   assert.ok(vis(sPunt, ".pc-basis"));
-  assert.ok(/punting FT%/.test(txt(sPunt, ".pc-basis")), txt(sPunt, ".pc-basis"));
+  assert.ok(/adjusted for your FT% punt/.test(txt(sPunt, ".pc-basis")), txt(sPunt, ".pc-basis"));
 });
 
 // ---------- D. Real WAIT case at pick 40 ----------

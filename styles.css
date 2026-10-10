@@ -699,3 +699,23 @@ body{background:transparent!important}
   body.mobile-drafting .pick-moment{bottom:auto;top:8px;right:12px;padding:8px 12px;min-width:0;pointer-events:none}
 }
 #md .fchip:disabled{opacity:.35;cursor:not-allowed}
+
+/* Player rows: the name is the evaluate button, Draft is a sibling (no nested buttons). */
+#md .pnamebtn{all:unset;box-sizing:border-box;display:inline;cursor:pointer;color:inherit;font:inherit;text-align:left}
+#md .pnamebtn:focus-visible{outline:2px solid var(--hatch-widget-accent);outline-offset:2px;border-radius:4px}
+#md:not(.mobile-draft) .prow .l1{gap:12px}
+#md:not(.mobile-draft) .prow .draftbtn{margin-left:8px;min-width:64px}
+#md:not(.mobile-draft) .prow .pname{padding-right:4px}
+/* Desktop sub-line: drop last-season total rank (3rd) and MPG (4th); the team is already beside the name. */
+#md:not(.mobile-draft) .prow .l2>span:nth-child(3),#md:not(.mobile-draft) .prow .l2>span:nth-child(4){display:none}
+#md:not(.mobile-draft) .prow .l2 .playoffbadge{opacity:.75;font-weight:500}
+/* Desktop per-game averages in the Pick coach */
+#md .pick-coach .pc-avg{margin-top:12px;border-top:1px solid var(--hatch-widget-border);padding-top:10px}
+#md .pick-coach .pc-avg h4{margin:0 0 6px;font-size:12px}
+#md .pick-coach .pc-avg p{margin:4px 0;font-size:11px}
+#md .pick-coach .m-per-game{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:8px 0}
+#md .pick-coach .m-per-game>div{padding:6px;border:1px solid var(--hatch-widget-border);border-radius:8px;text-align:center}
+#md .pick-coach .m-per-game dt{font-size:10px;color:var(--hatch-widget-muted)}
+#md .pick-coach .m-per-game dd{margin:3px 0 0;font-size:14px;font-weight:600}
+#md .puntbox .puntpick{margin:10px 0 2px}
+#md .puntbox .puntnotes{margin-top:8px}
