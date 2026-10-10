@@ -1037,6 +1037,7 @@ function mobileMatchupHtml(){
   });
   return h+'<details class="m-method"><summary>How scoring works</summary><p class="muted">Sum of last season’s per-game category z-scores across each roster. A difference above 0.5 is an edge; within ±0.5 is even. Scores are your category edges and losses, with ties shown separately. Missing data uses the mean of ten rated players nearest in consensus ADP. Starters and bench count equally; pick counts, injuries, schedules and role changes can affect the comparison. These are not forecast box scores or probabilities.</p></details>';
 }
+function puntFitNote(row,cats){var cv=PDATA[PLAYERS[row.pi].n].cv;return PuntCore.bestCats(cv,cats,2).filter(function(x){return x.v>0;}).map(function(x){return x.cat+' '+(x.v>0?'+':'')+x.v.toFixed(1);}).join(' · ');}
 function mobilePuntHtml(){
   var grades=draftGrades(),cats=mobilePuntPreview==null?state.puntCats.slice():mobilePuntPreview;
   var taken={};state.log.forEach(function(pi){taken[pi]=true;});
@@ -1053,7 +1054,7 @@ function mobilePuntHtml(){
   h+='</div><p class="muted">Exploring: '+(cats.length?esc(PuntCore.label(cats)):'Balanced')+'. '+(sameCats(cats,state.puntCats)?'Matches your committed strategy.':'Commit to apply these changes.')+'</p><div class="m-punt-actions"><button class="bigbtn" id="mdmobilepuntcommit"'+(sameCats(cats,state.puntCats)?' disabled':'')+'>'+(cats.length?'Commit '+esc(PuntCore.label(cats)):'Commit balanced')+'</button><button class="ghostbtn" id="mdmobilepuntclear">Clear punts</button></div>';
   if(cats.length===3)h+='<p class="muted">With three punts, you need five wins from the remaining six categories.</p>';
   /* Same two lists as the desktop Punt advice box: take now vs can likely wait. */
-  var following=next<0?-1:followingUserPickIdx(next),card=function(row){var pl=PLAYERS[row.pi];return '<button class="m-punt-player" data-mobile-punt-player="'+row.pi+'"><span><b>'+esc(pl.n)+'</b><small>'+esc(pl.p.join('/'))+' · ADP '+consRank(pl).toFixed(1)+' · available rank #'+row.baseRank+' → #'+row.puntRank+'</small></span><strong class="'+(row.gain>0?'m-gain':row.gain<0?'m-weak':'')+'">'+(row.gain>0?'+':'')+row.gain+'<small>rank change</small></strong></button>';};
+  var following=next<0?-1:followingUserPickIdx(next),card=function(row,note){var pl=PLAYERS[row.pi];return '<button class="m-punt-player" data-mobile-punt-player="'+row.pi+'"><span><b>'+esc(pl.n)+'</b><small>'+esc(pl.p.join('/'))+' · ADP '+consRank(pl).toFixed(1)+' · available rank #'+row.baseRank+' → #'+row.puntRank+'</small>'+(note?'<small>'+esc(note)+'</small>':'')+'</span><strong class="'+(row.gain>0?'m-gain':row.gain<0?'m-weak':'')+'">'+(row.gain>0?'+':'')+row.gain+'<small>rank change</small></strong></button>';};
   h+='<h4>'+(next<0?'Draft complete':'Consider at pick #'+(next+1))+'</h4>';
   if(!cats.length)h+='<p class="muted">Select a punt to compare available-player ranks.</p>';
   else if(next>=0){
@@ -1061,6 +1062,7 @@ function mobilePuntHtml(){
     h+='<p class="muted">Players who rise under this punt and are unlikely to last until your following pick.</p>';
     if(!near.length)h+='<p class="muted">No punt risers look urgent for this pick.</p>';
     near.forEach(function(row){h+=card(row);});
+    PuntCore.positionFits(rows,PLAYERS,next,following,near).forEach(function(f){h+='<h4>Still strong at '+(f.group==='bigs'?'big':'guard')+'</h4><p class="muted">Their rank drops under this punt, but they still add value in other categories.</p>';f.rows.forEach(function(row){h+=card(row,puntFitNote(row,cats));});});
     if(later.length){h+='<h4>Watch for later</h4><p class="muted">Rising players whose ADP suggests they may still be there at pick #'+(following+1)+'. ADP is not a guarantee.</p>';later.forEach(function(row){h+=card(row);});}
   }
   return h+'<details class="m-method"><summary>How punt value works</summary><p class="muted">A category is recommended when your per-pick value trails more than half of the comparable teams (teams with at least two rated players). Phone and desktop use the same rule. Ties go to the punt that lifts more players near your next picks. Value uses existing historical category values, excluding all selected punts. Rank changes compare rated, available players. Up to three punts; TO values are inverted so fewer turnovers rate higher. Coach verdicts account for your committed punts. Missing category data cannot support a punt ranking.</p></details>';
@@ -1222,7 +1224,7 @@ function renderDraft(){
   h+=viewTabsHtml();
   var glance=state.view==="board"||state.view==="grades"||state.view==="coach";
   h+='<div class="cols'+(glance?' glance':'')+'"><div class="avail">';
-  h+='<h3>Available players</h3><p class="muted list-hint">Select a player for advice. Draft adds them to your team.</p><input type="text" id="mdq" aria-label="Search available players" placeholder="Search players..." value="'+esc(state.q)+'">';
+  h+='<h3>Available players</h3><p class="muted list-hint">Select a player for advice. Draft adds them to your team.</p>'+(isMobileDraft()?'<div class="md-searchrow">':'')+'<input type="text" id="mdq" aria-label="Search available players" placeholder="Search players..." value="'+esc(state.q)+'">';
   var filterSummary=(state.f==="All"?"All positions":state.f)+" · "+sortLabel(state.sort||"cons");
   h+='<details class="filters-disclose" id="mdfilters"'+(state.filtersOpen?' open':'')+'>';
   h+='<summary>Filters &amp; sort <span class="muted">'+esc(filterSummary)+'</span></summary>';
@@ -1232,7 +1234,7 @@ function renderDraft(){
   var sorts=[["cons","Consensus","Yahoo + Fantrax ADP blend (each platform's thin late-draft tail counts less); what CPU teams draft from"],["rank","Rank","Draft Lab rank: consensus ADP nudged toward 2025-26 nine-cat production (up to 20 spots)"],["adp","ADP","Yahoo ADP (Hashtag Basketball, 4 Oct 2026)"],["last","Last · PER","2025-26 nine-category per-game rank (Basketball Monster / Hashtag)"],["lastTotal","Last · TOT","2025-26 nine-category TOTALS rank — derived from Basketball-Reference season totals, not a published rank"]];
   if(state.puntCats.length)sorts.push(["punt","Punt value","Historical "+puntCatCount()+"-category value, excluding "+puntLabel()]);
   sorts.forEach(function(s){h+='<button class="fchip'+((state.sort||"cons")===s[0]?' sel':'')+'" data-sort="'+s[0]+'" title="'+s[2]+'">'+s[1]+'</button>';});
-  h+='</div></details>';
+  h+='</div></details>'+(isMobileDraft()?'</div>':'');
   if(isMobileDraft()&&state.phase==="draft")h+=mobilePastAdpHtml();
   h+='<div class="plist" id="mdplist"></div><div id="mdpager"></div></div>';
   h+='<div class="side" id="mdside"></div></div>';
@@ -1466,6 +1468,7 @@ function renderPuntStrategy(grades,previewCats,expanded){
         else h+='<p class="muted">No '+g[0]+' gain value near your next two picks. Do not force the position.</p>';
       });
     }else h+='<p class="muted">'+(next<0?'No picks remain.':'No qualifying position options near your next two picks. Use Punt value sort to explore the full board.')+'</p>';
+    PuntCore.positionFits(rows,PLAYERS,next,following,near).forEach(function(f){h+='<h4>Still strong at '+(f.group==='bigs'?'big':'guard')+'</h4><p class="muted">Their rank drops under this punt, but they still add value in other categories.</p><ol>';f.rows.forEach(function(r){var p=PLAYERS[r.pi];h+='<li>'+esc(p.n)+' · Consensus ADP '+consRank(p).toFixed(1)+' · punt rank #'+r.baseRank+' → #'+r.puntRank+' ('+esc(puntFitNote(r,cats))+') <button type="button" class="textlink punt-eval" data-punt-eval="'+r.pi+'">Evaluate</button></li>';});h+='</ol>';});
     h+='<p class="muted">These are position alternatives, not a ranking to draft in order. Each player appears once by eligible position. Pick-now targets use consensus ADP before the midpoint to your following pick; later watches stop about one round after it. Ranks compare available players with category data only.</p>';
   }
   return h+'</section>';

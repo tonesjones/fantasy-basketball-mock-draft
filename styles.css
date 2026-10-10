@@ -719,3 +719,13 @@ body{background:transparent!important}
 #md .pick-coach .m-per-game dd{margin:3px 0 0;font-size:14px;font-weight:600}
 #md .puntbox .puntpick{margin:10px 0 2px}
 #md .puntbox .puntnotes{margin-top:8px}
+
+/* Phone Players tab: search and Filters share one row to leave more room for the list. */
+@media(max-width:700px){
+  #md.mobile-draft .md-searchrow{display:flex;align-items:flex-start;gap:8px;flex:none;margin:0 0 6px}
+  #md.mobile-draft .md-searchrow>input{flex:1;min-width:0;min-height:44px;font-size:16px;margin:0}
+  #md.mobile-draft .md-searchrow>.filters-disclose{flex:none;margin:0}
+  #md.mobile-draft .md-searchrow>.filters-disclose:not([open]){max-width:48%}
+  #md.mobile-draft .md-searchrow>.filters-disclose:not([open])>summary{white-space:nowrap}
+  #md.mobile-draft .md-searchrow>.filters-disclose>summary>.muted{display:none}
+}
