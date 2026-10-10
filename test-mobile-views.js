@@ -69,17 +69,12 @@ assert(!fs.readFileSync('./index.html','utf8').includes('player-averages.js'),'i
 assert.equal(data.PLAYERS.filter(p=>context.window.PlayerAverages.players[p.n]).length,255);
 for(const stats of Object.values(context.window.PlayerAverages.players)){assert(stats.g>0);assert(stats.ftm<=stats.fta&&stats.fgm<=stats.fga);for(const value of Object.values(stats))assert(Number.isFinite(value)&&value>=0);}
 state.phase='done';markup=context.mobileTeamHtml();assert(markup.includes('id="mdmobilerunback"')&&markup.includes('gradebadge'),'finished draft shows grade and Run it back');state.phase='draft';
-// Past ADP on phones: same rows as the desktop box, as tappable buttons.
+// Past ADP on phones: same rows as the desktop box, shown as an inline chip on available players.
 vm.runInContext(source.slice(source.indexOf('function pastAdpRows(){'),source.indexOf('function renderPastAdp(){')),context);
 const savedLog=state.log;state.log=Array.from({length:30},(_,i)=>i+40);
 const past=context.pastAdpRows();
 assert(past.length>0&&past.length<=8,'past-ADP rows found');
 past.forEach((r,i)=>{assert(!state.log.includes(r.pi));assert(r.adp<state.log.length+1);if(i)assert(past[i-1].value>=r.value);});
-markup=context.mobilePastAdpHtml();
-assert.deepEqual([...markup.matchAll(/data-past-adp-pi="(\d+)"/g)].map(m=>Number(m[1])),Array.from(past,r=>r.pi));
-assert(markup.includes('· '+past.length+' still available')&&!markup.includes(' open>'),'collapsed by default');
-context.mobilePastAdpOpen=true;assert(context.mobilePastAdpHtml().includes('id="mdpastadp" open'),'remembers open state');context.mobilePastAdpOpen=false;
-state.log=[];assert.equal(context.mobilePastAdpHtml(),'','hidden when nobody is past ADP');
 state.log=savedLog;
 console.log('mobile views: opponent order, nine categories, adaptive punts, roster picks and sourced stat lines passed');
 

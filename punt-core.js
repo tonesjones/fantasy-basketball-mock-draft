@@ -82,6 +82,64 @@
         return a.puntRank - b.puntRank;
       });
   }
+  /* Rank drops under a punt can hide players who still help elsewhere (a REB
+     punt sinks bigs who are strong in BLK or FG%). For each of bigs/guards
+     with nobody in `shown`, return up to two of that group's best rows by
+     punt value, using the nearTermRisers window but ignoring gain. */
+  function positionFits(rows, players, pick, followingPick, shown) {
+    if (pick < 0) return [];
+    /* Through the "Watch for later" window: a big worth it now or at the next pick. */
+    var cutoff = followingPick > pick ? followingPick + 1 + 12 : pick + 1;
+    var seen = {};
+    (shown || []).forEach(function (r) {
+      seen[r.pi] = true;
+    });
+    var pool = rows.filter(function (r) {
+      var market = marketAdp(players[r.pi]);
+      return r.puntRank <= 50 && market != null && market <= cutoff;
+    });
+    /* Group by primary position: an SF/PF wing is not the big a REB punt hides. */
+    function has(r, a, b) {
+      var pos = players[r.pi].p[0];
+      return pos === a || pos === b;
+    }
+    var out = [];
+    [
+      ["bigs", "PF", "C"],
+      ["guards", "PG", "SG"],
+    ].forEach(function (g) {
+      if (
+        (shown || []).some(function (r) {
+          return has(r, g[1], g[2]);
+        })
+      )
+        return;
+      var fit = pool
+        .filter(function (r) {
+          return !seen[r.pi] && r.gain < 0 && has(r, g[1], g[2]);
+        })
+        .sort(function (a, b) {
+          return b.punt - a.punt || a.pi - b.pi;
+        })
+        .slice(0, 2);
+      if (fit.length) out.push({ group: g[0], rows: fit });
+    });
+    return out;
+  }
+  /* Top n categories by cv value, skipping punted ones. */
+  function bestCats(cv, cats, n) {
+    var skip = normalize(cats);
+    return CATS.map(function (c, i) {
+      return { cat: c, v: cv[i] };
+    })
+      .filter(function (x) {
+        return skip.indexOf(x.cat) < 0 && Number.isFinite(x.v);
+      })
+      .sort(function (a, b) {
+        return b.v - a.v;
+      })
+      .slice(0, n);
+  }
   function marketAdp(p) {
     return core.marketAdp(p);
   }
@@ -165,6 +223,8 @@
     rankings: rankings,
     nearTermRisers: nearTermRisers,
     laterRisers: laterRisers,
+    positionFits: positionFits,
+    bestCats: bestCats,
     groupRisers: groupRisers,
     suggest: suggest,
   };
