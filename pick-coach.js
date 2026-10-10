@@ -7,8 +7,8 @@
  * to labeled stub (model:"stub", source "Stub") so QA can exercise suggest /
  * lean / "Not sure enough…" — never labeled as Jev.
  * Other http(s) hosts: network TypeError → uncertain + quiet error (NOT stub).
- * QA query (preview): ?leanDemo=1 | ?coachFixture=1 | ?forceConf=suggest|lean|uncertain
- * forces Stub/Fixture paths (never Jev) for paint QA.
+ * QA query (preview): ?coachFixture=1 forces the Stub/Fixture path (never Jev)
+ * for paint QA.
  */
 (function (root) {
   "use strict";
@@ -156,7 +156,7 @@
     }
   }
 
-  /** Parse preview QA query: ?coachFixture=1 | ?leanDemo=1 | ?forceConf=suggest|lean|uncertain */
+  /** Parse preview QA query: ?coachFixture=1 */
   function readCoachQaMode() {
     try {
       if (!isQaFixtureHost() || !location.search) return null;
@@ -175,13 +175,6 @@
           params[String(k)] = String(v);
         });
       }
-      var force = String(params.forceConf || "").toLowerCase();
-      if (force === "suggest" || force === "lean" || force === "uncertain") {
-        return { mode: "forceConf", band: force };
-      }
-      if (params.leanDemo === "1" || params.leanDemo === "true") {
-        return { mode: "leanDemo", band: "lean" };
-      }
       if (params.coachFixture === "1" || params.coachFixture === "true") {
         return { mode: "coachFixture", band: null };
       }
@@ -194,7 +187,6 @@
   /**
    * Deterministic Stub/Fixture result — never labeled Jev.
    * coachFixture: map ADP/pick gap → suggest|lean|uncertain.
-   * leanDemo / forceConf: fixed band for UX paint QA.
    */
   function fixtureResult(state, qa) {
     var band = (qa && qa.band) || null;
@@ -229,10 +221,6 @@
     if (band === "suggest") {
       scoreConf = 0.72;
       choiceConf = 0.68;
-      if (!qa || qa.mode !== "coachFixture") {
-        choice = "take";
-        score = 4;
-      }
       why = "Fixture suggest — high confidence stub (not Jev).";
     } else if (band === "lean") {
       // Mid-conf Edwards-like: paints outline Lean take/wait/reach + Soft lean.
@@ -240,10 +228,6 @@
       // (even if UI briefly reclassifies; honor res.verdict is the paint source).
       scoreConf = 0.38;
       choiceConf = 0.36;
-      if (!qa || qa.mode === "leanDemo" || qa.mode === "forceConf") {
-        choice = "take";
-        score = 2;
-      }
       why = "Fixture lean — mid confidence stub (not Jev). Soft lean path for UX QA.";
     } else {
       band = "uncertain";
@@ -260,10 +244,6 @@
       rank: state && state.rank,
       pickNumber: state && state.pickNumber,
     });
-    // forceConf/leanDemo must honor requested band even if classify drifts
-    if (qa && (qa.mode === "forceConf" || qa.mode === "leanDemo") && qa.band) {
-      verdict = qa.band;
-    }
 
     return {
       score: score,
@@ -280,7 +260,7 @@
     };
   }
 
-  /** Fingerprint: player + pick# + logLen (board identity for cache). */
+  /** Fingerprint: player + pick# + logLen + committed punts (board identity for cache). */
   function fingerprint(state) {
     var s = state || {};
     var player = String(s.player || "");
@@ -289,7 +269,8 @@
       s.logLen != null && s.logLen !== ""
         ? Number(s.logLen)
         : Math.max(0, pick - 1);
-    return player + "|" + pick + "|" + logLen;
+    var punts = Array.isArray(s.puntCats) ? s.puntCats.join("+") : "";
+    return player + "|" + pick + "|" + logLen + "|" + punts;
   }
 
   function cacheGet(key) {
@@ -565,9 +546,6 @@
       // Preview soft-fail / fixture stub is QA-only — never look like Jev.
       if (res.fallback === "fixture" || res.fixture) {
         var qa = readCoachQaMode();
-        if (qa && qa.mode === "leanDemo") return "Stub/Fixture · leanDemo";
-        if (qa && qa.mode === "forceConf" && qa.band)
-          return "Stub/Fixture · forceConf=" + qa.band;
         if (qa && qa.mode === "coachFixture") return "Stub/Fixture · coachFixture";
         return "Stub/Fixture";
       }

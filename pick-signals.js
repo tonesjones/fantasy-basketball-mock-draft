@@ -111,7 +111,7 @@
   }
 
   /* True-value rank estimate.
-   * ctx: {moves, netVac, playoffStart} — netVac from netVacated().
+   * ctx: {moves, netVac, playoffStart, puntShift, puntLabel} — netVac from netVacated().
    */
   function trueValue(p, ctx) {
     ctx = ctx || {};
@@ -148,6 +148,18 @@
       if (Math.abs(pe) >= 0.5) {
         edge += pe;
         edges.push({ k: "playoff", v: +pe.toFixed(1), note: pg + " games in your playoff window" });
+      }
+    }
+
+    // 5. Punt edge (committed punts only): spots gained under the punt among
+    // available rated players. Cap 40 / w 0.5 — rank shifts are big and come
+    // from stale category values, so keep it a nudge, not a rewrite of consensus.
+    var ps = ctx.puntShift && ctx.puntShift[p.n];
+    if (ps) {
+      var pe2 = dampen(ps, 40, 0.5);
+      if (Math.abs(pe2) >= 1) {
+        edge += pe2;
+        edges.push({ k: "punt", v: +pe2.toFixed(1), note: (ps > 0 ? "rises " : "drops ") + Math.abs(ps) + " spots punting " + (ctx.puntLabel || "your punts") });
       }
     }
 
