@@ -88,7 +88,8 @@
      punt value, using the nearTermRisers window but ignoring gain. */
   function positionFits(rows, players, pick, followingPick, shown) {
     if (pick < 0) return [];
-    var cutoff = pick + 1 + (followingPick > pick ? Math.floor((followingPick - pick) / 2) : 0);
+    /* Through the "Watch for later" window: a big worth it now or at the next pick. */
+    var cutoff = followingPick > pick ? followingPick + 1 + 12 : pick + 1;
     var seen = {};
     (shown || []).forEach(function (r) {
       seen[r.pi] = true;
@@ -97,9 +98,10 @@
       var market = marketAdp(players[r.pi]);
       return r.puntRank <= 50 && market != null && market <= cutoff;
     });
+    /* Group by primary position: an SF/PF wing is not the big a REB punt hides. */
     function has(r, a, b) {
-      var pos = players[r.pi].p;
-      return pos.indexOf(a) >= 0 || pos.indexOf(b) >= 0;
+      var pos = players[r.pi].p[0];
+      return pos === a || pos === b;
     }
     var out = [];
     [
@@ -114,7 +116,7 @@
         return;
       var fit = pool
         .filter(function (r) {
-          return !seen[r.pi] && has(r, g[1], g[2]);
+          return !seen[r.pi] && r.gain < 0 && has(r, g[1], g[2]);
         })
         .sort(function (a, b) {
           return b.punt - a.punt || a.pi - b.pi;
