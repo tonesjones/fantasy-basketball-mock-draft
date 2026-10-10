@@ -978,14 +978,7 @@ function closeMobileSheet(){
   mobileSheetPlayer=null;
   if(mobileReturnFocus&&mobileReturnFocus.isConnected)mobileReturnFocus.focus({preventScroll:true});
 }
-var mobileRosterMode="slots",mobileMatchSort="value",mobilePuntPreview=null,mobilePastAdpOpen=false;
-/* Phone home for the desktop "Past ADP and still available" box: one collapsed row above the list. */
-function mobilePastAdpHtml(){
-  var rows=pastAdpRows();if(!rows.length)return '';
-  var h='<details class="m-past-adp" id="mdpastadp"'+(mobilePastAdpOpen?' open':'')+'><summary>Past ADP <span class="muted">· '+rows.length+' still available</span></summary><div class="m-past-adp-panel"><ol>';
-  rows.forEach(function(r){h+='<li><button type="button" data-past-adp-pi="'+r.pi+'"><b>'+esc(r.name)+'</b><span>ADP '+r.adp+' · value '+r.value.toFixed(1)+'</span></button></li>';});
-  return h+'</ol><p class="muted">Consensus ADP is behind the current pick. Ranked by 2025–26 nine-category value, not a projection.</p></div></details>';
-}
+var mobileRosterMode="slots",mobileMatchSort="value",mobilePuntPreview=null;
 function mobileOutlook(grades){
   var next=nextUserPickIdx();
   return DA.categoryOutlook({grades:grades,userTeam:userTeam(),players:PLAYERS,pdata:PDATA,log:state.log,nextPick:next,followingPick:next<0?-1:followingUserPickIdx(next)});
@@ -1119,11 +1112,6 @@ function wireMobileDraft(){
     b.addEventListener("click",function(){rememberMobileScroll();closeMobileSheet();mobileView=v[0];if(v[0]==='team'&&mobileRosterMode==='board')mobileRosterMode='slots';setState({view:(v[0]==="players"||v[0]==="punt")?"coach":v[0]});});nav.append(b);
   });el("mdapp").append(nav);
 
-  var pastAdp=el("mdpastadp");
-  if(pastAdp){
-    pastAdp.addEventListener("toggle",function(){mobilePastAdpOpen=pastAdp.open;});
-    pastAdp.querySelectorAll("[data-past-adp-pi]").forEach(function(b){b.addEventListener("click",function(){mobilePastAdpOpen=false;evaluatePlayer(Number(b.dataset.pastAdpPi));});});
-  }
   var filters=el("mdfilters"),filterClose=document.createElement("button");
   filterClose.type="button";filterClose.className="ghostbtn mobile-filter-close";filterClose.textContent="Done";
   filterClose.addEventListener("click",function(){filters.open=false;el("mdq").focus();});filters.append(filterClose);
@@ -1233,7 +1221,6 @@ function renderDraft(){
   if(state.puntCats.length)sorts.push(["punt","Punt value","Historical "+puntCatCount()+"-category value, excluding "+puntLabel()]);
   sorts.forEach(function(s){h+='<button class="fchip'+((state.sort||"cons")===s[0]?' sel':'')+'" data-sort="'+s[0]+'" title="'+s[2]+'">'+s[1]+'</button>';});
   h+='</div></details>';
-  if(isMobileDraft()&&state.phase==="draft")h+=mobilePastAdpHtml();
   h+='<div class="plist" id="mdplist"></div><div id="mdpager"></div></div>';
   h+='<div class="side" id="mdside"></div></div>';
   el("mdapp").innerHTML=h;
@@ -1289,6 +1276,7 @@ function renderList(){
     var sub='<span>ADP '+disp(pl2.adp)+'</span><span>Last '+disp(pl2.last)+'</span><span>Tot '+disp(pl2.lastTotal)+'</span><span>MPG '+(pl2.mpg==null?'—':pl2.mpg.toFixed(1))+'</span><span>'+posBadges(pl2.p)+'</span>'+playoffBadge(pl2)+'<span class="rt">'+esc(pl2.t)+'</span>';
     var mvRow=moverRoleChipHtml(pl2, false);if(mvRow)sub+=mvRow;
     if(pl2.c.length)sub+='<span>'+pl2.c.slice(0,4).join(" · ")+'</span>';
+    if(state.phase==="draft"&&state.log.length+1>consRank(pl2))sub+='<span class="pastadp-chip">Past ADP</span>';
     if(state.puntCats.length)sub+=pr?'<span title="Historical available-player ranks, nine-category vs excluding '+puntLabel()+'">Punt '+state.puntCats.join('+')+': #'+pr.baseRank+' → #'+pr.puntRank+(pr.gain>0?' (+'+pr.gain+')':'')+'</span>':'<span>Punt value: unknown (no 2025-26 category data)</span>';
     var focusCls=(focusNow===i)?' pc-focus':'';
     rows.push('<div class="prow'+focusCls+'" data-pi="'+i+'"><div class="l1"><span class="prank">'+rlabel+'</span><span class="pname"><button type="button" class="pnamebtn" data-pi="'+i+'" aria-label="Evaluate '+esc(pl2.n)+'" aria-pressed="'+(focusNow===i?'true':'false')+'">'+esc(pl2.n)+' <span class="teamtag">'+esc(pl2.t)+'</span></button>'+injBadge(pl2)+'</span><button class="draftbtn" data-pi="'+i+'" aria-label="Draft '+esc(pl2.n)+'"'+(ut?'':' disabled')+'>Draft</button></div><div class="l2">'+sub+'</div></div>');

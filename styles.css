@@ -487,6 +487,7 @@ body{
 #md .mv-chip,#md .role-chip,#md .pick-coach .pc-chip.mv-chip{background:transparent;border-color:var(--dl-border);color:var(--dl-muted);font-weight:500}
 #md .role-chip.role-up,#md .pick-coach .pc-chip.role-up,#md .pick-coach .pc-chip{color:var(--dl-green);border-color:var(--dl-green-line);background:var(--dl-green-bg);font-weight:500}
 #md .role-chip.role-down,#md .pick-coach .pc-chip.role-down{color:var(--dl-amber);border-color:var(--dl-amber-line);background:var(--dl-amber-bg)}
+#md .pastadp-chip{display:inline-block;font-size:10px;font-weight:600;line-height:1.3;padding:1px 6px;border-radius:999px;border:1px solid var(--dl-amber-line);color:var(--dl-amber);background:var(--dl-amber-bg);white-space:nowrap}
 #md .pick-coach .pc-chip.mv-chip{color:var(--dl-muted);border-color:var(--dl-border);background:transparent}
 #md .pick-coach .pc-choice{font-family:var(--dl-mono);font-weight:500;font-size:11px;letter-spacing:0;border-radius:6px}
 #md .pick-coach .pc-choice-take{color:var(--dl-green);background:var(--dl-green-bg);border-color:var(--dl-green-line)}
@@ -682,8 +683,9 @@ body{background:transparent!important}
   #md.mobile-draft .prow .draftbtn{display:none}
   #md.mobile-draft .prow .l2{gap:6px;flex-wrap:wrap}
   #md.mobile-draft .prow .l2>span:nth-child(2),#md.mobile-draft .prow .l2>span:nth-child(3),#md.mobile-draft .prow .l2>span:nth-child(4){display:none}
-  #md.mobile-draft .prow .l2>span:nth-child(n+7){display:none}
-  #md.mobile-draft .filters-disclose summary{min-height:44px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+  #md.mobile-draft .prow .l2>span:nth-child(n+7):not(.pastadp-chip){display:none}
+  #md.mobile-draft .filters-disclose summary{min-height:44px;display:flex;align-items:center;justify-content:flex-start;gap:8px}
+  #md.mobile-draft .filters-disclose summary .muted{margin-left:auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   #md.mobile-draft .filters-disclose[open]{position:fixed;inset:auto 10px max(72px,env(safe-area-inset-bottom));max-height:70dvh;overflow:auto;z-index:12;background:var(--dl-raised);box-shadow:0 -12px 50px #0009;padding:14px;border-radius:16px;border:1px solid var(--dl-border-strong)}
   #md.mobile-draft .fchip{min-height:44px}
   #md.mobile-draft .mobile-filter-close{display:block;width:100%;min-height:44px;margin-top:12px}
