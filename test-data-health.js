@@ -39,5 +39,5 @@ for(const name of ['Coby White','Max Strus','Nic Claxton','Grant Williams']) {
 for(const name of ['Jalen Suggs','Cam Whitmore']) {
   assert.equal(injuryBundle.PLAYERS.find(p=>p.n===name).inj,null,name+' has no supported ongoing injury flag');
 }
-assert.equal(Object.keys(injuryBundle.INJ).length,14);
+assert.equal(Object.keys(injuryBundle.INJ).length,17);
 console.log(`Data health tests passed; ${report.players} bundled players have matching data records.`);
