@@ -32,7 +32,7 @@ loadInto(sandbox, "player-pool.js"); // real PLAYERS literal + PDATA enrichment
 var S = sandbox.PickSignals;
 assert.ok(S, "PickSignals exported");
 var PLAYERS = sandbox.PLAYERS;
-assert.strictEqual(PLAYERS.length, 272, "branch pool is 272 players");
+assert.strictEqual(PLAYERS.length, 274, "branch pool is 274 players");
 
 var byName = {};
 PLAYERS.forEach(function (p) { byName[p.n] = p; });

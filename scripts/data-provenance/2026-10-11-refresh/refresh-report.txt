@@ -1,0 +1,37 @@
+Matched pool players: 258
+Value changes: 390 (21 moved >= 3)
+  Mark Williams adpF 141.8 -> 157.3 (consensus 127.9 -> 135.7)
+  Rui Hachimura adpF 223.4 -> 209.9 (consensus 148.7 -> 145.7)
+  Davion Mitchell adpF 139.8 -> 152.3 (consensus 132.7 -> 141.3)
+  Daniel Gafford adpF 217.1 -> 208.6 (consensus 160.3 -> 159.3)
+  Yves Missi adpF 226.4 -> 218.7 (consensus 206.6 -> 139.2)
+  Jonathan Kuminga adpF 202.4 -> 195 (consensus 143.6 -> 145.0)
+  Yaxel Lendeborg adpF 162.6 -> 156.1 (consensus 144.1 -> 140.7)
+  Shaedon Sharpe adpF 201.9 -> 208.4 (consensus 200.5 -> 202.1)
+  Jalen Smith adpF 242.8 -> 236.5 (consensus 210.7 -> 209.1)
+  Khaman Maluach adpF 167 -> 160.8 (consensus 149.2 -> 146.3)
+  Brandon Ingram adpF 78.5 -> 84.4 (consensus 72.8 -> 77.2)
+  Keaton Wagler adpF 209.8 -> 204.6 (consensus 145.5 -> 142.6)
+  Aaron Nesmith adpF 203.5 -> 199.2 (consensus 136.3 -> 136.4)
+  Tobias Harris adpF 176.9 -> 181 (consensus 143.9 -> 144.0)
+  Cam Johnson adpF 164.6 -> 160.6 (consensus 141.4 -> 141.6)
+  Kristaps Porzingis adpF 109.5 -> 113.3 (consensus 105.5 -> 108.4)
+  Bilal Coulibaly adpF 202.8 -> 206.4 (consensus 200.7 -> 201.6)
+  Kelly Oubre Jr. adpF 228.3 -> 224.8 (consensus 137.6 -> 137.7)
+  Grayson Allen adpF 163.2 -> 160.1 (consensus 144.4 -> 142.0)
+  Christian Braun adpF 180.6 -> 177.5 (consensus 154.2 -> 153.6)
+  Aday Mara adpF 241.8 -> 238.8 (consensus 132.9 -> 133.8)
+Newly published: 3
+  Scotty Pippen Jr. adp null -> 115
+  Yves Missi adp null -> 112.7
+  Jarred Vanderbilt adpF null -> 243.8
+Now blank (will be nulled): 1
+  Luke Kennard adp 110.1 -> null
+Pool players absent from the table (values kept): 14
+  Donte DiVincenzo, Jonas Valanciunas, Clint Capela, Nicolas Batum, Jaden Ivey, Aaron Holiday, Jeremy Sochan, Caris LeVert, Haywood Highsmith, Ochai Agbaji, D'Angelo Russell, Cam Thomas, Jonathan Isaac, Jonathan Mogbo
+Table players with a Yahoo ADP not in the pool (add candidates): 2
+  Bronny James Jr. LAL Yahoo 106.4 Fantrax 241.9
+  Jordan Poole NO Yahoo 110.5 Fantrax 239.5
+Team / position differences (not written; review by hand): 2
+  Rob Dillingham: team CHA -> CHI, pos PG/SG -> PG/SG
+  Buddy Hield: team CHI -> CHA, pos SF/SG -> SF/SG

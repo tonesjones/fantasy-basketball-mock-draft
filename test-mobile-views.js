@@ -66,7 +66,7 @@ markup=context.mobilePlayerStats(data.PLAYERS.find(p=>p.n==='Nikola Jokic'));ass
 context.averagesLoad='failed';assert(context.mobilePlayerStats(data.PLAYERS.find(p=>p.n==='Nikola Jokic')).includes('unavailable right now'));
 context.averagesLoad=null;context.window.PlayerAverages=averages;
 assert(!fs.readFileSync('./index.html','utf8').includes('player-averages.js'),'index.html does not load the averages up front');
-assert.equal(data.PLAYERS.filter(p=>context.window.PlayerAverages.players[p.n]).length,255);
+assert.equal(data.PLAYERS.filter(p=>context.window.PlayerAverages.players[p.n]).length,257);
 for(const stats of Object.values(context.window.PlayerAverages.players)){assert(stats.g>0);assert(stats.ftm<=stats.fta&&stats.fgm<=stats.fga);for(const value of Object.values(stats))assert(Number.isFinite(value)&&value>=0);}
 state.phase='done';markup=context.mobileTeamHtml();assert(markup.includes('id="mdmobilerunback"')&&markup.includes('gradebadge'),'finished draft shows grade and Run it back');state.phase='draft';
 // Past ADP on phones: same rows as the desktop box, as tappable buttons.

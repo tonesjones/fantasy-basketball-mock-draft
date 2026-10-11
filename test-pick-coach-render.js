@@ -31,7 +31,7 @@ var S = sandbox.PickSignals;
 var PickCoach = sandbox.PickCoach;
 assert.ok(S && PickCoach, "engine + coach loaded");
 var PLAYERS = sandbox.PLAYERS;
-assert.strictEqual(PLAYERS.length, 272, "272 players");
+assert.strictEqual(PLAYERS.length, 274, "274 players");
 
 var byName = {};
 PLAYERS.forEach(function (p) { byName[p.n] = p; });
