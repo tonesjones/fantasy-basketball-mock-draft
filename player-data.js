@@ -330,6 +330,8 @@ var PDATA={
 "Bronny James Jr.":{adp:106.4,adpF:241.9,last:null,lastTotal:null,mpg:null},
 "Jordan Poole":{adp:110.5,adpF:239.5,last:null,lastTotal:null,mpg:null},
 };
+// Injury review 2026-10-11: Stewart, Nurkic and Filipowski added; Claxton, Mark Williams,
+// Porzingis and DiVincenzo updated. See docs/data-refresh-2026-10-11.md.
 // Injury review 2026-10-06: White, Strus, Claxton and Grant Williams added.
 // Suggs and Whitmore stale flags removed after current participation reports.
 // Older records retain their source dates. See docs/data-refresh-2026-10-06.md.
@@ -339,18 +341,21 @@ var PDATA={
 // return date or status (honest "unknown/no timetable" where unreported);
 // src: outlet + report date.
 var INJ={
+"Isaiah Stewart":{injury:"Moderate left ankle sprain",detail:"Hurt two minutes into his Grizzlies preseason debut on October 5.",ret:"Reevaluation in two weeks; expected to miss the October 21 opener",src:"Rotoworld / NBC Sports, 9 Oct 2026"},
+"Jusuf Nurkic":{injury:"Partial plantar plate tear, second toe of right foot",detail:"Injured in the October 4 preseason opener.",ret:"Out at least four weeks, including the opening weeks of the season",src:"Chris Haynes via Roundtable, 8 Oct 2026"},
+"Kyle Filipowski":{injury:"Back (offseason herniated-disc surgery)",detail:"Has missed preseason games and is not cleared for on-court work.",ret:"No timeline; Will Hardy hopes to have him back soon",src:"Rotoworld / NBC Sports, 10 Oct 2026"},
 "Coby White":{injury:"Left calf strain",detail:"Will miss preseason.",ret:"Opener uncertain; no timetable",src:"NBA.com / Associated Press, 6 Oct 2026"},
 "Max Strus":{injury:"Partial tear of right plantar fascia",detail:"Injured in the October 4 preseason opener; will miss the start of the regular season.",ret:"Reevaluation in four weeks from October 5; return date unknown",src:"Clippers announcement via NBA.com, 5 Oct 2026"},
-"Nic Claxton":{injury:"Hamstring injury",detail:"Chicago plans to reassess him after two weeks.",ret:"Reevaluation around October 19; return unconfirmed",src:"Tiago Splitter via Sportsnet, 5 Oct 2026"},
+"Nic Claxton":{injury:"Hamstring injury",detail:"Out for preseason; Tiago Splitter said the hamstring will be reevaluated right before the regular season.",ret:"Opener (Oct 21 at Toronto) up in the air",src:"Chicago Sun-Times, 7 Oct 2026"},
 "Grant Williams":{injury:"Right hamstring injury",detail:"Will miss preseason.",ret:"Reevaluation during the first week of the regular season; return unknown",src:"Hornets announcement via NBA.com, 25 Sep 2026"},
-"Mark Williams":{injury:"Torn left-shoulder labrum",detail:"Injured in offseason workout; underwent successful surgery on Sept 10, 2026. No timetable given.",ret:"Extended absence; no confirmed return date",src:"Arizona Republic, 11 Sep 2026"},
+"Mark Williams":{injury:"Torn left-shoulder labrum",detail:"Injured in an offseason workout; surgery Sept 10, 2026. Arizona Sports 98.7's John Gambadoro expects at least five months out.",ret:"Likely out until about February 2027; no official timeline",src:"NBC Sports, 11 Sep 2026"},
 "Brandon Ingram":{injury:"Right heel surgery; partial Achilles tear",detail:"Will miss opening night.",ret:"No timetable",src:"NBA.com / Associated Press, 29 Sep 2026"},
 "Tobias Harris":{injury:"Left calf strain",detail:"Injured during training camp; Spurs plan to reevaluate him after preseason.",ret:"Questionable for October 20 opener",src:"Michael C. Wright / HoopsHype via Yahoo Sports, 4 Oct 2026"},
 "Dereck Lively II":{injury:"Right foot (season-ending surgery Dec 2025)",detail:"Shooting and working toward running on court as of Sept 25. Dallas plans to be patient; he is not cleared for camp.",ret:"Start of regular season uncertain",src:"Dallas Mavericks notebook, 25 Sep 2026"},
 "Jimmy Butler":{injury:"Torn right ACL (reconstruction Feb 9, 2026)",detail:"At Warriors Media Day he said he has started running a little and playing some basketball; rehabilitation continues.",ret:"No confirmed return date",src:"NBA.com Warriors Media Day, 28 Sep 2026"},
 "Moses Moody":{injury:"Torn left patellar tendon (surgery Mar 28, 2026)",detail:"Continuing rehabilitation and very light on-court activity; Warriors expect him to miss the start of the season.",ret:"No confirmed return date",src:"NBA.com Warriors Media Day, 28 Sep 2026"},
-"Kristaps Porzingis":{injury:"Unspecified health issue",detail:"Ruled out indefinitely and missing the start of training camp. Warriors have not ruled out an opening-night return.",ret:"No timetable; opening-night availability uncertain",src:"NBA.com / Associated Press, 28 Sep 2026"},
+"Kristaps Porzingis":{injury:"Unspecified health issue",detail:"Ruled out indefinitely in late September. On Oct 8 Steve Kerr called the situation \"definitely concerning\" and had not seen him.",ret:"No timetable; opening-night availability doubtful",src:"Larry Brown Sports via Yardbarker, 8 Oct 2026"},
 "Kon Knueppel":{injury:"Left hamstring injury",detail:"Will miss all preseason games; Charlotte will reevaluate him during the first week of the regular season.",ret:"Opening-night availability uncertain",src:"Charlotte Hornets injury update, 25 Sep 2026"},
-"Donte DiVincenzo":{injury:"Ruptured right Achilles (surgery Apr 2026, by Dr. Martin O'Malley)",detail:"ESPN's Brian Windhorst (Aug 30, 2026): Wolves hold quiet hope for a return before end of season, possibly around the All-Star break; GM Matt Lloyd declined to give a timeline (Sep 4, 2026).",ret:"Possibly around All-Star break; no official timeline",src:"ESPN / Darren Wolfson, Aug-Sep 2026"},
+"Donte DiVincenzo":{injury:"Ruptured right Achilles (2026 playoffs)",detail:"GM Matt Lloyd declined to give a timeline (early Sep); DiVincenzo said Sept 28 he expects to play at some point this season.",ret:"Late-season return at best; no official timeline",src:"Rotoworld citing The Athletic, 28 Sep 2026"},
 "Shaedon Sharpe":{injury:"Torn right-knee meniscus (surgery Aug 27, 2026)",detail:"Torn in an offseason workout; the team announced a reevaluation in about six months.",ret:"Reevaluation around late Feb 2027; return unknown",src:"NBA.com / Trail Blazers, 27 Aug 2026"},
 };
