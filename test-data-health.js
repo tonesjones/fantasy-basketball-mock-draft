@@ -47,11 +47,26 @@ assert.equal(Object.keys(injuryBundle.INJ).length,17);
   assert.equal(src.indexOf('function renderDataHealth(',start+1),-1,'renderDataHealth is declared once');
   let i=src.indexOf('{',start),depth=0;
   for(;i<src.length;i++){if(src[i]==='{')depth++;else if(src[i]==='}'&&--depth===0)break;}
-  const sandbox={HEALTH:{players:2,missingAdp:[],missingLast:[],untagged:[],placeholderTeams:[],errors:[],missingData:[],orphanData:[]},DATA_VERSION:'v',esc:String};
+  const sandbox={window:{DataHealth:{freshness:()=>[]}},HEALTH:{players:2,missingAdp:[],missingLast:[],untagged:[],placeholderTeams:[],errors:[],missingData:[],orphanData:[]},DATA_VERSION:'v',esc:String};
   require('node:vm').runInNewContext(src.slice(start,i+1),sandbox);
   const html=sandbox.renderDataHealth('Data &amp; sources');
   assert.equal(typeof html,'string');
   assert.ok(html.startsWith('<details')&&html.endsWith('</details>'),'panel is one closed details block');
   assert.ok(html.includes('<b>Data &amp; sources</b>'),'the label argument reaches the summary');
 }
+for(const [name,rec] of Object.entries(injuryBundle.INJ)){
+  assert.ok(['questionable','out','out-indefinitely','season-out'].includes(rec.status),name+' has a valid status');
+  assert.match(rec.reviewedAt,/^\d{4}-\d{2}-\d{2}$/,name+' has reviewedAt');
+}
+const {freshness}=require('./data-health');
+const now=Date.parse('2026-10-12T12:00:00Z');
+const fresh={A:{reviewedAt:'2026-10-05'}};
+assert.deepEqual(freshness('2026-10-05',fresh,now),[],'exactly 7 days old is not stale');
+let fw=freshness('2026-10-04',fresh,now);
+assert.equal(fw.length,1);assert.match(fw[0],/ADP data is 8 days old/);
+fw=freshness('2026-10-12',{A:{reviewedAt:'2026-10-04'},B:{reviewedAt:'2026-10-11'}},now);
+assert.equal(fw.length,1);assert.match(fw[0],/A \(8d\)/);assert.ok(!/B \(/.test(fw[0]));
+assert.equal(freshness('2026-10-04',{A:{reviewedAt:'2026-09-01'}},now).length,2,'both warnings can show');
+assert.equal(freshness(null,{},now).length,1,'missing ADP date warns');
+assert.equal(typeof injuryBundle.ADP_DATE,'string','bundled ADP_DATE present');
 console.log(`Data health tests passed; ${report.players} bundled players have matching data records.`);
