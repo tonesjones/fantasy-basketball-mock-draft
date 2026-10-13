@@ -11,9 +11,10 @@ assert.equal(R.parseCsv('a,"b, c",d\n1,"say ""hi""",3\r\n').length, 2, 'quoted C
 assert.equal(R.parseCsv('a,"b, c",d\n')[0][1], 'b, c');
 
 const players = Array.from(loadData().PLAYERS);
+const jokicF = players.find(p => p.n === 'Nikola Jokic').adpF;
 const csv = [
   'Player,Team,Pos,Yahoo ADP,Fantrax ADP,ESPN ADP',
-  'Nikola Jokic,DEN,C,3.1,1.5,2.0',                  // Yahoo moves, Fantrax same
+  'Nikola Jokic,DEN,C,3.1,' + jokicF + ',2.0',        // Yahoo moves, Fantrax same
   'Alexandre Sarr,WSH,C,,50.0,40',                    // alias + team alias; Yahoo now blank
   '"Alperen Sengün",HOU,PF C,18.6,20.7,15',           // diacritics
   'Some Rookie,UTA,SG,99.0,120.0,',                   // add candidate
@@ -42,7 +43,7 @@ const sb = {};
 vm.createContext(sb);
 vm.runInContext(out, sb);
 assert.equal(sb.PDATA['Nikola Jokic'].adp, 3.1);
-assert.equal(sb.PDATA['Nikola Jokic'].adpF, 1.5);
+assert.equal(sb.PDATA['Nikola Jokic'].adpF, jokicF);
 assert.equal(sb.PDATA['Alex Sarr'].adp, null);
 assert.equal(sb.PDATA['Alex Sarr'].adpF, 50);
 assert.equal(sb.PDATA['Tyrese Haliburton'].adp, 17.2, 'an entry whose first field is adp is rewritten');

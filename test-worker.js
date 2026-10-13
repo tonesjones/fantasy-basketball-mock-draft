@@ -96,5 +96,15 @@ function req(opts) {
   assert.ok(!/engine_numbers/.test(sent.questions.score.instructions), "no dangling engine_numbers reference");
   assert.strictEqual(sent.state.candidate.picks_past_adp, null, "no ADP -> null, not NaN");
 
+  assert.ok(!sent.state.strategy && !/strategy/.test(sent.questions.score.instructions), "no strategy without punts");
+  r = await mocked.fetch(req({ ip: "8.8.4.1", body: JSON.stringify({ player: "P", pickNumber: 5, puntCats: ["FT%", "ft%", "FT%", "TO", "<b>x</b>", 5, "AST", "BLK"] }) }), { TYPESAFE_API_KEY: "k" });
+  assert.deepStrictEqual(sent.state.strategy.punt_categories, ["FT%", "TO", "AST"], "whitelisted, deduped, capped at 3");
+  assert.ok(/strategy\.punt_categories/.test(sent.questions.choice.instructions), "questions mention strategy when punting");
+  assert.ok(!/<b>/.test(JSON.stringify(sent)), "junk never echoed");
+  r = await mocked.fetch(req({ ip: "8.8.4.2", body: JSON.stringify({ player: "P", pickNumber: 5, puntCats: "FT%" }) }), { TYPESAFE_API_KEY: "k" });
+  assert.ok(!sent.state.strategy, "non-array ignored");
+  r = await mocked.fetch(req({ ip: "8.8.4.3", body: JSON.stringify({ player: "P", pickNumber: 5, puntCats: ["nope"] }) }), { TYPESAFE_API_KEY: "k" });
+  assert.ok(!sent.state.strategy, "all-junk array -> no strategy");
+
   console.log("worker guard tests passed");
 })().catch(function (e) { console.error(e); process.exit(1); });

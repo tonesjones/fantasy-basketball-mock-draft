@@ -39,7 +39,7 @@ for(const name of ['Coby White','Max Strus','Nic Claxton','Grant Williams']) {
 for(const name of ['Jalen Suggs','Cam Whitmore']) {
   assert.equal(injuryBundle.PLAYERS.find(p=>p.n===name).inj,null,name+' has no supported ongoing injury flag');
 }
-assert.equal(Object.keys(injuryBundle.INJ).length,14);
+assert.equal(Object.keys(injuryBundle.INJ).length,17);
 for(const [name,rec] of Object.entries(injuryBundle.INJ)){
   assert.ok(['questionable','out','out-indefinitely','season-out'].includes(rec.status),name+' has a valid status');
   assert.match(rec.reviewedAt,/^\d{4}-\d{2}-\d{2}$/,name+' has reviewedAt');

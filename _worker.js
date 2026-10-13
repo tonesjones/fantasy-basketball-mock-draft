@@ -207,6 +207,18 @@ function normalizeBoardList(list, kind) {
     });
 }
 
+var CATS9 = ["PTS", "REB", "AST", "STL", "BLK", "3PM", "FG%", "FT%", "TO"];
+/** Committed punts: array only, whitelisted, deduped, max 3. Never echoes raw input. */
+function cleanPuntCats(raw) {
+  var out = [];
+  if (!Array.isArray(raw)) return out;
+  for (var i = 0; i < raw.length && out.length < 3; i++) {
+    var c = raw[i];
+    if (typeof c === "string" && CATS9.indexOf(c) >= 0 && out.indexOf(c) < 0) out.push(c);
+  }
+  return out;
+}
+
 function buildState(body) {
   var pickNumber = Number(body.pickNumber) || 1;
   var teams = 12;
@@ -266,6 +278,13 @@ function buildState(body) {
     roster_needs: rn,
     board_context: board,
   };
+  var punts = cleanPuntCats(body.puntCats);
+  if (punts.length) {
+    out.strategy = {
+      punt_categories: punts,
+      note: "User is punting these; judge value on the remaining categories",
+    };
+  }
   // Engine numbers (market + curated edges) as context. The engine's own
   // verdict and reason strings are deliberately NOT sent: Jev is an
   // independent second opinion, and the client compares its choice against
@@ -292,11 +311,12 @@ function buildState(body) {
  * distribution, so the instructions don't try to steer it - a low
  * confidence means "genuinely split", which is information the client uses.
  */
-function buildQuestions(hasEngineNumbers) {
+function buildQuestions(hasEngineNumbers, hasStrategy) {
   var context =
     "Use `candidate.picks_past_adp` (positive = fallen past market ADP, " +
     "negative = early), `roster_needs`" +
-    (hasEngineNumbers ? ", `board_context` and `engine_numbers`." : " and `board_context`.");
+    (hasEngineNumbers ? ", `board_context` and `engine_numbers`." : " and `board_context`.") +
+    (hasStrategy ? " Also consider `strategy.punt_categories`." : "");
   return {
     score: {
       type: "score",
@@ -381,7 +401,7 @@ async function handlePickQuality(request, env) {
   var payload = {
     state: state,
     model: MODEL,
-    questions: buildQuestions(!!state.engine_numbers),
+    questions: buildQuestions(!!state.engine_numbers, !!state.strategy),
   };
 
   var controller = new AbortController();
