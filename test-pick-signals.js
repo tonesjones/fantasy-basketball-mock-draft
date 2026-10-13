@@ -102,17 +102,18 @@ function playerWithRole(role) {
   assert.ok(n, "need a role-" + role + " player");
   return P(n);
 }
-t("role-up IMPROVES rank (lowers V)", function () {
-  var p = playerWithRole("up");
-  var withRole = S.trueValue(p, ctx).V;
-  var noRole = S.trueValue(p, { moves: {}, netVac: {}, playoffStart: 20 }).V;
-  assert.ok(withRole < noRole, "role-up should lower V: with=" + withRole + " without=" + noRole);
-});
-t("role-down WORSENS rank (raises V)", function () {
-  var p = playerWithRole("down");
-  var withRole = S.trueValue(p, ctx).V;
-  var noRole = S.trueValue(p, { moves: {}, netVac: {}, playoffStart: 20 }).V;
-  assert.ok(withRole > noRole, "role-down should raise V: with=" + withRole + " without=" + noRole);
+t("role arrows are labels only (no value change)", function () {
+  ["up", "down"].forEach(function (role) {
+    var p = playerWithRole(role);
+    var tv = S.trueValue(p, ctx);
+    var noRole = S.trueValue(p, { moves: {}, netVac: {}, playoffStart: 20 });
+    var re = tv.edges.filter(function (e) { return e.k === "role"; });
+    assert.strictEqual(re.length, 1, "role label still shown");
+    assert.strictEqual(re[0].v, 0);
+    var sum = tv.edges.reduce(function (a, e) { return a + e.v; }, 0);
+    assert.ok(Math.abs(sum - tv.edgeTotal) < 0.15, "role adds nothing to edgeTotal");
+    assert.ok(noRole.edges.every(function (e) { return e.k !== "role"; }));
+  });
 });
 t("vacated-usage gain IMPROVES rank (lowers V)", function () {
   var name = Object.keys(ctx.netVac).filter(function (n) { return ctx.netVac[n].v > 0; })[0];
@@ -192,10 +193,45 @@ t("edges stay within sane bounds", function () {
 });
 
 // --- evaluate verdicts ---
-t("INJ is always pass", function () {
-  var r = S.evaluate(P("Jimmy Butler"), { pick: 60, nextPick: 84, available: availAt(60), openSlots: OPEN, ctx: ctx });
+function withInj(name, status) {
+  var base = P(name);
+  var copy = Object.assign({}, base, { inj: Object.assign({}, base.inj || { injury: "Test injury", ret: "Test return", src: "Test src, 1 Oct 2026" }, { status: status }) });
+  return copy;
+}
+t("season-out INJ is a pass", function () {
+  var c = withInj("Jimmy Butler", "season-out");
+  var r = S.evaluate(c, { pick: 60, nextPick: 84, available: availAt(60), openSlots: OPEN, ctx: ctx });
   assert.strictEqual(r.verdict, "pass");
-  assert.ok(r.reasons[0].indexOf("INJ") === 0, "got: " + r.reasons[0]);
+  assert.ok(r.reasons[0].indexOf("INJ") === 0 && /out for the season/.test(r.reasons[0]), "got: " + r.reasons[0]);
+});
+["questionable", "out-indefinitely"].forEach(function (status) {
+  t(status + " INJ stays eligible with a sourced warning", function () {
+    var c = withInj("Jimmy Butler", status);
+    var r = S.evaluate(c, { pick: 60, nextPick: 84, available: availAt(60), openSlots: OPEN, ctx: ctx });
+    assert.notStrictEqual(r.V, 999, "valued normally");
+    assert.ok(!/out for the season/.test(r.reasons.join(" ")));
+    var w = r.reasons[r.reasons.length - 1];
+    assert.ok(w.indexOf("INJ " + status) === 0 && w.indexOf(c.inj.ret) > 0 && w.indexOf(c.inj.src) > 0, "got: " + w);
+  });
+});
+t("only season-out players are excluded from best available", function () {
+  var star = P("Victor Wembanyama");
+  var base = availAt(1);
+  assert.ok(base.some(function (p) { return p.n === star.n; }), "star on the board");
+  function withStatus(status) {
+    return base.map(function (p) { return p.n === star.n ? Object.assign({}, p, { inj: { injury: "x", status: status, ret: "r", src: "s" } }) : p; });
+  }
+  var other = base.filter(function (p) { return p.n !== star.n; })[0];
+  function alt(status) { return S.evaluate(other, { pick: 1, nextPick: 24, available: withStatus(status), openSlots: OPEN, ctx: ctx }).alternative; }
+  assert.strictEqual(alt("questionable").n, star.n, "questionable star still the best alternative");
+  assert.notStrictEqual(alt("season-out").n, star.n, "season-out star never named");
+});
+t("historical-rank eligibility is shared with built-in Rank (cap 320)", function () {
+  var core = require("./draft-core");
+  var p = { lastTotal: 400, last: 300 };
+  assert.strictEqual(core.historicalRank(p), 300);
+  assert.strictEqual(core.historicalRank({ lastTotal: 400, last: 500 }), null);
+  assert.strictEqual(S.trueValue(Object.assign({ n: "x", t: "BOS", adp: 150 }, { lastTotal: 450, last: 450 }), {}).edges.length, 0);
 });
 t("best available at market is take", function () {
   var r = S.evaluate(P("Victor Wembanyama"), { pick: 1, nextPick: 24, available: availAt(1), openSlots: OPEN, ctx: ctx });

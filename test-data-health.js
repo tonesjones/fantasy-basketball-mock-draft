@@ -40,4 +40,19 @@ for(const name of ['Jalen Suggs','Cam Whitmore']) {
   assert.equal(injuryBundle.PLAYERS.find(p=>p.n===name).inj,null,name+' has no supported ongoing injury flag');
 }
 assert.equal(Object.keys(injuryBundle.INJ).length,17);
+for(const [name,rec] of Object.entries(injuryBundle.INJ)){
+  assert.ok(['questionable','out','out-indefinitely','season-out'].includes(rec.status),name+' has a valid status');
+  assert.match(rec.reviewedAt,/^\d{4}-\d{2}-\d{2}$/,name+' has reviewedAt');
+}
+const {freshness}=require('./data-health');
+const now=Date.parse('2026-10-12T12:00:00Z');
+const fresh={A:{reviewedAt:'2026-10-05'}};
+assert.deepEqual(freshness('2026-10-05',fresh,now),[],'exactly 7 days old is not stale');
+let fw=freshness('2026-10-04',fresh,now);
+assert.equal(fw.length,1);assert.match(fw[0],/ADP data is 8 days old/);
+fw=freshness('2026-10-12',{A:{reviewedAt:'2026-10-04'},B:{reviewedAt:'2026-10-11'}},now);
+assert.equal(fw.length,1);assert.match(fw[0],/A \(8d\)/);assert.ok(!/B \(/.test(fw[0]));
+assert.equal(freshness('2026-10-04',{A:{reviewedAt:'2026-09-01'}},now).length,2,'both warnings can show');
+assert.equal(freshness(null,{},now).length,1,'missing ADP date warns');
+assert.equal(typeof injuryBundle.ADP_DATE,'string','bundled ADP_DATE present');
 console.log(`Data health tests passed; ${report.players} bundled players have matching data records.`);

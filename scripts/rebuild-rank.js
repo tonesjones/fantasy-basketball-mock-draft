@@ -30,7 +30,7 @@ var EDGE_WEIGHT = 0.4,
 
 function rankKey(p) {
   var c = core.marketRank(p),
-    last = core.lastSeasonRank(p);
+    last = core.historicalRank(p);
   if (p.inj || last == null || c > EDGE_MAX_CONSENSUS) return c;
   return c - EDGE_WEIGHT * Math.max(-EDGE_CAP, Math.min(EDGE_CAP, c - last));
 }
