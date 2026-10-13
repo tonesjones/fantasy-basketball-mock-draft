@@ -50,6 +50,10 @@ if (require.main === module) {
           (report[key].length ? "\n  " + report[key].join(", ") : "")
       );
     });
+    const ctx = require("./scripts/load-data").loadData();
+    health
+      .freshness(ctx.ADP_DATE, ctx.INJ)
+      .forEach((w) => console.log("Freshness warning (advisory): " + w));
     console.log(
       "Largest built-in rank / consensus-order gaps (40+ spots; review signals, not proven errors):"
     );

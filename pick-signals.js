@@ -9,7 +9,7 @@
  *          consensus (DraftCore.marketRank: weighted Yahoo + Fantrax ADP),
  *          adjusted by damped edges:
  *          - last-season actuals gap (produced better/worse than market)
- *          - role up/down (movers-outlook heuristic)
+ *          - (role up/down is a displayed label only; it carries no value)
  *          - vacated usage, NETTED against every incoming arrival (a departure
  *            only opens usage if nobody better arrives to absorb it)
  *          - returning teammates (a star who missed much of last season is
@@ -25,7 +25,8 @@
  *   pass  — below value; names the better alternative with its value
  *   reach — below value but fills an acute positional need (mid+ draft only)
  *
- * INJ-tagged players are a hard pass.
+ * Only season-out injuries are a hard pass; other INJ statuses stay eligible
+ * with a sourced warning.
  *
  * Globals used: PLAYERS, MOVES, VACATED_USAGE, window.DraftCore,
  * window.PlayoffData, window.PlayoffCore. Attach: window.PickSignals.
@@ -41,12 +42,7 @@
 
   /* Robust last-season actuals: median of totals-rank and per-game rank. */
   function actuals(p) {
-    var v = [];
-    if (p.lastTotal != null && isFinite(p.lastTotal) && p.lastTotal <= 320) v.push(p.lastTotal);
-    if (p.last != null && isFinite(p.last) && p.last <= 320) v.push(p.last);
-    if (!v.length) return null;
-    v.sort(function (a, b) { return a - b; });
-    return v.length % 2 ? v[(v.length - 1) / 2] : (v[0] + v[1]) / 2;
+    return root.DraftCore.historicalRank(p);
   }
 
   function clamp(x, lo, hi) { return Math.max(lo, Math.min(hi, x)); }
@@ -199,10 +195,10 @@
       }
     }
 
-    // 2. Role edge from movers-outlook.
+    // 2. Role arrows are a label only (market vs last-season rank): v 0, no edge.
     var mv = ctx.moves && ctx.moves[p.n];
-    if (mv && mv.roleDelta === "up") { edge += 6; edges.push({ k: "role", v: 6, note: "role up (" + (mv.roleNote || "ADP ahead of last rank") + ")" }); }
-    else if (mv && mv.roleDelta === "down") { edge -= 6; edges.push({ k: "role", v: -6, note: "role down (" + (mv.roleNote || "ADP behind last rank") + ")" }); }
+    if (mv && mv.roleDelta === "up") edges.push({ k: "role", v: 0, note: "role up (" + (mv.roleNote || "ADP ahead of last rank") + ")" });
+    else if (mv && mv.roleDelta === "down") edges.push({ k: "role", v: 0, note: "role down (" + (mv.roleNote || "ADP behind last rank") + ")" });
 
     // 3. Vacated usage (netted).
     var nv = ctx.netVac && ctx.netVac[p.n];
@@ -233,6 +229,13 @@
     return { V: V, consensus: c, edges: edges, edgeTotal: +edge.toFixed(1) };
   }
 
+  function isSeasonOut(p) { return !!(p.inj && p.inj.status === "season-out"); }
+  /* Sourced warning for a non-season-out injury, quoting ret and src. */
+  function injuryWarning(inj) {
+    return "INJ " + (inj.status || "listed") + " — " + (inj.injury || "injured") +
+      (inj.ret ? "; " + inj.ret : "") + (inj.src ? " (" + inj.src + ")" : "");
+  }
+
   function vStr(v) { return (v >= 0 ? "+" : "") + v; }
 
   /* Positional need: does candidate fill an open starter slot? */
@@ -259,8 +262,8 @@
     var openSlots = opts.openSlots || [];
     var ctx = opts.ctx || {};
 
-    // INJ hard pass.
-    if (candidate.inj) {
+    // Season-out injuries are a hard pass; other INJ statuses get a warning.
+    if (isSeasonOut(candidate)) {
       return {
         verdict: "pass", V: 999, consensus: consensus(candidate), valueAtPick: -999,
         reasons: ["INJ — " + (candidate.inj.injury || "injured") + ", out for the season"],
@@ -272,10 +275,10 @@
     var V = tv.V;
     var valueAtPick = pick - V;
 
-    // Best available by true value (excluding injured).
+    // Best available by true value (excluding season-out injuries).
     var best = null, bestV = Infinity;
     available.forEach(function (p) {
-      if (p.inj || p.n === candidate.n) return;
+      if (isSeasonOut(p) || p.n === candidate.n) return;
       var pv = trueValue(p, ctx).V;
       if (pv < bestV) { bestV = pv; best = p; best._V = pv; }
     });
@@ -323,7 +326,7 @@
         verdict = "reach";
         var alt = null, altV = Infinity;
         available.forEach(function (p) {
-          if (p.inj || p.n === candidate.n) return;
+          if (isSeasonOut(p) || p.n === candidate.n) return;
           var sharesPos = (p.p || []).some(function (pp) { return (candidate.p || []).indexOf(pp) >= 0; });
           if (!sharesPos) return;
           var pv = trueValue(p, ctx).V;
@@ -338,6 +341,8 @@
         reasons.push("better: " + bestStr);
       }
     }
+
+    if (candidate.inj) reasons.push(injuryWarning(candidate.inj));
 
     // Target window: where should you draft him?
     // lastChance never precedes the target: if true value is worse than

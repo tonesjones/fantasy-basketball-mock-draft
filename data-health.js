@@ -164,5 +164,36 @@
     });
     return out;
   }
-  return { audit: audit };
+  /* Advisory only: warns when the ADP table date or any injury reviewedAt is
+     more than maxDays old. now defaults to the current date. */
+  var DAY = 86400000;
+  function ageDays(date, now) {
+    var t = /^\d{4}-\d{2}-\d{2}$/.test(date || "") ? Date.parse(date + "T00:00:00Z") : NaN;
+    return isNaN(t) ? null : Math.floor((now - t) / DAY);
+  }
+  function freshness(adpDate, inj, now, maxDays) {
+    now = now instanceof Date ? now.getTime() : now == null ? Date.now() : now;
+    maxDays = maxDays == null ? 7 : maxDays;
+    var warnings = [];
+    var a = ageDays(adpDate, now);
+    if (a == null) warnings.push("ADP data date is missing or invalid.");
+    else if (a > maxDays) warnings.push("ADP data is " + a + " days old (" + adpDate + ").");
+    var stale = [];
+    Object.keys(inj || {}).forEach(function (name) {
+      var d = ageDays(inj[name].reviewedAt, now);
+      if (d == null || d > maxDays)
+        stale.push(name + (d == null ? " (no review date)" : " (" + d + "d)"));
+    });
+    if (stale.length)
+      warnings.push(
+        stale.length +
+          " injury record(s) not reviewed in over " +
+          maxDays +
+          " days: " +
+          stale.join(", ") +
+          "."
+      );
+    return warnings;
+  }
+  return { audit: audit, freshness: freshness };
 });

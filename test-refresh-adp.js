@@ -50,4 +50,28 @@ assert.equal(sb.PDATA['Tyrese Haliburton'].adpF, 11.6);
 assert.equal(out.slice(out.indexOf('var INJ=')), src.slice(src.indexOf('var INJ=')), 'INJ block unchanged');
 assert.equal(R.apply(src, []), src, 'no changes, no rewrite');
 
+// A row with only a Fantrax ADP is still an add candidate and shows in the report.
+const fOnly = R.diff(R.readTable('Player,Team,Pos,Yahoo ADP,Fantrax ADP\nFantrax Only Guy,XXX,SG,,33.0\nBlank Row,XXX,SG,,\n'), players);
+assert.deepEqual(fOnly.unmatched.map(r => r.name), ['Fantrax Only Guy'], 'Fantrax-only row is a candidate, blank row is not');
+assert.match(R.report(fOnly), /Fantrax Only Guy .*Yahoo null Fantrax 33/);
+
+// Missing platform columns are an error, and the CLI writes nothing.
+assert.throws(() => R.readTable('Player,Yahoo ADP\nA,3\n'), /Fantrax ADP column/, 'missing Fantrax column throws');
+assert.throws(() => R.readTable('Player,Fantrax ADP\nA,3\n'), /Yahoo ADP column/, 'missing Yahoo column throws');
+const tmp = fs.mkdtempSync(require('node:os').tmpdir() + '/refresh-adp-');
+const badCsv = tmp + '/bad.csv';
+fs.writeFileSync(badCsv, 'Player,Yahoo ADP\nNikola Jokic,3.1\n');
+const cp = require('node:child_process');
+const run = cp.spawnSync(process.execPath, [ROOT + '/scripts/refresh-adp.js', badCsv, '--apply'], { encoding: 'utf8' });
+assert.notEqual(run.status, 0, 'CLI with missing Fantrax column exits non-zero');
+assert.equal(fs.readFileSync(ROOT + '/player-data.js', 'utf8'), src, 'no write on a bad CSV');
+fs.rmSync(tmp, { recursive: true, force: true });
+
+// Blank cells become null, for both platforms.
+const blanks = R.readTable('Player,Yahoo ADP,Fantrax ADP\nNikola Jokic,,\nSome Rookie,  ,4.5\n');
+assert.equal(blanks[0].yahoo, null, 'blank Yahoo cell is null');
+assert.equal(blanks[0].fantrax, null, 'blank Fantrax cell is null');
+assert.equal(blanks[1].yahoo, null, 'whitespace-only Yahoo cell is null');
+assert.equal(blanks[1].fantrax, 4.5);
+
 console.log('refresh-adp tests passed');
