@@ -148,6 +148,17 @@
     if (!vals.length) return null;
     return vals.length === 1 ? vals[0] : (vals[0] + vals[1]) / 2;
   }
+  /* Last-season rank used to adjust value: like lastSeasonRank, but ranks
+     beyond HISTORY_MAX_RANK are noise and ignored. The built-in Rank and the
+     Pick coach both call this, so they agree on who gets an adjustment. */
+  var HISTORY_MAX_RANK = 320;
+  function historicalRank(player) {
+    var vals = [player.lastTotal, player.last].filter(function (v) {
+      return v != null && isFinite(v) && v <= HISTORY_MAX_RANK;
+    });
+    if (!vals.length) return null;
+    return vals.length === 1 ? vals[0] : (vals[0] + vals[1]) / 2;
+  }
   /* CPU draft-market estimate and the app's consensus rank. Players neither
      platform lists sort after every listed player (the blend tops out near
      211), ordered by last-season rank; no 2025-26 data at all sorts last. */
@@ -238,6 +249,7 @@
     marketAdp: marketAdp,
     marketRank: marketRank,
     lastSeasonRank: lastSeasonRank,
+    historicalRank: historicalRank,
     seededRandom: seededRandom,
   };
 });

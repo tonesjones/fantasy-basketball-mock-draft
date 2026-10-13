@@ -6,7 +6,7 @@
    Input: a CSV with a header row. Columns are matched case-insensitively:
      name     "name" | "player"                       (required)
      Yahoo    "yahoo" | "yahoo adp" | "adp"           (required)
-     Fantrax  "fantrax" | "fantrax adp" | "adpf"      (optional)
+     Fantrax  "fantrax" | "fantrax adp" | "adpf"      (required)
      team     "team", position "pos" | "position"     (optional; reported only)
    Blank cells mean "no ADP published". ESPN ADP is never used (standing
    rule), and neither is any blend that includes it. Make the CSV from the
@@ -19,7 +19,7 @@
    Conventions (docs/adp-refresh-2026-09-14.md): a pool player missing from
    the table keeps his old values (flagged); a player in the table with a
    blank cell gets null. Team / position changes are reported, never written.
-   After --apply: node scripts/rebuild-rank.js, bump DATA_VERSION in app.js,
+   After --apply: node scripts/rebuild-rank.js, bump DATA_VERSION in app.js and ADP_DATE in player-data.js,
    update the "updated <date>" stamps, and commit the CSV under
    scripts/data-provenance/<date>-adp-refresh/. */
 "use strict";
@@ -100,12 +100,13 @@ function readTable(text) {
     cF = column(header, ["fantrax", "fantrax adp", "adpf"]),
     cT = column(header, ["team"]),
     cP = column(header, ["pos", "position"]);
-  if (cName < 0 || cY < 0) throw new Error("CSV needs a name column and a Yahoo ADP column");
+  if (cName < 0 || cY < 0 || cF < 0)
+    throw new Error("CSV needs a name column, a Yahoo ADP column and a Fantrax ADP column");
   return rows.map(function (r) {
     return {
       name: r[cName].trim(),
       yahoo: num(r[cY]),
-      fantrax: cF < 0 ? undefined : num(r[cF]),
+      fantrax: num(r[cF]),
       team: cT < 0 ? null : r[cT].trim(),
       pos: cP < 0 ? null : r[cP].trim(),
     };
@@ -118,18 +119,17 @@ function diff(table, players) {
     byKey[normalize(p.n)] = p;
   });
   var seen = {},
-    out = { matched: 0, changes: [], unmatched: [], absent: [], teamPos: [], hasFantrax: false };
+    out = { matched: 0, changes: [], unmatched: [], absent: [], teamPos: [] };
   table.forEach(function (row) {
     var p = byKey[normalize(ALIASES[row.name] || row.name)];
     if (!p) {
-      if (row.yahoo != null) out.unmatched.push(row);
+      if (row.yahoo != null || row.fantrax != null) out.unmatched.push(row);
       return;
     }
     if (seen[p.n]) throw new Error("Two table rows match " + p.n);
     seen[p.n] = true;
     out.matched++;
-    var next = { adp: row.yahoo, adpF: row.fantrax === undefined ? p.adpF : row.fantrax };
-    if (row.fantrax !== undefined) out.hasFantrax = true;
+    var next = { adp: row.yahoo, adpF: row.fantrax };
     ["adp", "adpF"].forEach(function (field) {
       if (p[field] !== next[field])
         out.changes.push({
@@ -168,7 +168,7 @@ function report(d) {
   var lost = d.changes.filter(function (c) {
     return c.to == null;
   });
-  lines.push("Matched pool players: " + d.matched + (d.hasFantrax ? "" : " (no Fantrax column: adpF untouched)"));
+  lines.push("Matched pool players: " + d.matched);
   lines.push("Value changes: " + d.changes.length + " (" + moves.length + " moved >= " + MATERIAL + ")");
   moves
     .sort(function (a, b) {
@@ -228,7 +228,7 @@ if (require.main === module) {
     fs.writeFileSync(target, apply(fs.readFileSync(target, "utf8"), d.changes));
     console.log(
       "\nWrote " + d.changes.length + " values to player-data.js. Next: node scripts/rebuild-rank.js, " +
-        "bump DATA_VERSION in app.js, update the 'updated <date>' stamps, commit the CSV as provenance."
+        "bump DATA_VERSION in app.js and ADP_DATE in player-data.js, update the 'updated <date>' stamps, commit the CSV as provenance."
     );
   }
 }

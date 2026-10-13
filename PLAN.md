@@ -115,3 +115,6 @@ Not planned: traded picks and keeper leagues.
   rebased onto the new base and mergeable.
 - Next: owner adds `TOKEN_ENC_KEY`, deploys the Worker with the page, and
   runs the two-account check.
+
+## Ported from main (#39)
+Injury `status`/`reviewedAt` (coach auto-passes only `season-out`), stricter ADP import, role arrows as labels only, shared `historicalRank`, and 7-day freshness warnings.
