@@ -401,17 +401,19 @@ function pcShow(root, which){
   var card=root.querySelector(".pc-card");
   if(card)card.hidden=which!=="pc-card";
 }
+/* The pick the coach advises on: the current pick on your turn; in Yahoo
+   mode, your upcoming pick while others are on the clock (a preview). */
+function coachPickIdx(){
+  if(isUserTurn())return state.log.length;
+  return state.yahooLive?nextUserPickIdx():-1;
+}
 function buildPickCoachPayload(pi){
   var pl=PLAYERS[pi];
-  var pickNumber=state.log.length+1;
+  var target=coachPickIdx();
+  var pickNumber=target+1;
   var logLen=state.log.length;
-  var nxt=nextUserPickIdx();
-  var picksUntilNext=0;
-  if(isUserTurn()){
-    var nxt2=-1,tot2=totalPicks();
-    for(var j=pickNumber;j<tot2;j++)if(teamForPick(j)===userTeam()){nxt2=j;break;}
-    picksUntilNext=nxt2>=0?nxt2-(pickNumber-1):0;
-  }else if(nxt>=0)picksUntilNext=nxt-state.log.length;
+  var nxt2=followingUserPickIdx(target);
+  var picksUntilNext=nxt2>=0?nxt2-target:0;
   var ros=myRoster();
   var open=[],filled=[],drafted=[];
   ros.slots.forEach(function(e){
@@ -740,18 +742,23 @@ function refreshPickCoach(){
     root.innerHTML='<div class="pc-card"><div class="pc-name">Waiting for Yahoo</div><div class="pc-meta">Pick advice resumes after a fresh board update.</div></div>';
     updateCoachDockPeek("");syncCoachDock();return;
   }
-  if(!isUserTurn()){pcShow(root,"pc-wait");updateCoachDockPeek("");syncCoachDock();return;}
+  if(coachPickIdx()<0){pcShow(root,"pc-wait");updateCoachDockPeek("");syncCoachDock();return;}
   var pi=resolveFocusPi();
   if(pi==null){pcShow(root,"pc-empty");updateCoachDockPeek("");return;}
   pcShow(root,"pc-loading");
   var seq=++_pcEvalSeq;
   var payload=buildPickCoachPayload(pi);
-  window.PickCoach.evaluate(payload).then(function(res){
+  var local=localCoachResult(payload);
+  if(local)paintPickCoach(local);
+  /* Preview picks use the local verdict only; Jev runs once you're on the clock. */
+  if(!isUserTurn()){if(!local)pcShow(root,"pc-wait");return;}
+  window.PickCoach.evaluate(payload).then(paintPickCoach);
+  function paintPickCoach(res){
     if(seq!==_pcEvalSeq)return;
     if(!res||res.stale)return;
     var still=el("pick-coach");
     if(!still)return;
-    if(!isUserTurn()){pcShow(still,"pc-wait");return;}
+    if(coachPickIdx()<0){pcShow(still,"pc-wait");return;}
     var pl=PLAYERS[pi];
     var card=still.querySelector(".pc-card");
     var nameEl=still.querySelector(".pc-name");
@@ -763,6 +770,8 @@ function refreshPickCoach(){
     if(metaEl){
       var adpTxt=pl.adp!=null?String(pl.adp):"—";
       var meta="Pick #"+payload.pickNumber+" · ADP "+adpTxt;
+      var away=payload.pickNumber-1-state.log.length;
+      if(away>0)meta+=" · "+away+(away===1?" pick away":" picks away");
       if(pl.projMpg!=null)meta+=" · proj MPG "+pl.projMpg;
       if(pl.projRank!=null)meta+=" · proj #"+pl.projRank;
       metaEl.textContent=meta;
@@ -778,6 +787,7 @@ function refreshPickCoach(){
         else if(res.model==="stub"||res.fallback)src="Stub · offline";
         else if(res.model)src=/^jev/i.test(String(res.model))?"Jev":String(res.model);
       }
+      if(res.localOnly)src=isUserTurn()?"Jev checking…":"Preview · Jev on your turn";
       srcEl.textContent=src;
       srcEl.hidden=!src;
       srcEl.title=(res.jev&&window.PickCoach.jevOpinionLabel?window.PickCoach.jevOpinionLabel(res.jev)+" \u00b7 ":"")+(res.model?String(res.model):(res.error?String(res.error):""));
@@ -938,7 +948,14 @@ function refreshPickCoach(){
       }
     }
     pcShow(still,"pc-card");
-  });
+  }
+}
+/* The deterministic verdict from local signals, shown before Jev answers. */
+function localCoachResult(payload){
+  if(!payload.signals||!payload.signals.verdict)return null;
+  var res=window.PickCoach.normalizeApiResult({score:null,scoreConfidence:0,choice:null,choiceConfidence:0},payload);
+  res.localOnly=true;
+  return res;
 }
 
 /* ---- Yahoo live draft mode ----
@@ -961,7 +978,7 @@ function yahooPoolIndex(poolName){
    localStorage. The page never sees a Yahoo token. */
 var YAHOO_WORKER_URL="https://yahoo-draft-copilot.tonyjaysales.workers.dev";
 var YAHOO_SESSION_KEY="draft-lab.yahoo-session";
-var _liveSyncTimer=null,_liveSyncBusy=false,_yahooAwaitingOrder=false;
+var _liveSyncTimer=null,_liveSyncOn=false,_liveSyncBusy=false,_yahooAwaitingOrder=false;
 function liveSyncStatus(m){var s=el("yhsyncstatus")||el("yhstatus");if(s)s.textContent=m;}
 function yahooSession(){try{return localStorage.getItem(YAHOO_SESSION_KEY)||"";}catch(e){return "";}}
 function yahooSetSession(token){try{if(token)localStorage.setItem(YAHOO_SESSION_KEY,token);else localStorage.removeItem(YAHOO_SESSION_KEY);}catch(e){}}
@@ -1030,19 +1047,34 @@ function yahooApplySnapshot(j){
   if(newUserPicks.length){var latest=newUserPicks[newUserPicks.length-1];showPickMoment(latest.name,latest.index);}
   return true;
 }
+/* Poll every 3s while your pick is on the clock or up to 2 picks away (so a
+   back-to-back turn shows quickly), 12s otherwise. */
+function liveSyncDelay(){
+  if(_yahooAwaitingOrder||!state.yahooLive)return 12000;
+  var nxt=nextUserPickIdx();
+  return nxt>=0&&nxt-state.log.length<=2?3000:12000;
+}
+function liveSyncSchedule(){
+  clearTimeout(_liveSyncTimer);
+  _liveSyncTimer=_liveSyncOn?setTimeout(liveSyncTick,liveSyncDelay()):null;
+}
 function liveSyncTick(){
   var live=!!(state.yahooLive&&state.yahooLive.worker&&state.phase==="draft");
   if(!(live||_yahooAwaitingOrder)||_liveSyncBusy)return;
-  if(!yahooSession()){liveSyncStatus("Signed out of Yahoo. Sign in again from the setup screen.");return;}
+  if(!yahooSession()){liveSyncStatus("Signed out of Yahoo. Sign in again from the setup screen.");liveSyncSchedule();return;}
   _liveSyncBusy=true;
-  yahooApi("/api/board").then(function(j){_liveSyncBusy=false;yahooHandleBoard(j);})
-    .catch(function(e){_liveSyncBusy=false;liveSyncStatus(e.message||"Yahoo sync failed.");});
+  yahooApi("/api/board").then(function(j){_liveSyncBusy=false;yahooHandleBoard(j);liveSyncSchedule();})
+    .catch(function(e){_liveSyncBusy=false;liveSyncStatus(e.message||"Yahoo sync failed.");liveSyncSchedule();});
 }
 function liveSyncEnsure(){
   var want=!!(yahooSession()&&(_yahooAwaitingOrder||(state.yahooLive&&state.yahooLive.worker&&state.phase==="draft")));
-  if(want&&!_liveSyncTimer){_liveSyncTimer=setInterval(liveSyncTick,12000);liveSyncTick();}
-  if(!want&&_liveSyncTimer){clearInterval(_liveSyncTimer);_liveSyncTimer=null;}
+  if(want&&!_liveSyncOn){_liveSyncOn=true;liveSyncTick();}
+  if(!want&&_liveSyncOn){_liveSyncOn=false;liveSyncSchedule();}
 }
+/* Coming back from the Yahoo tab or window: sync now instead of waiting for the timer. */
+function liveSyncNow(){if(_liveSyncOn&&!document.hidden)liveSyncTick();}
+document.addEventListener("visibilitychange",liveSyncNow);
+window.addEventListener("focus",liveSyncNow);
 function yahooStartWatch(){
   var room=(el("yhroom")||{}).value||"";
   if(!room){liveSyncStatus("Paste your Yahoo draft-room URL.");return;}
@@ -1333,7 +1365,7 @@ function setCoachDockOpen(open){
   }
 }
 function syncCoachDock(){
-  var on=!isMobileDraft()&&state.phase==="draft"&&state.view==="coach"&&isUserTurn();
+  var on=!isMobileDraft()&&state.phase==="draft"&&state.view==="coach"&&coachPickIdx()>=0;
   var root=document.getElementById("md");
   var cols=document.querySelector("#md .cols");
   if(root){

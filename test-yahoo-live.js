@@ -96,4 +96,30 @@ assert.equal(sandbox.state.draftPos, 4, "the slot from Yahoo becomes the user's 
 assert.equal(sandbox.state.yahooLive.userTeamName, "Tony");
 assert.match(sandbox.status, /You're Tony, pick 4\./);
 
+// Poll speed and coach target follow the snake order (12 teams, slot 12: picks 12 and 13 are back to back).
+Object.assign(sandbox, {
+  teamForPick: function (idx) { return sandbox.CORE.teamForPick(idx, 12); },
+  totalPicks: function () { return 156; },
+  userTeam: function () { return 11; },
+  _yahooAwaitingOrder: false,
+});
+["isUserTurn", "nextUserPickIdx", "liveSyncDelay", "coachPickIdx"].forEach(function (name) {
+  vm.runInNewContext(extractFn(name), sandbox);
+});
+function atPick(n, live) { sandbox.state = { log: new Array(n).fill(0), yahooLive: live === false ? null : { worker: true } }; }
+atPick(0);
+assert.equal(sandbox.liveSyncDelay(), 12000, "far from your pick: slow poll");
+assert.equal(sandbox.coachPickIdx(), 11, "Yahoo preview advises on your upcoming pick");
+atPick(9);
+assert.equal(sandbox.liveSyncDelay(), 3000, "two picks away: fast poll");
+atPick(11);
+assert.equal(sandbox.liveSyncDelay(), 3000, "on the clock before a back-to-back: fast poll");
+assert.equal(sandbox.coachPickIdx(), 11);
+atPick(12);
+assert.equal(sandbox.coachPickIdx(), 12, "second half of the back-to-back");
+atPick(14);
+assert.equal(sandbox.liveSyncDelay(), 12000);
+atPick(0, false);
+assert.equal(sandbox.coachPickIdx(), -1, "the mock draft keeps the coach to your turn");
+
 console.log("yahoo live client tests passed");

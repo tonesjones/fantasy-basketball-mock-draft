@@ -74,11 +74,11 @@ function extractFn(name) {
   vm.runInNewContext(extractFn(n), sandbox);
 });
 
-// ---- extract the real paint block (refreshPickCoach .then body) ----
-var startMarker = 'window.PickCoach.evaluate(payload).then(function(res){';
+// ---- extract the real paint block (paintPickCoach inside refreshPickCoach) ----
+var startMarker = 'function paintPickCoach(res){';
 var si = html.indexOf(startMarker);
 assert.ok(si >= 0, "paint block start not found");
-var endMarker = '    pcShow(still,"pc-card");\n  });\n}';
+var endMarker = '    pcShow(still,"pc-card");\n  }\n}';
 var ei = html.indexOf(endMarker, si);
 assert.ok(ei >= 0, "paint block end not found");
 var body = html.slice(si + startMarker.length, ei);
@@ -97,8 +97,9 @@ vm.runInNewContext([
   "function renderPickCoachStrengths(){return \"\";}",
   "function playoffBadge(){return \"\";}",
   "function isUserTurn(){return true;}",
+  "function coachPickIdx(){return 0;}",
   "function updateCoachDockPeek(){}",
-  "var state={puntCats:[]};",
+  "var state={puntCats:[],log:[]};",
 ].join("\n"), sandbox);
 
 // ---- minimal DOM shim ----
