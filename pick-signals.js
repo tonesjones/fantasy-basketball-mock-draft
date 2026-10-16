@@ -26,7 +26,8 @@
  *   reach — below value but fills an acute positional need (mid+ draft only)
  *
  * Only season-out injuries are a hard pass; other INJ statuses stay eligible
- * with a sourced warning.
+ * with a sourced warning. A sourced earliest return (inj.retBy) discounts V
+ * by the share of the regular season missed.
  *
  * Globals used: PLAYERS, MOVES, VACATED_USAGE, window.DraftCore,
  * window.PlayoffData, window.PlayoffCore. Attach: window.PickSignals.
@@ -238,7 +239,31 @@
     }
 
     var V = clamp(Math.round(c - edge), 1, 320);
+
+    // 7. Expected missed time. Applied after the market edges (and kept out
+    // of edgeTotal) because it is not a nudge: a player who misses 45% of the
+    // season is worth a fraction of his healthy rank. Rank / availability.
+    var miss = missedFraction(p.inj);
+    if (miss > 0) {
+      var hurt = clamp(Math.round(V / (1 - miss)), 1, 320);
+      if (hurt > V) {
+        edges.push({ k: "injury", v: V - hurt, note: "misses ~" + Math.round(miss * 100) + "% of the regular season (back ~" + p.inj.retBy + " at the earliest)" });
+        V = hurt;
+      }
+    }
     return { V: V, consensus: c, edges: edges, edgeTotal: +edge.toFixed(1) };
+  }
+
+  /* Share of the regular season an injured player misses, from inj.retBy
+     (earliest sourced return, YYYY-MM-DD). No retBy = no sourced timeline,
+     so no discount (the warning still shows). Capped below 1: season-out is
+     its own status. */
+  var SEASON_START = Date.UTC(2026, 9, 20), SEASON_END = Date.UTC(2027, 3, 11);
+  function missedFraction(inj) {
+    if (!inj || !inj.retBy) return 0;
+    var r = Date.parse(inj.retBy + "T00:00:00Z");
+    if (!isFinite(r)) return 0;
+    return clamp((r - SEASON_START) / (SEASON_END - SEASON_START), 0, 0.9);
   }
 
   function isSeasonOut(p) { return !!(p.inj && p.inj.status === "season-out"); }
@@ -385,6 +410,7 @@
     returningTeammates: returningTeammates,
     playoffAverage: playoffAverage,
     trueValue: trueValue,
+    missedFraction: missedFraction,
     positionalNeed: positionalNeed,
     evaluate: evaluate
   };
