@@ -343,13 +343,14 @@ var PDATA={
 // status: questionable | out | out-indefinitely | season-out. Only season-out
 // makes the Pick coach auto-pass and exclude him; reviewedAt (YYYY-MM-DD) is
 // the source report date and feeds the data-health freshness warning.
-// retBy (YYYY-MM-DD, optional): earliest return the source supports; the Pick
+// retBy (YYYY-MM-DD, optional): earliest return the source supports, counted
+// from the injury date when the report doesn't say; the Pick
 // coach discounts value by the share of the regular season missed. Omit it
 // when no timeline is reported.
 var ADP_DATE="2026-10-11"; // date of the Hashtag ADP table in PDATA
 var INJ={
-"Isaiah Stewart":{injury:"Moderate left ankle sprain",detail:"Hurt two minutes into his Grizzlies preseason debut on October 5.",ret:"Reevaluation in two weeks; expected to miss the October 21 opener",src:"Rotoworld / NBC Sports, 9 Oct 2026",status:"out",retBy:"2026-10-23",reviewedAt:"2026-10-09"},
-"Jusuf Nurkic":{injury:"Partial plantar plate tear, second toe of right foot",detail:"Injured in the October 4 preseason opener.",ret:"Out at least four weeks, including the opening weeks of the season",src:"Chris Haynes via Roundtable, 8 Oct 2026",status:"out",retBy:"2026-11-05",reviewedAt:"2026-10-08"},
+"Isaiah Stewart":{injury:"Moderate left ankle sprain",detail:"Hurt two minutes into his Grizzlies preseason debut on October 5.",ret:"Reevaluation in two weeks; expected to miss the October 21 opener",src:"Rotoworld / NBC Sports, 9 Oct 2026",status:"out",retBy:"2026-10-19",reviewedAt:"2026-10-09"},
+"Jusuf Nurkic":{injury:"Partial plantar plate tear, second toe of right foot",detail:"Injured in the October 4 preseason opener.",ret:"Out at least four weeks, including the opening weeks of the season",src:"Chris Haynes via Roundtable, 8 Oct 2026",status:"out",retBy:"2026-11-01",reviewedAt:"2026-10-08"},
 "Kyle Filipowski":{injury:"Back (offseason herniated-disc surgery)",detail:"Has missed preseason games and is not cleared for on-court work.",ret:"No timeline; Will Hardy hopes to have him back soon",src:"Rotoworld / NBC Sports, 10 Oct 2026",status:"out-indefinitely",reviewedAt:"2026-10-10"},
 "Coby White":{injury:"Left calf strain",detail:"Will miss preseason.",ret:"Opener uncertain; no timetable",src:"NBA.com / Associated Press, 6 Oct 2026",status:"out-indefinitely",reviewedAt:"2026-10-06"},
 "Max Strus":{injury:"Partial tear of right plantar fascia",detail:"Injured in the October 4 preseason opener; will miss the start of the regular season.",ret:"Reevaluation in four weeks from October 5; return date unknown",src:"Clippers announcement via NBA.com, 5 Oct 2026",status:"out",retBy:"2026-11-02",reviewedAt:"2026-10-05"},

@@ -191,7 +191,9 @@ t("sourced long absence (retBy) discounts value by games missed", function () {
   var hurt = S.trueValue(base, ctx);
   var miss = S.missedFraction(base.inj);
   assert.ok(miss > 0.55 && miss < 0.75, "Feb 10 return misses ~65% of the season: " + miss);
-  assert.ok(hurt.V >= Math.min(320, Math.round(healthy / (1 - miss))) - 1, "V " + hurt.V + " vs healthy " + healthy);
+  var base0 = Math.min(healthy, S.actuals(base));
+  assert.strictEqual(hurt.V, Math.max(healthy, Math.min(320, Math.round(base0 / (1 - miss)))), "V " + hurt.V + " vs healthy " + healthy);
+  assert.ok(hurt.V < 320, "market already priced some of it; no compounding to the floor");
   assert.ok(hurt.edges.some(function (e) { return e.k === "injury" && e.v < 0; }), "injury edge shown");
   var noDate = Object.assign({}, base, { inj: Object.assign({}, base.inj, { retBy: undefined }) });
   assert.strictEqual(S.trueValue(noDate, ctx).V, healthy, "no sourced timeline, no discount");
