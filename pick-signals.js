@@ -241,11 +241,15 @@
     var V = clamp(Math.round(c - edge), 1, 320);
 
     // 7. Expected missed time. Applied after the market edges (and kept out
-    // of edgeTotal) because it is not a nudge: a player who misses 45% of the
-    // season is worth a fraction of his healthy rank. Rank / availability.
+    // of edgeTotal) because it is not a nudge: a player who misses 65% of the
+    // season is worth a fraction of his healthy rank. The market may already
+    // have priced the injury in, so start from a healthy baseline (the better
+    // of V and last season's actuals), scale it by availability, and only
+    // ever move V down to that level, never compound a market discount.
     var miss = missedFraction(p.inj);
     if (miss > 0) {
-      var hurt = clamp(Math.round(V / (1 - miss)), 1, 320);
+      var healthy = a != null ? Math.min(V, a) : V;
+      var hurt = clamp(Math.round(healthy / (1 - miss)), 1, 320);
       if (hurt > V) {
         edges.push({ k: "injury", v: V - hurt, note: "misses ~" + Math.round(miss * 100) + "% of the regular season (back ~" + p.inj.retBy + " at the earliest)" });
         V = hurt;
