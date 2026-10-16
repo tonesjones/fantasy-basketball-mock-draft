@@ -254,6 +254,25 @@ t("acceptable value with urgent better alternative is wait", function () {
   assert.ok(r, "expected at least one acceptable-value 'wait' at pick 40");
   assert.ok(/won't survive to pick 64/.test(r.reasons.join(" ")), "should name the urgent alternative: " + JSON.stringify(r.reasons));
 });
+t("best available who survives, with a close runner-up who won't, is wait", function () {
+  // Synthetic board: X is our #55 (market 75 + punt edge), Y is our #56 at
+  // market 56. Survival reads market ADP: X (75) lasts to 64, Y (56) doesn't.
+  var X = { n: "Test X", t: "ZZZ", adp: 75 }, Y = { n: "Test Y", t: "ZZZ", adp: 56 };
+  var c = { puntShift: { "Test X": 80 } };
+  var opts = { pick: 50, nextPick: 64, available: [X, Y], openSlots: OPEN, ctx: c };
+  var r = S.evaluate(X, opts);
+  assert.strictEqual(r.V, 55);
+  assert.strictEqual(r.alternative.V, 56);
+  assert.strictEqual(r.verdict, "wait", JSON.stringify(r.reasons));
+  assert.ok(/take Test Y now, Test X next pick/.test(r.reasons.join(" ")), JSON.stringify(r.reasons));
+  // Runner-up also survives: nothing to gain by waiting.
+  var Y2 = Object.assign({}, Y, { adp: 70 });
+  c.puntShift["Test Y"] = 28; // keeps Y2 at our #56
+  assert.strictEqual(S.evaluate(X, Object.assign({}, opts, { available: [X, Y2] })).verdict, "take");
+  // Runner-up won't survive but isn't close (our #60): take.
+  var Y3 = { n: "Test Y3", t: "ZZZ", adp: 60 };
+  assert.strictEqual(S.evaluate(X, Object.assign({}, opts, { available: [X, Y3] })).verdict, "take");
+});
 t("way below value with better alternative is pass", function () {
   var r = S.evaluate(P("Jayson Tatum"), { pick: 10, nextPick: 34, available: availAt(10), openSlots: OPEN, ctx: ctx });
   assert.strictEqual(r.verdict, "pass");

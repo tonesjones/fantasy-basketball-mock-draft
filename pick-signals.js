@@ -21,7 +21,9 @@
  * Verdicts: take | wait | pass | reach
  *   take  — best available value at this pick (or tied); won't survive
  *   wait  — acceptable value, but a more urgent better-value alternative
- *           won't survive to your next pick — take that one, he's fallback
+ *           won't survive to your next pick — take that one, he's fallback.
+ *           Also for the best available when his ADP says he survives to
+ *           your next pick and a close runner-up (within 4) won't
  *   pass  — below value; names the better alternative with its value
  *   reach — below value but fills an acute positional need (mid+ draft only)
  *
@@ -302,13 +304,16 @@
     var xIsBest = !best || V <= bestV + 1;
 
     if (xIsBest) {
-      // Best (or tied) available: take unless the market says he'll survive
-      // AND a later pick is nearly as good — but survival is rare (market is
-      // efficient vs our edges), so default to take.
+      // Best (or tied) available: take, unless his market ADP says he'll
+      // survive to the next pick AND the runner-up is within 4 spots but
+      // won't survive — then take the runner-up now and get both. Survival
+      // is rare (market is efficient vs our edges), so default to take.
       var survives = candidate.adp != null && candidate.adp >= nextPick + 8;
-      if (survives && bestValueAtPick > valueAtPick + 4) {
+      var bestGone = best && best.adp != null && best.adp < nextPick;
+      if (survives && bestGone && bestV <= V + 4) {
         verdict = "wait";
         reasons.push(vStr(valueAtPick) + " value at pick " + pick + " (our #" + V + ") — but ADP " + Math.round(candidate.adp) + " says he survives to " + nextPick);
+        reasons.push(best.n + " (" + vStr(bestValueAtPick) + " value, our #" + bestV + ") is close and won't survive (ADP " + Math.round(best.adp) + ") — take " + best.n + " now, " + candidate.n + " next pick");
       } else {
         verdict = "take";
         reasons.push(vStr(valueAtPick) + " value at pick " + pick + " (our #" + V + ") — " +

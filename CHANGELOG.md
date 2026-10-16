@@ -1,5 +1,13 @@
 # Changelog
 
+## Pick value: "wait" for a best available who will survive (2026-10-15)
+The best available player's "wait" verdict in `pick-signals.js` could never
+fire: its condition contradicted the best-available check, so he always got
+"take". It now fires when his market ADP says he lasts to your next pick
+(ADP at least next pick + 8) and the runner-up is within 4 spots of value
+but won't last (ADP before your next pick): take the runner-up now and him
+next pick. Survival still reads market ADP, not true value.
+
 ## Pick value: stacked arrivals, returning stars, playoff weight (2026-10-04)
 Three fixes to the true-value engine (`pick-signals.js`). Market data and the
 built-in Rank order are unchanged.
