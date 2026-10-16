@@ -12,7 +12,7 @@ class MemoryKV {
 
 /* Two Yahoo users. Each OAuth code and token maps to one of them. */
 const USERS = {
-  alice: { guid: "GUIDALICE", code: "code-alice", refresh: "refresh-alice", access: "access-alice", league: "111", position: 3, team: "Alice Team" },
+  alice: { guid: "GUIDALICE", code: "code-alice", refresh: "refresh-alice", access: "access-alice", league: "111", position: 3, team: "Alice Team", metaTeams: 10 },
   bob: { guid: "GUIDBOB", code: "code-bob", refresh: "refresh-bob", access: "access-bob", league: "222", position: null, team: "Bob Team" },
 };
 const byCode = (code) => Object.values(USERS).find((u) => u.code === code);
@@ -64,11 +64,13 @@ async function fakeFetch(input, init = {}) {
     }));
   }
   if (url.includes("/draftresults")) {
-    return jsonResponse(leagueEnvelope(key, "draft_results", {
-      0: { draft_result: { pick: "1", round: "1", team_key: `${key}.t.1`, player_key: `478.p.${league}` } },
-      1: { draft_result: { pick: "2", round: "1", team_key: `${key}.t.2` } },
-      count: 2,
-    }));
+    /* Twelve round 1 slots; only pick 1 is made. The user's team (t.2) sits at their draft position. */
+    const slots = { count: 12 };
+    for (let pick = 1; pick <= 12; pick++) {
+      const team = pick === user.position ? 2 : pick === 1 ? 1 : 100 + pick;
+      slots[pick - 1] = { draft_result: { pick: String(pick), round: "1", team_key: `${key}.t.${team}`, ...(pick === 1 ? { player_key: `478.p.${league}` } : {}) } };
+    }
+    return jsonResponse(leagueEnvelope(key, "draft_results", slots));
   }
   if (url.includes("/players;player_keys=")) {
     return jsonResponse(leagueEnvelope(key, "players", {
@@ -76,7 +78,7 @@ async function fakeFetch(input, init = {}) {
       count: 1,
     }));
   }
-  if (url.includes("/fantasy/v2/league/")) return jsonResponse({ fantasy_content: { league: [{ league_key: key, num_teams: 12, name: "Mock" }] } });
+  if (url.includes("/fantasy/v2/league/")) return jsonResponse({ fantasy_content: { league: [{ league_key: key, num_teams: user.metaTeams || 12, name: "Mock" }] } });
   throw new Error(`Unexpected URL ${url}`);
 }
 
@@ -181,6 +183,8 @@ assert.equal(aliceBoard.draftId, "478.l.111", "watches are kept per user");
 assert.equal(aliceBoard.pickCount, 1, "unmade Yahoo slots are excluded from completed picks");
 assert.equal(aliceBoard.picks[0].playerName, "Victor Wembanyama");
 assert.match(aliceBoard.boardHash, /^[a-f0-9]{64}$/);
+assert.equal(aliceBoard.teams, 12, "the team count follows Yahoo's draft order when num_teams was read before the lobby filled");
+assert.equal(aliceBoard.userSlot, 3);
 
 USERS.bob.position = 7;
 response = await api("/api/board", bobToken);

@@ -394,11 +394,29 @@ function parseLeagueInfo(metaPayload, settingsPayload, teamsPayload) {
   return { teams, rounds, teamNames, own };
 }
 
-function parseDraftResults(payload) {
-  const results = leagueSub(payload, "draft_results");
-  return numberedValues(results)
+function draftResultItems(payload) {
+  return numberedValues(leagueSub(payload, "draft_results"))
     .map((item) => item.draft_result || item)
-    .filter((item) => item && item.player_key)
+    .filter(Boolean);
+}
+
+/* Round 1 team keys in pick order, or null if the round isn't fully known yet.
+   Yahoo lists every slot (made or not) once the order is set; otherwise round 1
+   is complete only after a round 2 pick exists. */
+function parseDraftOrder(payload) {
+  const items = draftResultItems(payload);
+  const complete = items.some((item) => !item.player_key || Number(item.round) >= 2);
+  const roundOne = items
+    .filter((item) => Number(item.round) === 1 && Number(item.pick) > 0)
+    .sort((a, b) => Number(a.pick) - Number(b.pick))
+    .map((item) => String(item.team_key || ""));
+  if (!complete || roundOne.length < 2 || roundOne.length > 20) return null;
+  return roundOne;
+}
+
+function parseDraftResults(payload) {
+  return draftResultItems(payload)
+    .filter((item) => item.player_key)
     .map((item) => ({
       overallPick: Number(item.pick),
       round: Number(item.round),
@@ -451,6 +469,7 @@ async function startWatch(input, env, fetchImpl, guid) {
   const watch = {
     draftId: leagueKey,
     slot: info.own.draftPosition,
+    teamKey: info.own.teamKey,
     teamName: info.own.name,
     teams: info.teams,
     rounds: info.rounds,
@@ -466,22 +485,32 @@ async function loadBoard(env, fetchImpl, guid) {
   const raw = await env.YAHOO_SESSIONS.get(`${WATCH_PREFIX}${guid}`);
   if (!raw) return null;
   const watch = JSON.parse(raw);
-  let changed = false;
-  if (!watch.slot) {
-    const { teamNames, own } = parseTeams(
-      await yahooGet(`/fantasy/v2/league/${encodeURIComponent(watch.draftId)}/teams`, env, fetchImpl, guid),
-    );
-    if (own && own.draftPosition) {
-      Object.assign(watch, { slot: own.draftPosition, teamName: own.name, teamNames });
-      changed = true;
-    }
-  }
+  const before = JSON.stringify(watch);
   const payload = await yahooGet(
     `/fantasy/v2/league/${encodeURIComponent(watch.draftId)}/draftresults`,
     env,
     fetchImpl,
     guid,
   );
+  const order = parseDraftOrder(payload);
+  /* A mock lobby can fill after the watch starts, so the team count and names
+     saved then may be stale. Re-read teams until the draft order matches. */
+  if (!watch.slot || !watch.teamKey || (order && order.length !== watch.teams)) {
+    const { teamNames, own } = parseTeams(
+      await yahooGet(`/fantasy/v2/league/${encodeURIComponent(watch.draftId)}/teams`, env, fetchImpl, guid),
+    );
+    if (own) {
+      Object.assign(watch, { teamKey: own.teamKey, teamName: own.name, teamNames });
+      if (own.draftPosition) watch.slot = own.draftPosition;
+    }
+  }
+  if (order) {
+    const ownIndex = watch.teamKey ? order.indexOf(watch.teamKey) : -1;
+    if (order.length !== watch.teams || (ownIndex >= 0 && ownIndex + 1 !== watch.slot)) {
+      watch.teams = order.length;
+      if (ownIndex >= 0) watch.slot = ownIndex + 1;
+    }
+  }
   const picks = parseDraftResults(payload);
   const names = await resolvePlayerNames(
     watch.draftId,
@@ -491,11 +520,8 @@ async function loadBoard(env, fetchImpl, guid) {
     fetchImpl,
     guid,
   );
-  if (Object.keys(names).length !== Object.keys(watch.playerNames || {}).length) {
-    watch.playerNames = names;
-    changed = true;
-  }
-  if (changed) await putWatch(env, guid, watch);
+  if (Object.keys(names).length !== Object.keys(watch.playerNames || {}).length) watch.playerNames = names;
+  if (JSON.stringify(watch) !== before) await putWatch(env, guid, watch);
   const boardPicks = picks.map((pick) => ({
     ...pick,
     playerName: names[pick.yahooPlayerKey] || pick.yahooPlayerKey,
@@ -510,7 +536,7 @@ async function loadBoard(env, fetchImpl, guid) {
     userTeamName: watch.teamName || "",
     teamNames: watch.teamNames || {},
     pickCount: boardPicks.length,
-    boardHash: await sha256(JSON.stringify(boardPicks)),
+    boardHash: await sha256(JSON.stringify({ teams: watch.teams, slot: watch.slot, picks: boardPicks })),
     complete: boardPicks.length >= watch.teams * watch.rounds,
     picks: boardPicks,
   };
@@ -574,6 +600,6 @@ export function createWorker(fetchImpl = fetch) {
   };
 }
 
-export { mlidFromInput, parseWatchInput, parseDraftResults, parseLeagueInfo, sha256 };
+export { mlidFromInput, parseWatchInput, parseDraftOrder, parseDraftResults, parseLeagueInfo, sha256 };
 
 export default createWorker();
