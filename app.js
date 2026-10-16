@@ -992,7 +992,7 @@ function yahooPoolIndex(poolName){
    localStorage. The page never sees a Yahoo token. */
 var YAHOO_WORKER_URL="https://yahoo-draft-copilot.tonyjaysales.workers.dev";
 var YAHOO_SESSION_KEY="draft-lab.yahoo-session";
-var _liveSyncTimer=null,_liveSyncOn=false,_liveSyncBusy=false,_yahooAwaitingOrder=false;
+var _liveSyncTimer=null,_liveSyncOn=false,_liveSyncBusy=false,_yahooAwaitingOrder=false,_yahooDoneRechecked=false;
 function liveSyncStatus(m){var s=el("yhsyncstatus")||el("yhstatus");if(s)s.textContent=m;}
 function yahooSession(){try{return localStorage.getItem(YAHOO_SESSION_KEY)||"";}catch(e){return "";}}
 function yahooSetSession(token){try{if(token)localStorage.setItem(YAHOO_SESSION_KEY,token);else localStorage.removeItem(YAHOO_SESSION_KEY);}catch(e){}}
@@ -1081,6 +1081,13 @@ function liveSyncTick(){
     .catch(function(e){_liveSyncBusy=false;liveSyncStatus(e.message||"Yahoo sync failed.");liveSyncSchedule();});
 }
 function liveSyncEnsure(){
+  /* Polling stops once a board is complete, so a board finished with wrong
+     settings (e.g. a stale team count) would never correct itself. Re-read it
+     once per page load. */
+  if(!_yahooDoneRechecked&&yahooSession()&&state.yahooLive&&state.yahooLive.worker&&state.phase==="done"){
+    _yahooDoneRechecked=true;
+    yahooApi("/api/board").then(yahooHandleBoard).catch(function(e){liveSyncStatus(e.message||"Yahoo sync failed.");});
+  }
   var want=!!(yahooSession()&&(_yahooAwaitingOrder||(state.yahooLive&&state.yahooLive.worker&&state.phase==="draft")));
   if(want&&!_liveSyncOn){_liveSyncOn=true;liveSyncTick();}
   if(!want&&_liveSyncOn){_liveSyncOn=false;liveSyncSchedule();}
@@ -1731,7 +1738,7 @@ function wirePuntControls(root){
 function renderDone(){
   cancelPickCoach();
   if(isMobileDraft()){renderDraft();return;}
-  var h='<h2>Draft complete</h2><div class="muted">Final roster from pick #'+state.draftPos+' ('+state.rounds+' rounds, 12 teams)</div>';
+  var h='<h2>Draft complete</h2><div class="muted">Final roster from pick #'+state.draftPos+' ('+state.rounds+' rounds, '+TEAMS+' teams)</div>';
   h+='<button class="bigbtn" id="mdnew2">Run it back</button>';
   if(state.userTurns.length)h+='<button class="ghostbtn" id="mdundo2" style="margin-left:8px">Undo my last pick</button>';
   h+=viewTabsHtml()+'<div id="mdside"></div>';
