@@ -1,5 +1,15 @@
 # Changelog
 
+## Pick coach: "wait" on the best available now reachable (2026-10-16)
+The "best available, but he'll survive" wait in `pick-signals.js` could never
+fire: it needed the runner-up to be 4+ spots better, inside a branch that only
+runs when nobody is more than 1 spot better. Now: when the best available's
+Yahoo ADP says he lasts to your next pick (ADP at least next pick + 8) and the
+runner-up is within 4 spots of value but won't (ADP before next pick - 2), the
+coach says wait and names the runner-up to take now. Never in rounds 1-2.
+Rare on real boards (the best-value player is a market survivor at about 3 of
+126 picks, and there the runner-up usually survives too), as intended.
+
 ## Pick coach: injured players lose value for games they'll miss (2026-10-16)
 The coach gave Mark Williams (torn labrum, out until about February) a "Take"
 at pick 141: only `season-out` injuries changed a player's value, so anyone

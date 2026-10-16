@@ -253,13 +253,16 @@
     var xIsBest = !best || V <= bestV + 1;
 
     if (xIsBest) {
-      // Best (or tied) available: take unless the market says he'll survive
-      // AND a later pick is nearly as good — but survival is rare (market is
-      // efficient vs our edges), so default to take.
+      // Best (or tied) available: take, unless the market says he'll survive
+      // to your next pick AND the runner-up is nearly as good but won't —
+      // then take the runner-up now and come back for him. Survival is
+      // market-based (ADP), never injury-adjusted V. Not in rounds 1-2.
       var survives = candidate.adp != null && candidate.adp >= nextPick + 8;
-      if (survives && bestValueAtPick > valueAtPick + 4) {
+      var runnerUpGoes = best && best.adp != null && best.adp < nextPick - 2;
+      if (survives && runnerUpGoes && bestValueAtPick >= valueAtPick - 4 && pick > 24) {
         verdict = "wait";
-        reasons.push(vStr(valueAtPick) + " value at pick " + pick + " (our #" + V + ") — but ADP " + Math.round(candidate.adp) + " says he survives to " + nextPick);
+        reasons.push(vStr(valueAtPick) + " value at pick " + pick + " (our #" + V + ") — best available, but ADP " + Math.round(candidate.adp) + " says he survives to " + nextPick);
+        reasons.push("take " + best.n + " now (" + vStr(bestValueAtPick) + " value, our #" + bestV + ", ADP " + Math.round(best.adp) + ") — he won't last; " + candidate.n + " should still be there at " + nextPick);
       } else {
         verdict = "take";
         reasons.push(vStr(valueAtPick) + " value at pick " + pick + " (our #" + V + ") — " +
