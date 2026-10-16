@@ -96,6 +96,19 @@ assert.equal(sandbox.state.draftPos, 4, "the slot from Yahoo becomes the user's 
 assert.equal(sandbox.state.yahooLive.userTeamName, "Tony");
 assert.match(sandbox.status, /You're Tony, pick 4\./);
 
+/* A finished board is re-read once per page load: polling has stopped, and the
+   finished board may have been built with a stale team count. */
+sandbox.yahooSession = function () { return "session"; };
+sandbox.yahooApi = function (path) { sandbox.apiCalls = (sandbox.apiCalls || []).concat(path); return { then: function () { return { catch: function () {} }; } }; };
+sandbox._yahooDoneRechecked = false;
+sandbox._liveSyncOn = false;
+vm.runInNewContext(extractFn("liveSyncEnsure"), sandbox);
+sandbox.state = { phase: "done", yahooLive: { worker: true } };
+sandbox.liveSyncEnsure();
+sandbox.liveSyncEnsure();
+assert.deepEqual(sandbox.apiCalls, ["/api/board"], "a finished Yahoo board is re-read exactly once");
+assert.equal(sandbox._liveSyncOn, false, "the re-read doesn't restart polling");
+
 // Poll speed and coach target follow the snake order (12 teams, slot 12: picks 12 and 13 are back to back).
 Object.assign(sandbox, {
   teamForPick: function (idx) { return sandbox.CORE.teamForPick(idx, 12); },
