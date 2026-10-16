@@ -1,6 +1,6 @@
 # Player refresh, 6 October 2026
 
-Prepared locally on `claude/yahoo-multiuser`. This refresh is not deployed.
+Prepared on `claude/yahoo-multiuser` and approved for promotion to `main` and production. Only the player refresh is promoted; Yahoo development features remain on their development branch.
 
 ## ADP and rank changes
 
@@ -29,12 +29,14 @@ Reviewed the other ten existing flags. No verified newer return timetable justif
 
 ## Roster review and limitations
 
-Hashtag still lists Hield and Dillingham on the wrong teams. The app keeps its reviewed assignments. [NBA.com reports that the Hornets later waived Dillingham](https://www.nba.com/news/hornets-trade-buddy-hield-bulls-rob-dillingham); this refresh does not establish his next team. The review also covered Jordan Hawkins's Chicago two-way signing and Ariel Hukporti's Achilles injury. Neither player is in the pool.
+Hashtag still reverses Hield and Dillingham's recent teams. Retained the app's reviewed assignments. [NBA.com reports Dillingham was subsequently waived](https://www.nba.com/news/hornets-trade-buddy-hield-bulls-rob-dillingham); his next team remains unresolved in this refresh. Jordan Hawkins's Chicago two-way signing and Ariel Hukporti's Achilles injury were reviewed, but both remain outside this player pool.
 
 ## Validation
 
 All 21 test suites pass. The internal data audit reports zero errors, unmatched data records, or orphan records. All 258 matched players agree with the source's Yahoo and Fantrax values. Coverage is 185/272 Yahoo and 244/272 Fantrax.
 
-Browser validation found a pre-existing, duplicated, unfinished `renderDataHealth` function that stopped the app from loading. The stale fragment was removed. The current source explanation and mobile label remain. JavaScript syntax now passes. The provenance README records the browser results.
+Development browser validation exposed a pre-existing duplicated, unfinished `renderDataHealth` function that prevented that branch from loading. Removed the stale fragment and retained the current source explanation and mobile label. Production already had a complete function. JavaScript syntax passes in both versions.
+
+Production has 19 test suites; all pass, along with formatting, rank-order, and internal data checks. Edge checks pass at all four mobile sizes and at 1280x900 desktop. The browser checker now waits for the player sheet's opening animation before measuring button positions, which prevents a premature assertion during its transition.
 
 The [routing log](model-routing-2026-10-06.md) records model identities, scope, and limitations.
