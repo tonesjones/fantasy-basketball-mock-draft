@@ -1,5 +1,12 @@
 # Changelog
 
+## Pick coach: no positional "reach" for long-term injured players (2026-10-16)
+- A player out for a quarter of the season or more (`retBy`) no longer counts
+  as filling an open starting slot, so need can't turn him into a take or
+  reach. Mark Williams at pick 137 with an open C went from "reach" to "pass".
+- "Reach" now requires that no better player at his position is on the
+  board. Before, it said "no better C alternative" while naming one (Ayton).
+
 ## Pick coach: "wait" on the best available now reachable (2026-10-16)
 The "best available, but he'll survive" wait in `pick-signals.js` could never
 fire: it needed the runner-up to be 4+ spots better, inside a branch that only
