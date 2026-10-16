@@ -343,7 +343,12 @@ async function yahooGet(path, env, fetchImpl, guid) {
   let response = await call(false);
   if (response.status === 401) response = await call(true);
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(`Yahoo API returned HTTP ${response.status}.`);
+  if (!response.ok) {
+    /* Name the resource and pass on Yahoo's reason; the path holds no secrets. */
+    const resource = path.split("?")[0].split("/").pop().split(";")[0];
+    const reason = data && data.error && typeof data.error.description === "string" ? ` ${data.error.description.slice(0, 200)}` : "";
+    throw new Error(`Yahoo API returned HTTP ${response.status} for ${resource}.${reason}`);
+  }
   return data;
 }
 

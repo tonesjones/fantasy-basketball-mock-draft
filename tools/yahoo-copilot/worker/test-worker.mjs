@@ -48,7 +48,7 @@ async function fakeFetch(input, init = {}) {
   const league = (/league\/478\.l\.(\d+)/.exec(url) || [])[1];
   const key = `478.l.${league}`;
   if (url.includes("/fantasy/v2/game/nba")) return jsonResponse({ fantasy_content: { game: [{ game_key: "478" }] } });
-  if (league !== user.league) return jsonResponse({ error: "not a member" }, 403);
+  if (league !== user.league) return jsonResponse({ error: { description: "You are not allowed to view this page." } }, 403);
   if (url.includes("/settings")) {
     return jsonResponse(leagueEnvelope(key, "settings", [{ is_auction_draft: "0", roster_positions: [
       { roster_position: { position: "PG", count: 1 } },
@@ -175,6 +175,7 @@ assert.equal(bobWatch.userSlot, null, "no slot until Yahoo sets the draft order"
 
 response = await postJson("/api/watch", bobToken, { roomUrl: "111" });
 assert.equal(response.status, 502, "a user can't watch a draft their Yahoo account can't read");
+assert.match((await response.json()).error.message, /HTTP 403 for \S+\. You are not allowed to view this page\./, "Yahoo errors name the resource and Yahoo's reason");
 
 response = await api("/api/board", aliceToken);
 const aliceBoard = await response.json();
