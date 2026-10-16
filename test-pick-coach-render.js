@@ -40,6 +40,7 @@ function P(n) { var p = byName[n]; assert.ok(p, "player missing: " + n); return 
 var ctx = {
   moves: sandbox.MOVES,
   netVac: S.netVacated(PLAYERS, sandbox.MOVES, sandbox.VACATED_USAGE),
+  returning: S.returningTeammates(PLAYERS, sandbox.MOVES),
   playoffStart: 20,
 };
 var OPEN = ["PG", "SG", "G", "SF", "PF", "C", "UTIL", "UTIL", "BN", "BN", "BN", "BN", "BN"];
@@ -96,6 +97,10 @@ vm.runInNewContext([
   "function esc(s){return String(s);}",
   "function renderPickCoachStrengths(){return \"\";}",
   "function playoffBadge(){return \"\";}",
+  "function playerAveragesHtml(){return \"\";}",
+  "function loadPlayerAverages(){}",
+  "function resolveFocusPi(){return null;}",
+  "function isMobileDraft(){return false;}",
   "function isUserTurn(){return true;}",
   "function coachPickIdx(){return 0;}",
   "function updateCoachDockPeek(){}",

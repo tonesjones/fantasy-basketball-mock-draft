@@ -111,6 +111,9 @@ async function main() {
       await page.locator('.prow[data-pi]').first().locator('.prank').click();
       const before = await page.evaluate(() => JSON.parse(localStorage.getItem('fantasy-basketball-mock-draft.v2')).state.log.length);
       await page.locator('.pc-draft:not([disabled])').waitFor();
+      await page.locator('#mdplayersheet').evaluate(async n=>{
+        await Promise.all(n.getAnimations().map(a=>a.finished.catch(()=>{})));
+      });
       await page.locator('#mdplayersheet .side').evaluate(n=>{n.scrollTop=n.scrollHeight;});
       const draftBox=await page.locator('.pc-draft').boundingBox();
       const closeBox=await page.locator('.mobile-sheet-close').boundingBox();

@@ -107,4 +107,21 @@ assert(Punt.valid(realChoice.cat),'suggestion is a real category (TO allowed)');
   assert.equal(Punt.suggest(t,0,players,pdata,{},10,-1,['PTS','TO']),null,'no other weak category left');
   assert.equal(Punt.suggest(t,0,players,pdata,{},10,-1,['REB','AST','STL']),null,'punt set already full');
 }
+// positionFits / bestCats
+{
+  const fp=[{n:'Guard',p:['PG'],adp:5},{n:'Big',p:['C'],adp:6},{n:'Big2',p:['PF'],adp:4},{n:'Wing',p:['SF'],adp:8}];
+  const fd={Guard:{cv:[0,3,0,0,0,0,0,0,0]},Big:{cv:[0,5,0,0,4,0,1,0,0]},Big2:{cv:[0,6,0,0,1,0,0,0,0]},Wing:{cv:[6,0,0,0,0,0,0,0,0]}};
+  const rows=Punt.rankings(fp,fd,{},'REB');
+  assert.equal(rows.find(r=>r.pi===1).gain<0,true,'REB punt does not lift the big');
+  assert.equal(Punt.nearTermRisers(rows,fp,0,10).some(r=>r.pi===1),false);
+  const fits=Punt.positionFits(rows,fp,0,10,[rows.find(r=>r.pi===0)]);
+  assert.equal(fits.length,1); assert.equal(fits[0].group,'bigs');
+  assert.deepEqual(fits[0].rows.map(r=>r.pi),[1,2],'best by punt value first, max 2');
+  assert.deepEqual(Punt.positionFits(rows,fp,0,10,[rows.find(r=>r.pi===1)]).map(f=>f.group),[],'no bigs when shown has a big; guards are not dropping');
+  const fp2=fp.map(p=>p.n==='Big2'?{n:'Big2',p:['SF','PF'],adp:4}:p);
+  assert.deepEqual(Punt.positionFits(rows,fp2,0,10,[rows.find(r=>r.pi===0)])[0].rows.map(r=>r.pi),[1],'SF/PF wing is not a big');
+  const bc=Punt.bestCats(fd.Big.cv,'REB',2);
+  assert.deepEqual(bc,[{cat:'BLK',v:4},{cat:'FG%',v:1}]);
+  assert(!Punt.bestCats(fd.Guard.cv,['REB'],9).some(x=>x.cat==='REB'),'punted cats excluded');
+}
 console.log('punt core passed');

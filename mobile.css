@@ -57,6 +57,7 @@
   #md.mobile-draft .prow .l2>span.rt:not(.mv-chip):not(.role-chip){display:inline;order:-2;font-weight:500;color:#9aa8bd}
   #md.mobile-draft .prow .l2>span:nth-child(5):not(.mv-chip):not(.role-chip){display:inline;order:-1}
   #md.mobile-draft .prow .l2>span:nth-child(1):not(.mv-chip):not(.role-chip){display:inline;order:0}
+  #md.mobile-draft .prow .l2>span.pastadp-chip:not(.mv-chip):not(.role-chip){display:inline-block;order:0;align-self:center;font-size:11px;color:var(--dl-amber)}
   #md.mobile-draft .prow .l2>span.playoffbadge:not(.mv-chip):not(.role-chip){display:flex;position:absolute;top:10px;right:2px;gap:3px;font-size:12px}
   #md.mobile-draft .playoffbadge .pwx{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
   #md.mobile-draft .playoffbadge .pw{display:inline-flex;align-items:baseline;gap:3px;min-width:30px;justify-content:center;padding:2px 5px;border-radius:8px;border:1px solid #26344f;font-size:12px;font-weight:600;color:#eef2f7;font-variant-numeric:tabular-nums}
