@@ -293,6 +293,15 @@
     return best;
   }
 
+  /* Is anyone available who shares a position with candidate and has better V? */
+  function betterSamePosition(candidate, V, available, ctx) {
+    return available.some(function (p) {
+      if (isSeasonOut(p) || p.n === candidate.n) return false;
+      var sharesPos = (p.p || []).some(function (pp) { return (candidate.p || []).indexOf(pp) >= 0; });
+      return sharesPos && trueValue(p, ctx).V < V;
+    });
+  }
+
   /* Evaluate ONE candidate at THIS pick.
    * opts: {pick, nextPick, available (array of player objs), openSlots, ctx}
    * Returns {verdict, V, consensus, valueAtPick, reasons[], edges[], target}
@@ -325,7 +334,9 @@
     });
     var bestValueAtPick = best ? pick - bestV : -999;
 
-    var need = positionalNeed(candidate, openSlots);
+    // A player out for a quarter of the season or more can't fill an open
+    // starting slot now, so positional need never props him up (take/reach).
+    var need = missedFraction(candidate.inj) >= 0.25 ? 0 : positionalNeed(candidate, openSlots);
     var verdict, reasons = [];
 
     var xIsBest = !best || V <= bestV + 1;
@@ -366,19 +377,11 @@
         verdict = "take";
         reasons.push(vStr(valueAtPick) + " at pick " + pick + " (our #" + V + ") — fills an open starting slot");
         reasons.push("note: " + bestStr + " is close in value");
-      } else if (valueAtPick < -4 && need >= 1 && !earlyDraft) {
+      } else if (valueAtPick < -4 && need >= 1 && !earlyDraft && !betterSamePosition(candidate, V, available, ctx)) {
+        // Reach only when nobody better at his position is on the board.
         verdict = "reach";
-        var alt = null, altV = Infinity;
-        available.forEach(function (p) {
-          if (isSeasonOut(p) || p.n === candidate.n) return;
-          var sharesPos = (p.p || []).some(function (pp) { return (candidate.p || []).indexOf(pp) >= 0; });
-          if (!sharesPos) return;
-          var pv = trueValue(p, ctx).V;
-          if (pv < altV) { altV = pv; alt = p; }
-        });
         reasons.push(vStr(valueAtPick) + " below value at pick " + pick + " (our #" + V + ") — but fills an open " + (candidate.p || []).join("/") + " slot");
-        if (alt) reasons.push("no better " + (candidate.p || []).join("/") + " alternative on the board; " + bestStr + " doesn't fill the need");
-        else reasons.push("no positional alternative available; " + bestStr + " doesn't fill the need");
+        reasons.push("no better " + (candidate.p || []).join("/") + " on the board; " + bestStr + " doesn't fill the need");
       } else {
         verdict = "pass";
         reasons.push(vStr(valueAtPick) + " below value at pick " + pick + " (our #" + V + " vs slot #" + pick + ")");

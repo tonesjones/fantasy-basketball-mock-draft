@@ -231,6 +231,20 @@ t("Mark Williams (out until Feb) is not a take at pick 141", function () {
   var r = S.evaluate(P("Mark Williams"), { pick: 141, nextPick: 148, available: availAt(141), openSlots: OPEN, ctx: ctx });
   assert.notStrictEqual(r.verdict, "take", JSON.stringify(r.reasons));
 });
+t("reach only when no better player at his position is on the board", function () {
+  function mk(n, pos, adp) { return { n: n, t: "BOS", p: [pos], adp: adp, adpF: adp }; }
+  var big = mk("Big", "C", 90), guard = mk("Guard", "PG", 50);
+  var opts = function (board) { return { pick: 60, nextPick: 75, available: board, openSlots: ["C"], ctx: {} }; };
+  assert.strictEqual(S.evaluate(big, opts([big, guard])).verdict, "reach");
+  var r = S.evaluate(big, opts([big, guard, mk("Big2", "C", 70)]));
+  assert.strictEqual(r.verdict, "pass", JSON.stringify(r.reasons));
+});
+t("long-term injured player is never a positional-need reach or take", function () {
+  var mark = P("Mark Williams");
+  var board = [mark].concat(availAt(137).filter(function (p) { return p.n !== mark.n; }));
+  var r = S.evaluate(mark, { pick: 137, nextPick: 152, available: board, openSlots: ["C", "UTIL"], ctx: ctx });
+  assert.strictEqual(r.verdict, "pass", JSON.stringify(r.reasons));
+});
 t("only season-out players are excluded from best available", function () {
   var star = P("Victor Wembanyama");
   var base = availAt(1);
