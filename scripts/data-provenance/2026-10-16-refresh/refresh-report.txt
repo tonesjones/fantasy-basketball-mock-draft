@@ -1,0 +1,150 @@
+Matched pool players: 261
+Value changes: 416 (49 moved >= 3)
+  Maxime Raynaud adpF 136.8 -> 153.9 (consensus 130.7 -> 141.9)
+  Mark Williams adpF 157.3 -> 174.3 (consensus 135.7 -> 139.9)
+  Rui Hachimura adpF 209.9 -> 192.9 (consensus 145.7 -> 148.5)
+  Devin Vassell adpF 149.8 -> 134.2 (consensus 137.1 -> 126.6)
+  Collin Gillespie adpF 144.3 -> 159.4 (consensus 139.3 -> 150.0)
+  Jonathan Kuminga adpF 195 -> 183.9 (consensus 145.0 -> 147.7)
+  Yaxel Lendeborg adpF 156.1 -> 145.8 (consensus 140.7 -> 133.8)
+  Aday Mara adpF 238.8 -> 229.3 (consensus 133.8 -> 134.2)
+  Yves Missi adpF 218.7 -> 211.1 (consensus 139.2 -> 142.9)
+  Shaedon Sharpe adpF 208.4 -> 215.8 (consensus 202.1 -> 203.9)
+  Kelly Oubre Jr. adpF 224.8 -> 217.9 (consensus 137.7 -> 136.6)
+  Daniel Gafford adpF 208.6 -> 201.9 (consensus 159.3 -> 156.2)
+  Khaman Maluach adpF 160.8 -> 154.4 (consensus 146.3 -> 142.5)
+  Moussa Diabate adpF 158.4 -> 152.6 (consensus 141.4 -> 138.8)
+  Jalen Smith adpF 236.5 -> 230.7 (consensus 209.1 -> 207.7)
+  Jusuf Nurkic adpF 118.8 -> 124.4 (consensus 116.3 -> 121.0)
+  Tobias Harris adpF 181 -> 186.5 (consensus 144.0 -> 143.0)
+  Aaron Nesmith adpF 199.2 -> 193.8 (consensus 136.4 -> 138.3)
+  Jimmy Butler adpF 201.3 -> 196 (consensus 143.2 -> 145.4)
+  Jared McCain adpF 233.3 -> 228.2 (consensus 138.4 -> 136.8)
+  Keaton Wagler adpF 204.6 -> 199.5 (consensus 142.6 -> 143.0)
+  Tre Jones adpF 160.5 -> 165.6 (consensus 143.4 -> 165.6)
+  Ty Jerome adp 112.5 -> 107.7 (consensus 99.0 -> 97.4)
+  John Collins adp 113.5 -> 108.7 (consensus 110.7 -> 108.8)
+  Kristaps Porzingis adpF 113.3 -> 118.1 (consensus 108.4 -> 112.1)
+  Brandon Ingram adpF 84.4 -> 89.1 (consensus 77.2 -> 81.8)
+  Nic Claxton adp 92.4 -> 97.1 (consensus 96.0 -> 100.2)
+  Darius Acuff Jr. adpF 130.6 -> 125.9 (consensus 121.3 -> 118.2)
+  Paul Reed adpF 154.3 -> 159 (consensus 137.3 -> 139.3)
+  Isaiah Stewart adpF 218 -> 222.7 (consensus 139.9 -> 139.4)
+  Bobby Portis adpF 213.6 -> 209.1 (consensus 136.0 -> 135.2)
+  Brandon Ingram adp 70 -> 74.4 (consensus 77.2 -> 81.8)
+  Keegan Murray adp 118 -> 113.7 (consensus 110.2 -> 109.1)
+  Cam Johnson adpF 160.6 -> 156.5 (consensus 141.6 -> 139.4)
+  Collin Sexton adpF 218.2 -> 214.1 (consensus 145.5 -> 144.8)
+  Jaylen Wells adpF 238.6 -> 234.5 (consensus 209.7 -> 208.6)
+  Dereck Lively II adpF 215.7 -> 219.7 (consensus 203.9 -> 204.9)
+  Aaron Gordon adpF 139.9 -> 136.1 (consensus 128.4 -> 125.9)
+  Dillon Brooks adpF 180.4 -> 176.6 (consensus 145.5 -> 145.5)
+  Nic Claxton adpF 99.5 -> 103.3 (consensus 96.0 -> 100.2)
+  Bilal Coulibaly adpF 206.4 -> 210 (consensus 201.6 -> 202.5)
+  Brook Lopez adpF 215 -> 218.5 (consensus 132.7 -> 131.2)
+  RJ Barrett adpF 122.7 -> 119.3 (consensus 118.7 -> 116.7)
+  CJ McCollum adpF 110 -> 106.8 (consensus 109.7 -> 107.8)
+  Myles Turner adp 101.8 -> 105 (consensus 95.2 -> 96.5)
+  Davion Mitchell adpF 152.3 -> 155.5 (consensus 141.3 -> 143.6)
+  Collin Murray-Boyles adp 113.1 -> 110 (consensus 108.2 -> 106.4)
+  Ayo Dosunmu adpF 109.7 -> 112.7 (consensus 110.9 -> 113.0)
+  Scoot Henderson adpF 223.7 -> 220.7 (consensus 205.9 -> 205.2)
+Newly published: 3
+  Bogdan Bogdanovic adpF null -> 243.8
+  Kevon Looney adpF null -> 243.9
+  Moses Moody adpF null -> 244.1
+Now blank (will be nulled): 2
+  Tre Jones adp 115.9 -> null
+  Anfernee Simons adp 109.7 -> null
+Pool players absent from the table (values kept): 13
+  Donte DiVincenzo, Jonas Valanciunas, Clint Capela, Nicolas Batum, Jaden Ivey, Aaron Holiday, Jeremy Sochan, Haywood Highsmith, Ochai Agbaji, D'Angelo Russell, Cam Thomas, Jonathan Isaac, Jonathan Mogbo
+Table players with a Yahoo ADP not in the pool (add candidates): 86
+  Ben Simmons SAC Yahoo 112.6 Fantrax 220.6
+  Joan Beringer MIN Yahoo null Fantrax 185.7
+  Gui Santos GS Yahoo null Fantrax 179.6
+  Oso Ighodaro PHO Yahoo null Fantrax 226.2
+  Daniss Jenkins DET Yahoo null Fantrax 237.4
+  Noah Clowney BKN Yahoo null Fantrax 238
+  Yanic Konan Niederhauser LAC Yahoo null Fantrax 241.3
+  Hugo González BOS Yahoo null Fantrax 241.7
+  Charles Bassey GS Yahoo null Fantrax 242.3
+  Dylan Cardwell SAC Yahoo null Fantrax 242.2
+  Ousmane Dieng MIL Yahoo null Fantrax 242.3
+  Jarace Walker IND Yahoo null Fantrax 242.3
+  Jaylin Williams OKC Yahoo null Fantrax 242.5
+  Cameron Carr LAL Yahoo null Fantrax 243.1
+  Koa Peat PHO Yahoo null Fantrax 243.3
+  Labaron Philon Jr. PHI Yahoo null Fantrax 243.4
+  Will Riley WAS Yahoo null Fantrax 243.2
+  Terrence Shannon Jr. MIN Yahoo null Fantrax 243.2
+  Sergio de Larrea DAL Yahoo null Fantrax 243.4
+  Bones Hyland MIN Yahoo null Fantrax 243.5
+  Gary Payton II GS Yahoo null Fantrax 243.4
+  Meleek Thomas CLE Yahoo null Fantrax 243.6
+  Landry Shamet NY Yahoo null Fantrax 243.7
+  Carter Bryant SA Yahoo null Fantrax 243.8
+  Moritz Wagner BKN Yahoo null Fantrax 243.5
+  Dean Wade PHI Yahoo null Fantrax 243.5
+  Kobe Sanders LAC Yahoo null Fantrax 243.6
+  Spencer Jones DEN Yahoo null Fantrax 243.7
+  Javon Small MEM Yahoo null Fantrax 243.7
+  Dailyn Swain CHI Yahoo null Fantrax 243.7
+  Christian Anderson CHA Yahoo null Fantrax 243.7
+  Dru Smith MIA Yahoo null Fantrax 243.7
+  Justin Champagnie WAS Yahoo null Fantrax 243.8
+  Jock Landale ATL Yahoo null Fantrax 243.8
+  Zach Collins CHI Yahoo null Fantrax 243.8
+  Svi Mykhailiuk UTA Yahoo null Fantrax 243.8
+  Moussa Cisse DAL Yahoo null Fantrax 243.8
+  Craig Porter Jr. CLE Yahoo null Fantrax 243.8
+  Quinten Post MEM Yahoo null Fantrax 243.8
+  Emanuel Sharp SAC Yahoo null Fantrax 243.8
+  Daeqwon Plowden SAC Yahoo null Fantrax 243.8
+  Tyler Kolek NY Yahoo null Fantrax 243.8
+  Dalton Knecht LAL Yahoo null Fantrax 243.8
+  Karim Lopez MEM Yahoo null Fantrax 243.8
+  Mohamed Diawara NY Yahoo null Fantrax 243.8
+  Jaxson Hayes UTA Yahoo null Fantrax 243.6
+  Kentavious Caldwell-Pope PHI Yahoo null Fantrax 243.8
+  Kyle Anderson TOR Yahoo null Fantrax 243.9
+  Gary Trent Jr. MIL Yahoo null Fantrax 243.8
+  Isaac Okoro CHI Yahoo null Fantrax 243.8
+  Jordan Walsh BOS Yahoo null Fantrax 243.8
+  Corey Kispert ATL Yahoo null Fantrax 243.8
+  Adou Thiero LAL Yahoo null Fantrax 243.9
+  Josh Minott BKN Yahoo null Fantrax 243.9
+  Luka Garza BOS Yahoo null Fantrax 244
+  Rasheer Fleming PHO Yahoo null Fantrax 244
+  Baba Miller LAC Yahoo null Fantrax 244
+  Joshua Jefferson BKN Yahoo null Fantrax 243.9
+  Alex Karaban SAC Yahoo null Fantrax 243.9
+  Chris Cenac Jr. BOS Yahoo null Fantrax 243.9
+  Jordan Goodwin PHO Yahoo null Fantrax 244.1
+  Olivier-Maxence Prosper MEM Yahoo null Fantrax 244
+  Tyus Jones DEN Yahoo null Fantrax 244
+  Isaiah Jackson LAC Yahoo null Fantrax 215.3
+  Cam Spencer MEM Yahoo null Fantrax 224.8
+  Nique Clifford SAC Yahoo null Fantrax 225.1
+  De'Anthony Melton GS Yahoo null Fantrax 225.1
+  Brayden Burries MIL Yahoo null Fantrax 230.6
+  Hannes Steinbach CHA Yahoo null Fantrax 231
+  Zaccharie Risacher DAL Yahoo null Fantrax 231.5
+  Jaylon Tyson CLE Yahoo null Fantrax 233
+  Robert Williams III POR Yahoo null Fantrax 233.5
+  Jake LaRavia LAL Yahoo null Fantrax 237.4
+  Tim Hardaway Jr. MIA Yahoo null Fantrax 238.1
+  Precious Achiuwa SAC Yahoo null Fantrax 238.3
+  Bradley Beal LAC Yahoo null Fantrax 238.7
+  Marcus Smart HOU Yahoo null Fantrax 238.7
+  Kris Dunn LAC Yahoo null Fantrax 240.6
+  Matisse Thybulle LAL Yahoo null Fantrax 241
+  Tre Johnson WAS Yahoo null Fantrax 241.7
+  Danny Wolf BKN Yahoo null Fantrax 241.8
+  Baylor Scheierman BOS Yahoo null Fantrax 243.2
+  Marvin Bagley III DEN Yahoo null Fantrax 243.6
+  Kasparas Jakucionis MIL Yahoo null Fantrax 243.6
+  Ziaire Williams LAL Yahoo null Fantrax 243.7
+  Nolan Traoré BKN Yahoo null Fantrax 244
+Team / position differences (not written; review by hand): 2
+  Rob Dillingham: team CHA -> CHI, pos PG/SG -> PG/SG
+  Buddy Hield: team CHI -> CHA, pos SF/SG -> SF/SG
