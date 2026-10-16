@@ -1741,6 +1741,7 @@ function renderDone(){
   var h='<h2>Draft complete</h2><div class="muted">Final roster from pick #'+state.draftPos+' ('+state.rounds+' rounds, '+TEAMS+' teams)</div>';
   h+='<button class="bigbtn" id="mdnew2">Run it back</button>';
   if(state.userTurns.length)h+='<button class="ghostbtn" id="mdundo2" style="margin-left:8px">Undo my last pick</button>';
+  if(state.yahooLive&&state.yahooLive.worker)h+='<div class="muted" id="yhsyncstatus" role="status"></div>';
   h+=viewTabsHtml()+'<div id="mdside"></div>';
   el("mdapp").innerHTML=h;
   announceLive((_pendingLive||"")+"Draft complete.");
@@ -1749,6 +1750,7 @@ function renderDone(){
   var undo=el("mdundo2");if(undo)undo.addEventListener("click",undoUserPick);
   el("mdapp").querySelectorAll("[data-view]").forEach(function(b){b.addEventListener("click",function(){setState({view:b.getAttribute("data-view")});});});
   renderSide();
+  liveSyncEnsure();
 }
 function playoffBadge(pl){
  var v=window.PlayoffCore.counts(window.PlayoffData,pl.t,state.playoffStart);

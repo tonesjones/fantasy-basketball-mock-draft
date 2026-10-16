@@ -108,6 +108,7 @@ sandbox.liveSyncEnsure();
 sandbox.liveSyncEnsure();
 assert.deepEqual(sandbox.apiCalls, ["/api/board"], "a finished Yahoo board is re-read exactly once");
 assert.equal(sandbox._liveSyncOn, false, "the re-read doesn't restart polling");
+assert.match(extractFn("renderDone"), /liveSyncEnsure\(\)/, "the Draft complete screen triggers the re-read");
 
 // Poll speed and coach target follow the snake order (12 teams, slot 12: picks 12 and 13 are back to back).
 Object.assign(sandbox, {
