@@ -259,6 +259,24 @@ t("big value that won't survive is take", function () {
   assert.strictEqual(r.verdict, "take");
   assert.ok(r.valueAtPick > 10, "valueAtPick " + r.valueAtPick);
 });
+t("best available who survives, with a close runner-up who won't, is wait", function () {
+  function mk(n, adp) { return { n: n, t: "BOS", p: ["SF"], adp: adp, adpF: adp }; }
+  var sleeper = mk("Sleeper", 90), hot = mk("Hot", 62), filler = mk("Filler", 150);
+  var board = [sleeper, hot, filler];
+  var at = function (x, pick, next) { return S.evaluate(x, { pick: pick, nextPick: next, available: board, openSlots: [], ctx: {} }); };
+  // Fantrax has Sleeper at 35, so he's best on value; Yahoo ADP 90 says he
+  // survives to 70. Hot (ADP 62) is close in value but goes before 70.
+  sleeper.adpF = 35;
+  var r = at(sleeper, 60, 70);
+  assert.ok(S.trueValue(sleeper, {}).V <= S.trueValue(hot, {}).V + 1, "sleeper is best available");
+  assert.strictEqual(r.verdict, "wait", JSON.stringify(r.reasons));
+  assert.ok(/take Hot now/.test(r.reasons.join(" ")), r.reasons.join(" | "));
+  // Rounds 1-2 always take talent.
+  assert.strictEqual(at(sleeper, 20, 29).verdict, "take");
+  // Runner-up also survives: nothing urgent, take.
+  hot.adp = hot.adpF = 95;
+  assert.strictEqual(at(sleeper, 60, 70).verdict, "take");
+});
 t("acceptable value with urgent better alternative is wait", function () {
   // Not pinned to one player: data refreshes and new edges shift who sits
   // exactly on the +6 threshold. The mechanic must fire for someone at 40.
