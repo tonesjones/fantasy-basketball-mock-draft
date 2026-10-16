@@ -185,6 +185,21 @@ t("season-out INJ is a pass", function () {
     assert.ok(w.indexOf("INJ " + status) === 0 && w.indexOf(c.inj.ret) > 0 && w.indexOf(c.inj.src) > 0, "got: " + w);
   });
 });
+t("sourced long absence (retBy) discounts value by games missed", function () {
+  var base = P("Mark Williams");
+  var healthy = S.trueValue(Object.assign({}, base, { inj: null }), ctx).V;
+  var hurt = S.trueValue(base, ctx);
+  var miss = S.missedFraction(base.inj);
+  assert.ok(miss > 0.55 && miss < 0.75, "Feb 10 return misses ~65% of the season: " + miss);
+  assert.ok(hurt.V >= Math.min(320, Math.round(healthy / (1 - miss))) - 1, "V " + hurt.V + " vs healthy " + healthy);
+  assert.ok(hurt.edges.some(function (e) { return e.k === "injury" && e.v < 0; }), "injury edge shown");
+  var noDate = Object.assign({}, base, { inj: Object.assign({}, base.inj, { retBy: undefined }) });
+  assert.strictEqual(S.trueValue(noDate, ctx).V, healthy, "no sourced timeline, no discount");
+});
+t("Mark Williams (out until Feb) is not a take at pick 141", function () {
+  var r = S.evaluate(P("Mark Williams"), { pick: 141, nextPick: 148, available: availAt(141), openSlots: OPEN, ctx: ctx });
+  assert.notStrictEqual(r.verdict, "take", JSON.stringify(r.reasons));
+});
 t("only season-out players are excluded from best available", function () {
   var star = P("Victor Wembanyama");
   var base = availAt(1);

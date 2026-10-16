@@ -1,5 +1,18 @@
 # Changelog
 
+## Pick coach: injured players lose value for games they'll miss (2026-10-16)
+The coach gave Mark Williams (torn labrum, out until about February) a "Take"
+at pick 141: only `season-out` injuries changed a player's value, so anyone
+else got a warning but kept their full healthy value.
+- New optional `retBy` on injury records (`player-data.js`): the earliest
+  return the source supports. `pick-signals.js` divides the player's value
+  rank by the share of the regular season (Oct 20 to Apr 11) he plays, and shows
+  it as an `injury` edge. Example: Williams back Feb 10 misses ~65% and drops
+  from #114 to #320, so he's no longer a take at 141.
+- Set for Mark Williams, Shaedon Sharpe (reevaluation, not return), Nurkic,
+  Strus and Stewart. Records with no reported timeline get no discount and
+  keep the warning only.
+
 ## Phone draft room refresh (2026-10-02)
 Details: `docs/mobile-ui.md`. Desktop unchanged apart from the toast font
 fix below.
