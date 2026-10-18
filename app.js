@@ -1015,7 +1015,7 @@ function yahooFinishSignIn(code){
   }).catch(function(e){render();liveSyncStatus(e.message);});
 }
 function yahooDisconnect(){
-  var done=function(){yahooSetSession("");_yahooAwaitingOrder=false;liveSyncEnsure();render();liveSyncStatus("Disconnected from Yahoo.");};
+  var done=function(){yahooSetSession("");_yahooAwaitingOrder=false;_season={leagues:null,busy:false,status:"",data:null,result:null,at:0};liveSyncEnsure();render();liveSyncStatus("Disconnected from Yahoo.");};
   yahooApi("/api/disconnect",{method:"POST",body:{}}).then(done,done);
 }
 function yahooHandleBoard(j){
@@ -1127,6 +1127,113 @@ function yahooAdvice(){
     return best;
   }catch(e){return null;}
 }
+/* ---- Season manager ----
+   After the draft: read the user's Yahoo roster, this week's opponent and the
+   waiver wire through the Worker, then SeasonCore says hold or drop for each
+   player. A drop is shown only with a named pickup that is a clear upgrade. */
+var YAHOO_LEAGUE_KEY="draft-lab.yahoo-league";
+var SEASON_RECHECK_MS=15*60*1000;
+var _season={leagues:null,busy:false,status:"",data:null,result:null,at:0};
+function seasonLeague(){try{return localStorage.getItem(YAHOO_LEAGUE_KEY)||"";}catch(e){return "";}}
+function seasonSetLeague(key){try{localStorage.setItem(YAHOO_LEAGUE_KEY,key);}catch(e){}}
+function seasonPanelHtml(){
+  if(!yahooSession())return "";
+  var h='<hr class="setup-div"><section class="season-panel" aria-labelledby="yhseasonh"><h3 id="yhseasonh">Season manager</h3><div class="muted">Checks your Yahoo roster against this week\'s opponent and the waiver wire. It suggests a drop only when a named pickup is a clear upgrade.</div>';
+  h+='<div id="yhseasonbody">'+seasonBodyHtml()+'</div></section>';
+  return h;
+}
+function seasonBodyHtml(){
+  var h='',leagues=_season.leagues,sel=seasonLeague();
+  if(leagues&&leagues.length){
+    h+='<div class="yhrow"><select id="yhleague" aria-label="Yahoo league">';
+    leagues.forEach(function(l){h+='<option value="'+esc(l.leagueKey)+'"'+(l.leagueKey===sel?' selected':'')+'>'+esc(l.name+' · '+(l.teamName||'your team'))+'</option>';});
+    h+='</select><button class="bigbtn" id="yhcheck"'+(_season.busy?' disabled':'')+'>'+(_season.result?'Check again':'Check roster')+'</button></div>';
+  }else if(leagues){
+    h+='<div class="muted">No Yahoo NBA leagues with a team of yours this season. Mock drafts don\'t count.</div>';
+  }
+  h+='<div class="muted" id="yhseasonstatus" role="status">'+esc(_season.status)+'</div>';
+  var r=_season.result,d=_season.data;
+  if(!r||!d)return h;
+  var when=new Date(d.fetchedAt||_season.at);
+  h+='<div class="muted">'+esc(d.myTeam.name)+(d.league.currentWeek?' · Week '+d.league.currentWeek:'')+(d.opponent?' vs '+esc(d.opponent.name):'')+' · checked '+esc(when.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}))+'</div>';
+  if(r.points)h+='<p class="muted">This is a points league. Draft Lab\'s values are nine-category only, so it makes no suggestions here.</p>';
+  h+='<h4>Suggested moves</h4>';
+  if(r.moves.length){
+    h+='<ul class="season-moves">';
+    r.moves.forEach(function(m){
+      h+='<li><span class="season-call drop">Drop</span> <b>'+esc(m.drop)+'</b> → <span class="season-call add">Add</span> <b>'+esc(m.add)+'</b> <span class="teamtag">'+esc(m.addTeam||'')+'</span> <span class="season-src">'+(m.availability==='W'?'Waivers (claim)':'Free agent')+'</span>';
+      h+='<div class="muted">+'+m.gain.toFixed(1)+' value'+(m.helps.length?' · helps '+esc(m.helps.join(', ')):'')+(m.matchupGain!=null?' · this week +'+m.matchupGain.toFixed(1):'')+'</div></li>';
+    });
+    h+='</ul>';
+  }else if(!r.points){
+    h+='<p class="muted">Hold everyone. No available player beats anyone on your roster by +'+SeasonCore.CLEAR_GAIN.toFixed(1)+' or more.</p>';
+  }
+  if(r.matchup){
+    h+='<h4>This week\'s categories</h4><div class="season-cats">';
+    r.matchup.result.forEach(function(res,c){
+      if(!res)return;
+      var cls=res==='swing'?'even':res;
+      h+='<span class="catmu '+cls+'" title="'+CATS9[c]+': you '+r.matchup.mine[c].toFixed(1)+' vs '+r.matchup.opp[c].toFixed(1)+'">'+CATS9[c]+'</span> ';
+    });
+    h+='</div><p class="muted"><span class="catmu win">win</span> ahead · <span class="catmu even">swing</span> close, where a pickup counts most · <span class="catmu loss">loss</span> behind. Compares 2025-26 per-game values of both rosters, not this week\'s games played.</p>';
+  }
+  h+='<h4>Your roster</h4><div class="boardwrap"><table class="season-roster"><thead><tr><th>Player</th><th>Slot</th><th>Value</th><th>Call</th><th>Why</th></tr></thead><tbody>';
+  r.roster.forEach(function(p){
+    var label=p.verdict==='drop'?'Drop':p.verdict==='il'?'IL':'Hold';
+    h+='<tr><td>'+esc(p.name)+' <span class="teamtag">'+esc(p.nbaTeam)+'</span>'+(p.status?' <span class="season-status" title="'+esc(p.injuryNote||p.status)+'">'+esc(p.status)+'</span>':'')+'<div class="muted season-why">'+esc(p.reason)+'</div></td><td>'+esc(p.selectedPosition||'')+'</td><td>'+(p.value==null?'—':(p.rated?'':'~')+p.value.toFixed(1))+'</td><td><span class="season-call '+p.verdict+'">'+label+'</span></td><td class="muted">'+esc(p.reason)+'</td></tr>';
+  });
+  h+='</tbody></table></div>';
+  if(r.watch.length){
+    h+='<h4>Watch list</h4><ul class="season-watch">';
+    r.watch.forEach(function(w){h+='<li>'+esc(w.name)+' <span class="teamtag">'+esc(w.nbaTeam)+'</span> <span class="muted">'+esc((w.positions||[]).filter(function(x){return x!=='Util'&&x!=='IL';}).join('/'))+' · '+(w.availability==='W'?'waivers':'free agent')+' · value '+w.value.toFixed(1)+'</span></li>';});
+    h+='</ul>';
+  }
+  h+='<p class="muted">Value is the sum of 2025-26 per-game category z-scores'+(r.cats.length<9?' over '+esc(r.cats.join(', ')):'')+', last season\'s production, not a projection. ~ marks a player with no 2025-26 stats, valued at his draft price. Players drafted in the top '+SeasonCore.PROTECT_RANK+' are never drop suggestions. Out players and those with a future return date are never pickups.'+(r.ignoredCats.length?' Not counted: '+esc(r.ignoredCats.join(', '))+'.':'')+(r.unmatchedAvailable?' '+r.unmatchedAvailable+' available player'+(r.unmatchedAvailable>1?'s are':' is')+' outside Draft Lab\'s pool, so '+(r.unmatchedAvailable>1?'they were':'it was')+' skipped.':'')+(state.puntCats&&state.puntCats.length?' Punting '+esc(state.puntCats.join(' + '))+' from your draft settings.':'')+'</p>';
+  return h;
+}
+function seasonRefresh(){
+  var body=el("yhseasonbody");if(!body)return;
+  body.innerHTML=seasonBodyHtml();
+  wireSeasonPanel(body);
+}
+function seasonStatus(msg){_season.status=msg;var s=el("yhseasonstatus");if(s)s.textContent=msg;}
+function seasonLoadLeagues(){
+  if(_season.leagues||_season.busy||!yahooSession())return;
+  _season.busy=true;
+  yahooApi("/api/leagues").then(function(j){
+    _season.busy=false;_season.leagues=j.leagues||[];
+    if(_season.leagues.length&&!_season.leagues.some(function(l){return l.leagueKey===seasonLeague();}))seasonSetLeague(_season.leagues[0].leagueKey);
+    _season.status="";seasonRefresh();
+  }).catch(function(e){_season.busy=false;seasonStatus(e.message||"Could not load your Yahoo leagues.");});
+}
+function seasonCheck(){
+  var key=seasonLeague();
+  if(!key||_season.busy)return;
+  _season.busy=true;seasonStatus("Checking your roster and the waiver wire…");
+  var b=el("yhcheck");if(b)b.disabled=true;
+  yahooApi("/api/season?league="+encodeURIComponent(key)).then(function(j){
+    _season.busy=false;_season.data=j;_season.at=Date.now();
+    _season.result=SeasonCore.analyze({
+      players:PLAYERS,pdata:PDATA,index:yahooPoolIndex,league:j.league,
+      mine:j.myTeam.players,opponent:j.opponent?j.opponent.players:null,available:j.available,
+      punts:state.puntCats
+    });
+    var n=_season.result.moves.length;
+    _season.status=n?n+" suggested move"+(n>1?"s":"")+".":"No clear upgrades on waivers.";
+    seasonRefresh();
+  }).catch(function(e){_season.busy=false;seasonStatus(e.message||"Yahoo roster check failed.");var b2=el("yhcheck");if(b2)b2.disabled=false;});
+}
+function wireSeasonPanel(root){
+  if(!root||!yahooSession())return;
+  var sel=root.querySelector("#yhleague");
+  if(sel)sel.addEventListener("change",function(){seasonSetLeague(sel.value);_season.data=null;_season.result=null;seasonCheck();});
+  var btn=root.querySelector("#yhcheck");if(btn)btn.addEventListener("click",seasonCheck);
+  seasonLoadLeagues();
+}
+/* Waiver wires move: coming back to the page re-checks a stale result. */
+function seasonRecheck(){if(!document.hidden&&_season.result&&el("yhseasonbody")&&Date.now()-_season.at>SEASON_RECHECK_MS)seasonCheck();}
+document.addEventListener("visibilitychange",seasonRecheck);
+window.addEventListener("focus",seasonRecheck);
 function renderSetup(){
   clearPlayoffHost();
   var h='<div class="season">Your draft room</div><h2>Build your next <span class="grad">contender.</span></h2>';
@@ -1145,6 +1252,7 @@ function renderSetup(){
     h+='<div class="yhrow"><a class="bigbtn" id="yhsignin" href="'+YAHOO_WORKER_URL+'/oauth/start">Sign in with Yahoo</a></div>';
   }
   h+='<div class="muted" id="yhstatus" role="status"></div>';
+  h+=seasonPanelHtml();
   h+='<div class="muted" style="margin-top:8px">Drafts save automatically in this browser. Data version: '+DATA_VERSION+'. · <button type="button" class="textlink" id="mdclear">Clear saved draft</button></div>';
   h+=playoffSettingsHtml();
   h+=renderDataHealth(phone?'Data & sources':'');
@@ -1158,6 +1266,7 @@ function renderSetup(){
   var yc=el("yhconnect");if(yc)yc.addEventListener("click",yahooStartWatch);
   var yd=el("yhdisconnect");if(yd)yd.addEventListener("click",yahooDisconnect);
   wirePlayoffSettings(el("mdapp"));
+  wireSeasonPanel(el("mdapp"));
   liveSyncEnsure();
 }
 function nextUserPickIdx(){
@@ -1742,12 +1851,14 @@ function renderDone(){
   h+='<button class="bigbtn" id="mdnew2">Run it back</button>';
   if(state.userTurns.length)h+='<button class="ghostbtn" id="mdundo2" style="margin-left:8px">Undo my last pick</button>';
   if(state.yahooLive&&state.yahooLive.worker)h+='<div class="muted" id="yhsyncstatus" role="status"></div>';
+  h+=seasonPanelHtml();
   h+=viewTabsHtml()+'<div id="mdside"></div>';
   el("mdapp").innerHTML=h;
   announceLive((_pendingLive||"")+"Draft complete.");
   _pendingLive="";
   el("mdnew2").addEventListener("click",restartDraft);
   var undo=el("mdundo2");if(undo)undo.addEventListener("click",undoUserPick);
+  wireSeasonPanel(el("mdapp"));
   el("mdapp").querySelectorAll("[data-view]").forEach(function(b){b.addEventListener("click",function(){setState({view:b.getAttribute("data-view")});});});
   renderSide();
   liveSyncEnsure();

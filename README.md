@@ -119,6 +119,7 @@ App code:
 - `draft-core.js`: pick validation, roster matching, the seeded random source, and CPU selection. No dependencies, so tests load it in Node.
 - `draft-analysis.js`: consensus rank, category replacement levels, grades, and matchups.
 - `punt-core.js`: punt selection, up to three categories, and punt-adjusted ranks.
+- `season-core.js`: the season manager's hold, drop, and pickup calls.
 - `playoff-core.js`: playoff game counts, totals, summaries, and the red, yellow, and green badge rule.
 - `pick-coach.js`, `pick-signals.js`: Pick coach verdicts and the signals behind them.
 - `_worker.js`: the Cloudflare Pages worker. Serves the site and proxies `/api/pick-quality` to Jev with an origin check, a body size cap, and a per-IP rate limit.
@@ -149,6 +150,17 @@ Checks and tooling:
 ## Yahoo live draft
 
 Draft Lab can follow your own Yahoo mock or live draft. On the setup screen, click **Sign in with Yahoo**, paste the draft-room URL, and click **Connect draft**. Draft Lab finds your team and pick, mirrors the board, and gives advice while you pick in Yahoo. Anyone with a Yahoo account can sign in. Each person's draft is read with their own Yahoo account, through the `yahoo-draft-copilot` Cloudflare Worker. See `tools/yahoo-copilot/worker/README.md` for setup and `tools/yahoo-copilot/README.md` for the command-line copilot.
+
+### Season manager
+
+After the draft, signed-in users see **Season manager** on the setup screen and the desktop Draft complete screen. Pick a league and click **Check roster**. Draft Lab reads your Yahoo roster, this week's opponent, and the best free agents and waiver players, then calls each player **Hold**, **Drop**, or **IL**:
+
+- A drop always names the pickup. The pickup must beat the dropped player by at least 1.5 summed category value, help this week's matchup (close categories count more), and keep every starting slot fillable.
+- Never dropped: players drafted in the top 100, players with no 2025-26 stats, and players outside the pool.
+- Never picked up: players Yahoo lists as out, and players whose sourced return date is still ahead.
+- At most three moves. Other good pickups go on a watch list.
+
+Values are 2025-26 per-game category z-scores, the same numbers the draft uses, so they don't reflect this season's games yet. League categories and your draft punts are honored. Points leagues get no suggestions. The logic is in `season-core.js`.
 
 ## More docs
 

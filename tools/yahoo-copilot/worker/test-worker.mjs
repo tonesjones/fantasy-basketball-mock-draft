@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { webcrypto } from "node:crypto";
-import { createWorker, mlidFromInput, parseWatchInput } from "./src/index.mjs";
+import { createWorker, mlidFromInput, parsePlayer, parseWatchInput } from "./src/index.mjs";
 
 class MemoryKV {
   constructor() { this.values = new Map(); this.ttl = new Map(); }
@@ -21,6 +21,15 @@ const byAccess = (token) => Object.values(USERS).find((u) => u.access === token)
 
 function leagueEnvelope(key, resource, value) {
   return { fantasy_content: { league: [{ league_key: key, num_teams: 12 }, { [resource]: value }] } };
+}
+
+function yahooPlayer(playerKey, full, team, eligible, selected, extra = {}) {
+  const meta = [{ player_key: playerKey }, { name: { full } }, { editorial_team_abbr: team }, { display_position: eligible.join(",") },
+    { eligible_positions: eligible.map((position) => ({ position })) }];
+  Object.entries(extra).forEach(([k, v]) => meta.push({ [k]: v }));
+  const player = [meta];
+  if (selected) player.push({ selected_position: [{ coverage_type: "date" }, { position: selected }] });
+  return { player };
 }
 
 function jsonResponse(body, status = 200) {
@@ -48,13 +57,64 @@ async function fakeFetch(input, init = {}) {
   const league = (/league\/478\.l\.(\d+)/.exec(url) || [])[1];
   const key = `478.l.${league}`;
   if (url.includes("/fantasy/v2/game/nba")) return jsonResponse({ fantasy_content: { game: [{ game_key: "478" }] } });
+  if (url.includes("/users;use_login=1/games;game_keys=nba/leagues")) {
+    return jsonResponse({ fantasy_content: { users: { 0: { user: [{ guid: user.guid }, { games: { 0: { game: [{ game_key: "478" }, { leagues: {
+      0: { league: [{ league_key: `478.l.${user.league}`, name: `${user.team} League`, num_teams: 12, scoring_type: "head", current_week: 1, draft_status: "postdraft" }] },
+      1: { league: [{ league_key: "478.l.999", name: "Watched league", num_teams: 10, scoring_type: "head" }] },
+      count: 2,
+    } }] }, count: 1 } }] }, count: 1 } } });
+  }
+  if (url.includes("/users;use_login=1/games;game_keys=nba/teams")) {
+    return jsonResponse({ fantasy_content: { users: { 0: { user: [{ guid: user.guid }, { games: { 0: { game: [{ game_key: "478" }, { teams: {
+      0: { team: [[{ team_key: `478.l.${user.league}.t.2` }, { team_id: "2" }, { name: user.team }]] },
+      count: 1,
+    } }] }, count: 1 } }] }, count: 1 } } });
+  }
   if (league !== user.league) return jsonResponse({ error: { description: "You are not allowed to view this page." } }, 403);
   if (url.includes("/settings")) {
     return jsonResponse(leagueEnvelope(key, "settings", [{ is_auction_draft: "0", roster_positions: [
       { roster_position: { position: "PG", count: 1 } },
       { roster_position: { position: "C", count: 1 } },
       { roster_position: { position: "BN", count: 1 } },
-    ] }]));
+      { roster_position: { position: "IL", count: 1 } },
+    ], stat_categories: { stats: [
+      { stat: { stat_id: 9004003, display_name: "FGM/A", is_only_display_stat: "1" } },
+      { stat: { stat_id: 5, display_name: "FG%" } },
+      { stat: { stat_id: 12, display_name: "PTS" } },
+      { stat: { stat_id: 19, display_name: "TO" } },
+    ] } }]));
+  }
+  if (url.includes("/teams/roster")) {
+    return jsonResponse(leagueEnvelope(key, "teams", {
+      0: { team: [[{ team_key: `${key}.t.1` }, { name: "Rival" }], { roster: { coverage_type: "date", 0: { players: {
+        0: yahooPlayer("478.p.1", "Nikola Jokic", "DEN", ["C", "Util"], "C"),
+        count: 1,
+      } } } }] },
+      1: { team: [[{ team_key: `${key}.t.2` }, { name: user.team }, { is_owned_by_current_login: 1 }], { roster: { coverage_type: "date", 0: { players: {
+        0: yahooPlayer("478.p.2", "Tyrese Maxey", "PHI", ["PG", "G", "Util"], "PG"),
+        1: yahooPlayer("478.p.3", "Jusuf Nurkic", "UTA", ["C", "Util", "IL"], "IL", { status: "INJ", injury_note: "Toe" }),
+        count: 2,
+      } } } }] },
+      count: 2,
+    }));
+  }
+  if (url.includes("/scoreboard")) {
+    return jsonResponse(leagueEnvelope(key, "scoreboard", { week: "1", 0: { matchups: { 0: { matchup: { week: "1", 0: { teams: {
+      0: { team: [[{ team_key: `${key}.t.2` }]] },
+      1: { team: [[{ team_key: `${key}.t.1` }]] },
+      count: 2,
+    } } } }, count: 1 } } }));
+  }
+  if (url.includes("/players;status=FA")) {
+    const start = Number((/start=(\d+)/.exec(url) || [])[1]);
+    const page = { count: 25 };
+    for (let i = 0; i < 25; i++) page[i] = yahooPlayer(`478.p.${1000 + start + i}`, `Free Agent ${start + i}`, "BOS", ["SF", "F", "Util"]);
+    return jsonResponse(leagueEnvelope(key, "players", page));
+  }
+  if (url.includes("/players;status=W")) {
+    /* Yahoo sends an empty collection as a bare array. */
+    if (/start=25/.test(url)) return jsonResponse(leagueEnvelope(key, "players", []));
+    return jsonResponse(leagueEnvelope(key, "players", { 0: yahooPlayer("478.p.900", "Waiver Guy", "NY", ["PF", "F", "Util"]), count: 1 }));
   }
   if (url.includes("/teams")) {
     return jsonResponse(leagueEnvelope(key, "teams", {
@@ -198,6 +258,39 @@ const draftCalls = calls.filter((call) => call.url.includes("/draftresults"));
 assert.ok(draftCalls.some((call) => call.url.includes("478.l.111") && call.auth === "Bearer access-alice"));
 assert.ok(draftCalls.some((call) => call.url.includes("478.l.222") && call.auth === "Bearer access-bob"));
 assert.ok(!draftCalls.some((call) => call.url.includes("478.l.222") && call.auth === "Bearer access-alice"), "each user reads Yahoo with their own token");
+
+/* In-season roster check. */
+response = await api("/api/leagues", aliceToken);
+assert.equal(response.status, 200);
+const { leagues } = await response.json();
+assert.deepEqual(leagues.map((l) => l.leagueKey), ["478.l.111"], "only leagues where the user has a team are listed");
+assert.equal(leagues[0].teamKey, "478.l.111.t.2");
+assert.equal(leagues[0].teamName, "Alice Team");
+
+response = await api("/api/season?league=not-a-key", aliceToken);
+assert.equal(response.status, 400, "a malformed league key is rejected");
+
+response = await api("/api/season?league=478.l.111", aliceToken);
+assert.equal(response.status, 200);
+const season = await response.json();
+assert.deepEqual(season.league.categories, ["FG%", "PTS", "TO"], "display-only stats are left out");
+assert.ok(season.league.positions.some((p) => p.position === "IL"));
+assert.equal(season.myTeam.name, "Alice Team");
+assert.deepEqual(season.myTeam.players.map((p) => p.name), ["Tyrese Maxey", "Jusuf Nurkic"]);
+const nurkic = season.myTeam.players[1];
+assert.equal(nurkic.selectedPosition, "IL");
+assert.equal(nurkic.status, "INJ");
+assert.deepEqual(nurkic.positions, ["C", "Util", "IL"]);
+assert.equal(season.opponent.name, "Rival", "the opponent comes from this week's scoreboard");
+assert.deepEqual(season.opponent.players.map((p) => p.name), ["Nikola Jokic"]);
+assert.equal(season.available.filter((p) => p.availability === "FA").length, 75, "three pages of free agents");
+assert.deepEqual(season.available.filter((p) => p.availability === "W").map((p) => p.name), ["Waiver Guy"], "waiver paging stops on a short page");
+assert.equal(season.available[0].availability, "W", "waiver players come first");
+
+response = await api("/api/season?league=478.l.111", bobToken);
+assert.equal(response.status, 502, "a user can't read another user's league");
+
+assert.equal(parsePlayer(yahooPlayer("478.p.5", "No Positions", "LAL", [])).positions.length, 0);
 
 response = await api("/api/board", aliceToken, { headers: { Origin: "https://evil.example" } });
 assert.equal(response.status, 403, "other sites are refused");

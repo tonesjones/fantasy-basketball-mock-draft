@@ -58,6 +58,8 @@ the Worker deletes that user's record and answers 401.
 | `GET /api/me` | session | Returns 200 while the session is valid. |
 | `POST /api/watch` | session | Starts watching `roomUrl` and returns the board. |
 | `GET /api/board` | session | Returns the current board for the user's watch. |
+| `GET /api/leagues` | session | Lists the user's NBA leagues this season and their team in each. |
+| `GET /api/season?league=<key>` | session | Returns the user's roster, this week's opponent roster, free agents and waiver players for the season manager. |
 | `POST /api/disconnect` | session | Deletes the user's Yahoo token, watch, and session. |
 
 Requests from any origin except `PAGE_ORIGIN` get 403. Each user has one
@@ -68,6 +70,14 @@ watch, stored under `watch:<guid>` for 8 hours.
 `draft_position`. If the user has no team in that draft, it answers 400. If
 Yahoo hasn't set the draft order yet, the board's `userSlot` is `null`, and
 each `GET /api/board` checks again until it is set.
+
+`GET /api/season` reads the league settings, every team's roster, the
+scoreboard, three pages of free agents (`status=FA`) and two of waiver players
+(`status=W`), both in Yahoo's overall rank order (`sort=OR`). Each player is
+`{ playerKey, name, nbaTeam, positions, status, injuryNote, selectedPosition }`;
+available players also carry `availability` (`FA` or `W`). The opponent is
+`null` when the scoreboard has no matchup for the user. The page does the
+valuing (`season-core.js`); the Worker only reads Yahoo.
 
 ## Test and deploy
 

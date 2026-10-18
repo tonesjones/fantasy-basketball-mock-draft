@@ -1,5 +1,26 @@
 # Changelog
 
+## Yahoo season manager: hold or drop, with a named pickup (2026-10-18)
+After the draft, the Yahoo site can check your league roster against this
+week's opponent and the waiver wire.
+- Worker: `GET /api/leagues` lists your NBA leagues this season.
+  `GET /api/season?league=<key>` returns your roster, this week's opponent
+  (from the scoreboard), up to 75 free agents and 50 waiver players (Yahoo's
+  overall rank order), and the league's categories and roster slots.
+- `season-core.js` calls each rostered player Hold, Drop or IL. A drop needs a
+  named pickup that beats him by at least 1.5 summed category value, helps
+  this week's matchup (close categories weigh 1.5x, runaway ones 0.5x), and
+  keeps every starting slot fillable. Players drafted in the top 100, players
+  with no 2025-26 stats, and players outside the pool are never drop
+  suggestions. Out players, and pool players with a sourced return date still
+  ahead, are never pickups. At most three moves; the rest go on a watch list.
+  League categories and your draft punts are honored. Points leagues get no
+  suggestions.
+- The **Season manager** panel shows on the setup screen and the desktop
+  Draft complete screen when you're signed in with Yahoo. It re-checks when
+  you come back to the page after 15 minutes.
+- Values are 2025-26 per-game z-scores (`cv`), not this season's stats.
+
 ## Pick coach: no positional "reach" for long-term injured players (2026-10-16)
 - A player out for a quarter of the season or more (`retBy`) no longer counts
   as filling an open starting slot, so need can't turn him into a take or
