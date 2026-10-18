@@ -27,7 +27,8 @@
  *
  * Only season-out injuries are a hard pass; other INJ statuses stay eligible
  * with a sourced warning. A sourced earliest return (inj.retBy) discounts V
- * by the share of the regular season missed.
+ * by the share of the regular season missed; out-indefinitely with no
+ * timetable assumes about a third of the season.
  *
  * Globals used: PLAYERS, MOVES, VACATED_USAGE, window.DraftCore,
  * window.PlayoffData, window.PlayoffCore. Attach: window.PickSignals.
@@ -251,7 +252,8 @@
       var healthy = a != null ? Math.min(V, a) : V;
       var hurt = clamp(Math.round(healthy / (1 - miss)), 1, 320);
       if (hurt > V) {
-        edges.push({ k: "injury", v: V - hurt, note: "misses ~" + Math.round(miss * 100) + "% of the regular season (back ~" + p.inj.retBy + " at the earliest)" });
+        edges.push({ k: "injury", v: V - hurt, note: "misses ~" + Math.round(miss * 100) + "% of the regular season (" +
+          (p.inj.retBy ? "back ~" + p.inj.retBy + " at the earliest" : "out indefinitely, no timetable; assumed") + ")" });
         V = hurt;
       }
     }
@@ -259,12 +261,15 @@
   }
 
   /* Share of the regular season an injured player misses, from inj.retBy
-     (earliest sourced return, YYYY-MM-DD). No retBy = no sourced timeline,
-     so no discount (the warning still shows). Capped below 1: season-out is
-     its own status. */
+     (earliest sourced return, YYYY-MM-DD). No retBy = no sourced timeline:
+     out-indefinitely assumes INDEFINITE_MISS (about two months), anything
+     else gets no discount (the warning still shows). Capped below 1:
+     season-out is its own status. */
   var SEASON_START = Date.UTC(2026, 9, 20), SEASON_END = Date.UTC(2027, 3, 11);
+  var INDEFINITE_MISS = 0.33;
   function missedFraction(inj) {
-    if (!inj || !inj.retBy) return 0;
+    if (!inj) return 0;
+    if (!inj.retBy) return inj.status === "out-indefinitely" ? INDEFINITE_MISS : 0;
     var r = Date.parse(inj.retBy + "T00:00:00Z");
     if (!isFinite(r)) return 0;
     return clamp((r - SEASON_START) / (SEASON_END - SEASON_START), 0, 0.9);

@@ -348,7 +348,8 @@ var PDATA={
 // retBy (YYYY-MM-DD, optional): earliest return the source supports, counted
 // from the injury date when the report doesn't say; the Pick
 // coach discounts value by the share of the regular season missed. Omit it
-// when no timeline is reported.
+// when no timeline is reported; out-indefinitely then assumes about a third of
+// the season missed, other statuses no discount.
 var ADP_DATE="2026-10-16"; // date of the Hashtag ADP table in PDATA
 var INJ={
 "Maxime Raynaud":{injury:"Right patellar subluxation",detail:"Recovering from the knee injury; set to begin the season on the sidelines.",ret:"Expected to miss at least the first five or six regular-season games, potentially longer",src:"Frankie Cartoscelli / KHTK via RotoWire, 15 Oct 2026",status:"out",reviewedAt:"2026-10-15"},
