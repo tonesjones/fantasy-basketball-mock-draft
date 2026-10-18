@@ -227,6 +227,23 @@ t("sourced long absence (retBy) discounts value by games missed", function () {
   var noDate = Object.assign({}, base, { inj: Object.assign({}, base.inj, { retBy: undefined }) });
   assert.strictEqual(S.trueValue(noDate, ctx).V, healthy, "no sourced timeline, no discount");
 });
+t("out-indefinitely with no timetable assumes missed time", function () {
+  var base = P("Brandon Ingram");
+  assert.ok(base.inj && base.inj.status === "out-indefinitely" && !base.inj.retBy, "fixture: Ingram out indefinitely, no retBy");
+  var healthy = S.trueValue(Object.assign({}, base, { inj: null }), ctx).V;
+  var hurt = S.trueValue(base, ctx);
+  assert.ok(S.missedFraction(base.inj) > 0.25, "assumed miss " + S.missedFraction(base.inj));
+  assert.ok(hurt.V > healthy && hurt.V > hurt.consensus, "V " + hurt.V + " vs healthy " + healthy + ", consensus " + hurt.consensus);
+  assert.ok(hurt.edges.some(function (e) { return e.k === "injury" && /no timetable/.test(e.note); }), "assumed-miss edge shown");
+});
+t("Brandon Ingram (out indefinitely) is not a take near his ADP", function () {
+  var ing = P("Brandon Ingram");
+  [75, 80, 85].forEach(function (pick) {
+    var r = S.evaluate(ing, { pick: pick, nextPick: pick + 15, available: availAt(pick).concat([ing]), openSlots: OPEN, ctx: ctx });
+    assert.notStrictEqual(r.verdict, "take", pick + ": " + JSON.stringify(r.reasons));
+    assert.ok(!/fills an open starting slot/.test(r.reasons.join(" ")), "no positional credit while out");
+  });
+});
 t("Mark Williams (out until Feb) is not a take at pick 141", function () {
   var r = S.evaluate(P("Mark Williams"), { pick: 141, nextPick: 148, available: availAt(141), openSlots: OPEN, ctx: ctx });
   assert.notStrictEqual(r.verdict, "take", JSON.stringify(r.reasons));
