@@ -305,6 +305,11 @@ async function finishOAuth(request, env, fetchImpl) {
   if (!response.ok || !data.access_token || !data.refresh_token) {
     return html(502, oauthPage(`<p>Yahoo sign-in failed (HTTP ${response.status}). Start again.</p>`));
   }
+  /* TEMPORARY DIAGNOSTIC: field names and scope only, never token values. */
+  let idClaims = null;
+  try { idClaims = Object.keys(JSON.parse(new TextDecoder().decode(bytesFromBase64(String(data.id_token).split(".")[1])))); } catch { /* no id_token */ }
+  console.log("DIAG token", JSON.stringify({ fields: Object.keys(data), scope: data.scope ?? null,
+    tokenGuid: realGuid(data.xoauth_yahoo_guid) ? "real" : String(data.xoauth_yahoo_guid), idClaims }));
   let guid;
   try {
     guid = await yahooGuid(data, env, fetchImpl);
@@ -364,6 +369,9 @@ async function yahooGet(path, env, fetchImpl, guid) {
   if (!response.ok) {
     /* Name the resource and pass on Yahoo's reason; the path holds no secrets. */
     const resource = path.split("?")[0].split("/").pop().split(";")[0];
+    /* TEMPORARY DIAGNOSTIC */
+    console.log("DIAG api", JSON.stringify({ path: path.split("?")[0], status: response.status,
+      wwwAuthenticate: response.headers.get("WWW-Authenticate"), error: data && data.error }));
     const reason = data && data.error && typeof data.error.description === "string" ? ` ${data.error.description.slice(0, 200)}` : "";
     throw new Error(`Yahoo API returned HTTP ${response.status} for ${resource}.${reason}`);
   }
