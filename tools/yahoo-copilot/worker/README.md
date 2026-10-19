@@ -34,7 +34,8 @@ the app Fantasy Sports read access only.
 
 1. The page links to `/oauth/start`. The Worker redirects to Yahoo.
 2. Yahoo returns to `/oauth/callback`. The Worker exchanges the code,
-   identifies the user by `xoauth_yahoo_guid`, and stores the encrypted
+   identifies the user by `xoauth_yahoo_guid` (or, when Yahoo sends the
+   `--hidden--` placeholder, by the Fantasy users API), and stores the encrypted
    refresh token under `user:<guid>`.
 3. The Worker redirects to the page with `#yhlogin=<code>`. The code works
    once and expires after 60 seconds.

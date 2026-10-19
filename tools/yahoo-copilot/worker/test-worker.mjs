@@ -13,7 +13,7 @@ class MemoryKV {
 /* Two Yahoo users. Each OAuth code and token maps to one of them. */
 const USERS = {
   alice: { guid: "GUIDALICE", code: "code-alice", refresh: "refresh-alice", access: "access-alice", league: "111", position: 3, team: "Alice Team", metaTeams: 10 },
-  bob: { guid: "GUIDBOB", code: "code-bob", refresh: "refresh-bob", access: "access-bob", league: "222", position: null, team: "Bob Team" },
+  bob: { guid: "GUIDBOB", code: "code-bob", refresh: "refresh-bob", access: "access-bob", league: "222", position: null, team: "Bob Team", hideGuid: true },
 };
 const byCode = (code) => Object.values(USERS).find((u) => u.code === code);
 const byRefresh = (token) => Object.values(USERS).find((u) => u.refresh === token);
@@ -46,7 +46,8 @@ async function fakeFetch(input, init = {}) {
     const body = new URLSearchParams(String(init.body));
     if (body.get("grant_type") === "authorization_code") {
       const user = byCode(body.get("code"));
-      return jsonResponse({ access_token: user.access, refresh_token: user.refresh, expires_in: 3600, xoauth_yahoo_guid: user.guid });
+      /* Yahoo sometimes hides the GUID in the token response; the Worker must then ask the users API. */
+      return jsonResponse({ access_token: user.access, refresh_token: user.refresh, expires_in: 3600, xoauth_yahoo_guid: user.hideGuid ? "--hidden--" : user.guid });
     }
     const user = byRefresh(body.get("refresh_token"));
     if (!user || revoked) return jsonResponse({ error: "invalid_grant" }, 400);
@@ -57,6 +58,7 @@ async function fakeFetch(input, init = {}) {
   const league = (/league\/478\.l\.(\d+)/.exec(url) || [])[1];
   const key = `478.l.${league}`;
   if (url.includes("/fantasy/v2/game/nba")) return jsonResponse({ fantasy_content: { game: [{ game_key: "478" }] } });
+  if (url.includes("/users;use_login=1?")) return jsonResponse({ fantasy_content: { users: { 0: { user: [{ guid: user.guid }] }, count: 1 } } });
   if (url.includes("/users;use_login=1/games;game_keys=nba/leagues")) {
     return jsonResponse({ fantasy_content: { users: { 0: { user: [{ guid: user.guid }, { games: { 0: { game: [{ game_key: "478" }, { leagues: {
       0: { league: [{ league_key: `478.l.${user.league}`, name: `${user.team} League`, num_teams: 12, scoring_type: "head", current_week: 1, draft_status: "postdraft" }] },
@@ -217,6 +219,7 @@ for (const user of Object.values(USERS)) {
   assert.ok(stored, "each user gets their own stored record");
   assert.ok(!stored.includes(user.refresh), "refresh tokens are encrypted at rest");
 }
+assert.equal(await kv.get("user:--hidden--"), null, "Yahoo's hidden-GUID placeholder is never used as a user key");
 for (const key of kv.keys("session:")) {
   const stored = await kv.get(key);
   assert.ok(!stored.includes(aliceToken) && !stored.includes(bobToken), "session tokens are stored only as hashes");

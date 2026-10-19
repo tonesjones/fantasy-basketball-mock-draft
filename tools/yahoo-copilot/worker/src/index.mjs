@@ -260,7 +260,8 @@ async function beginOAuth(request, env) {
 }
 
 async function yahooGuid(data, env, fetchImpl) {
-  if (data.xoauth_yahoo_guid) return String(data.xoauth_yahoo_guid);
+  /* Yahoo may send the placeholder "--hidden--" instead of the GUID. */
+  if (/^[A-Za-z0-9]+$/.test(data.xoauth_yahoo_guid || "")) return data.xoauth_yahoo_guid;
   const response = await fetchImpl(`${YAHOO_API}/fantasy/v2/users;use_login=1?format=json`, {
     headers: { Accept: "application/json", Authorization: `Bearer ${data.access_token}` },
   });
