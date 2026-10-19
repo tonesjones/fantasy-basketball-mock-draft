@@ -350,6 +350,17 @@ assert.equal(response.status, 401, "disconnect ends the session");
 response = await api("/api/board", aliceToken);
 assert.equal(response.status, 200, "other users are unaffected");
 
+/* Cold isolate: /api/leagues makes two Yahoo calls at once, and they must share one token refresh. */
+{
+  const { createWorker: createCold } = await import(`./src/index.mjs?cold=${Date.now()}`);
+  const before = calls.filter((c) => c.url.includes("/oauth2/get_token")).length;
+  const cold = await createCold(fakeFetch).fetch(new Request("https://worker.example/api/leagues", {
+    headers: { Origin: origin, Authorization: `Bearer ${aliceToken}` },
+  }), env);
+  assert.equal(cold.status, 200);
+  assert.equal(calls.filter((c) => c.url.includes("/oauth2/get_token")).length - before, 1, "parallel Yahoo calls share one token refresh");
+}
+
 /* Fresh isolate, so the access-token cache is empty and the Worker must refresh. */
 const { createWorker: createFresh } = await import(`./src/index.mjs?fresh=${Date.now()}`);
 revoked = true;
