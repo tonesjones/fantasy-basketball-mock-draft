@@ -90,6 +90,7 @@
       injuryNote: yp.injuryNote || "",
       selectedPosition: yp.selectedPosition || null,
       availability: yp.availability || null,
+      hot: !!yp.hot,
       pi: pi,
       cv: null,
       rated: false,
@@ -213,9 +214,98 @@
       });
   }
 
+  /* ---- Opportunity watch ----
+     A good player is out, so a teammate at his position may play more. This
+     is a watch list, not a move: the role change is a guess until recent
+     minutes confirm it. */
+  var BASE_POSITIONS = ["PG", "SG", "SF", "PF", "C"];
+  /* Injured players drafted in about the top 12 rounds open real minutes. */
+  var OPENING_RANK = 150;
+  var MAX_OPENINGS = 6,
+    MAX_BENEFICIARIES = 3;
+
+  /* 2 = shares a position, 1 = next to one (PG-SG-SF-PF-C), 0 = neither. */
+  function positionFit(a, b) {
+    var pa = a.filter(function (p) {
+        return BASE_POSITIONS.indexOf(p) >= 0;
+      }),
+      pb = b.filter(function (p) {
+        return BASE_POSITIONS.indexOf(p) >= 0;
+      }),
+      fit = 0;
+    pa.forEach(function (x) {
+      pb.forEach(function (y) {
+        var gap = Math.abs(BASE_POSITIONS.indexOf(x) - BASE_POSITIONS.indexOf(y));
+        fit = Math.max(fit, gap === 0 ? 2 : gap === 1 ? 1 : 0);
+      });
+    });
+    return fit;
+  }
+
+  function opportunities(injured, avail, previous) {
+    var seen = {};
+    (previous || []).forEach(function (name) {
+      seen[name] = true;
+    });
+    return injured
+      .filter(function (r) {
+        return r.pi >= 0 && r.rank <= OPENING_RANK && r.nbaTeam;
+      })
+      .map(function (r) {
+        var beneficiaries = avail
+          .filter(function (a) {
+            return (
+              a.nbaTeam === r.nbaTeam && !isOut(a) && positionFit(r.positions, a.positions) > 0
+            );
+          })
+          .map(function (a) {
+            return { row: a, fit: positionFit(r.positions, a.positions) };
+          })
+          .sort(function (x, y) {
+            return (
+              y.fit - x.fit ||
+              (y.row.hot ? 1 : 0) - (x.row.hot ? 1 : 0) ||
+              (y.row.value == null ? -1e9 : y.row.value) -
+                (x.row.value == null ? -1e9 : x.row.value)
+            );
+          })
+          .slice(0, MAX_BENEFICIARIES)
+          .map(function (b) {
+            return {
+              name: b.row.name,
+              positions: b.row.positions,
+              availability: b.row.availability,
+              hot: b.row.hot,
+              value: b.row.rated ? b.row.value : null,
+              samePosition: b.fit === 2,
+            };
+          });
+        return {
+          injured: r.name,
+          nbaTeam: r.nbaTeam,
+          status: r.status,
+          injuryNote: r.injuryNote,
+          fantasyTeam: r.fantasyTeam,
+          mine: r.mine,
+          rank: r.rank,
+          isNew: !!previous && !seen[r.name],
+          beneficiaries: beneficiaries,
+        };
+      })
+      .filter(function (o) {
+        return o.beneficiaries.length;
+      })
+      .sort(function (a, b) {
+        return (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0) || a.rank - b.rank;
+      })
+      .slice(0, MAX_OPENINGS);
+  }
+
   /* opts: { players, pdata, index(name) -> pool index or -1, league
      ({ categories, positions, scoringType }), mine, opponent, available
-     (Yahoo player lists from the Worker), punts (category names), now (ms) } */
+     (Yahoo player lists from the Worker), injured (out players on every
+     roster), previousInjured (names out at the last check, or null), punts
+     (category names), now (ms) } */
   function analyze(opts) {
     var league = opts.league || {};
     var ctx = {
@@ -395,6 +485,16 @@
       moves: moves,
       roster: rosterRows,
       watch: watch,
+      openings: opportunities(
+        (opts.injured || []).map(function (p) {
+          var r = describe(p, ctx);
+          r.fantasyTeam = p.fantasyTeam || "";
+          r.mine = !!p.mine;
+          return r;
+        }),
+        avail,
+        opts.previousInjured
+      ),
       unmatchedAvailable: avail.filter(function (r) {
         return r.pi < 0;
       }).length,
@@ -407,6 +507,7 @@
     PROTECT_RANK: PROTECT_RANK,
     MAX_MOVES: MAX_MOVES,
     activeCats: activeCats,
+    positionFit: positionFit,
     fillsStarters: fillsStarters,
     analyze: analyze,
   };

@@ -764,6 +764,7 @@ body{background:transparent!important}
 #md .season-moves,#md .season-watch{list-style:none;margin:0;padding:0}
 #md .season-moves li{border:1px solid var(--dl-border);border-radius:var(--dl-radius-sm);background:var(--dl-raised);padding:10px 12px;margin:6px 0}
 #md .season-watch li{padding:4px 0}
+#md .season-benef{margin-top:6px;display:grid;gap:4px}
 #md .season-call{display:inline-block;font-family:var(--dl-mono);font-size:11px;font-weight:600;border-radius:5px;padding:1px 6px;border:1px solid var(--dl-border)}
 #md .season-call.drop{color:var(--dl-red);border-color:var(--dl-red-line);background:var(--dl-red-bg)}
 #md .season-call.add{color:var(--dl-green);border-color:var(--dl-green-line);background:var(--dl-green-bg)}

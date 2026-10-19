@@ -1,5 +1,21 @@
 # Changelog
 
+## Yahoo season manager: opportunity watch and diagnostics (2026-10-19)
+- When a good player (consensus rank 150 or better) on any roster in your
+  league is out (Yahoo `O`, `INJ` or `SUSP`), the season manager lists up to
+  three available teammates at his position or the next one over. Same
+  position first, then last week's hot list, then value. New since your last
+  check is flagged. It's a watch list only: no drop is suggested from it until
+  recent minutes can confirm the bigger role.
+- Worker: `/api/season` also returns `injured` (out players on every roster)
+  and adds last week's best available players (`sort=AR;sort_type=lastweek`),
+  flagged `hot`, including ones outside the overall-rank lists.
+- Worker: `GET /api/season-diagnostics?league=<key>` returns raw Yahoo samples
+  (stat categories; last week, last month and season stats; percent owned;
+  ownership) for three available players. The panel's **Download Yahoo
+  diagnostics** link saves it, so minutes-based scoring can be built on the
+  real field names.
+
 ## Yahoo season manager: hold or drop, with a named pickup (2026-10-18)
 After the draft, the Yahoo site can check your league roster against this
 week's opponent and the waiver wire.

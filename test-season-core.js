@@ -159,4 +159,44 @@ const real = Season.analyze({
 assert.equal(real.roster.find((r) => r.name === "Nikola Jokic").verdict, "hold", "stars are protected");
 assert.equal(real.watch[0].name, "Victor Wembanyama");
 
+/* Opportunity watch: a good player is out, so an available teammate at his
+   position is worth watching. Star is out for BOS; Big Man for UTA. */
+const team = (name, nbaTeam, positions, extra) => ({ name, nbaTeam, positions, status: "", ...extra });
+const injured = [
+  team("Star", "BOS", ["PG", "SG", "G", "Util"], { status: "O", fantasyTeam: "Rival" }),
+  team("Blocks Pickup", "LAL", ["PG", "Util"], { status: "INJ", fantasyTeam: "Other" }),
+  team("Unknown Starter", "NY", ["SF", "Util"], { status: "O", fantasyTeam: "Other" }),
+];
+const pool = [
+  team("Small Upgrade", "BOS", ["SG", "G", "Util"], { availability: "FA" }),
+  team("Hot Pickup", "BOS", ["PG", "G", "Util"], { availability: "W" }),
+  team("Deep Backup", "BOS", ["PG", "G", "Util"], { availability: "A", hot: true }),
+  team("Wing Backup", "BOS", ["SF", "F", "Util"], { availability: "FA" }),
+  team("Center Backup", "BOS", ["C", "Util"], { availability: "FA" }),
+  team("Hurt Backup", "BOS", ["PG", "Util"], { availability: "FA", status: "INJ" }),
+  team("Laker Backup", "LAL", ["PG", "Util"], { availability: "FA" }),
+];
+const opp = Season.analyze({ players, pdata, index, league, mine: [], available: pool, injured, previousInjured: null });
+assert.equal(opp.openings.length, 1, "only good players open minutes (Blocks Pickup ranks past 150; Unknown Starter isn't in the pool)");
+const opening = opp.openings[0];
+assert.equal(opening.injured, "Star");
+assert.equal(opening.isNew, false, "nothing is new on the first check");
+assert.deepEqual(
+  opening.beneficiaries.map((b) => b.name),
+  ["Deep Backup", "Hot Pickup", "Small Upgrade"],
+  "same position first, hot last week next, then value; the hurt backup and other teams are left out",
+);
+assert.equal(opening.beneficiaries[0].value, null, "a player outside the pool shows no value");
+assert.equal(opening.beneficiaries[1].value, 3);
+assert.ok(!opening.beneficiaries.some((b) => b.name === "Center Backup"), "a center doesn't replace a guard");
+assert.equal(opp.moves.length, 0, "the watch never makes a move on its own");
+
+const again = Season.analyze({ players, pdata, index, league, mine: [], available: pool, injured, previousInjured: ["Big Man"] });
+assert.equal(again.openings[0].isNew, true, "an injury since the last check is flagged new");
+
+assert.equal(Season.positionFit(["PG"], ["SG", "G"]), 1);
+assert.equal(Season.positionFit(["PF", "C"], ["C"]), 2);
+assert.equal(Season.positionFit(["PG"], ["C"]), 0);
+assert.equal(Season.positionFit(["Util"], ["Util"]), 0, "Util and IL aren't real positions");
+
 console.log("season core tests passed");

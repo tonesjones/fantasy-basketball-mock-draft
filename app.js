@@ -1136,6 +1136,10 @@ var SEASON_RECHECK_MS=15*60*1000;
 var _season={leagues:null,busy:false,status:"",data:null,result:null,at:0};
 function seasonLeague(){try{return localStorage.getItem(YAHOO_LEAGUE_KEY)||"";}catch(e){return "";}}
 function seasonSetLeague(key){try{localStorage.setItem(YAHOO_LEAGUE_KEY,key);}catch(e){}}
+/* Who was out at the last check, per league, so a new injury can be flagged. */
+function seasonPrevInjured(key){try{var v=JSON.parse(localStorage.getItem("draft-lab.yahoo-injured."+key)||"null");return Array.isArray(v)?v:null;}catch(e){return null;}}
+function seasonSaveInjured(key,names){try{localStorage.setItem("draft-lab.yahoo-injured."+key,JSON.stringify(names));}catch(e){}}
+function seasonAvailLabel(a){return a==='W'?'waivers':a==='FA'?'free agent':'available';}
 function seasonPanelHtml(){
   if(!yahooSession())return "";
   var h='<hr class="setup-div"><section class="season-panel" aria-labelledby="yhseasonh"><h3 id="yhseasonh">Season manager</h3><div class="muted">Checks your Yahoo roster against this week\'s opponent and the waiver wire. It suggests a drop only when a named pickup is a clear upgrade.</div>';
@@ -1161,12 +1165,24 @@ function seasonBodyHtml(){
   if(r.moves.length){
     h+='<ul class="season-moves">';
     r.moves.forEach(function(m){
-      h+='<li><span class="season-call drop">Drop</span> <b>'+esc(m.drop)+'</b> → <span class="season-call add">Add</span> <b>'+esc(m.add)+'</b> <span class="teamtag">'+esc(m.addTeam||'')+'</span> <span class="season-src">'+(m.availability==='W'?'Waivers (claim)':'Free agent')+'</span>';
+      h+='<li><span class="season-call drop">Drop</span> <b>'+esc(m.drop)+'</b> → <span class="season-call add">Add</span> <b>'+esc(m.add)+'</b> <span class="teamtag">'+esc(m.addTeam||'')+'</span> <span class="season-src">'+(m.availability==='W'?'Waivers (claim)':m.availability==='FA'?'Free agent':'Available')+'</span>';
       h+='<div class="muted">+'+m.gain.toFixed(1)+' value'+(m.helps.length?' · helps '+esc(m.helps.join(', ')):'')+(m.matchupGain!=null?' · this week +'+m.matchupGain.toFixed(1):'')+'</div></li>';
     });
     h+='</ul>';
   }else if(!r.points){
     h+='<p class="muted">Hold everyone. No available player beats anyone on your roster by +'+SeasonCore.CLEAR_GAIN.toFixed(1)+' or more.</p>';
+  }
+  if(r.openings&&r.openings.length){
+    h+='<h4>Opportunity watch</h4><p class="muted">A good player is out, so these available teammates may play more. Watch them: Draft Lab won\'t suggest the move until recent minutes confirm the bigger role.</p><ul class="season-moves">';
+    r.openings.forEach(function(o){
+      h+='<li>'+(o.isNew?'<span class="season-call il">New</span> ':'')+'<b>'+esc(o.injured)+'</b> <span class="teamtag">'+esc(o.nbaTeam)+'</span> <span class="season-status" title="'+esc(o.injuryNote||o.status)+'">'+esc(o.status)+'</span> <span class="season-src">'+(o.mine?'your team':esc(o.fantasyTeam))+'</span>'+(o.injuryNote?'<div class="muted">'+esc(o.injuryNote)+'</div>':'');
+      h+='<div class="season-benef">';
+      o.beneficiaries.forEach(function(b){
+        h+='<div><span class="season-call add">Watch</span> '+esc(b.name)+' <span class="muted">'+esc((b.positions||[]).filter(function(x){return x!=='Util'&&x!=='IL';}).join('/'))+' · '+seasonAvailLabel(b.availability)+(b.hot?' · hot last week':'')+(b.value!=null?' · value '+b.value.toFixed(1):' · no 2025-26 value')+(b.samePosition?'':' · next position over')+'</span></div>';
+      });
+      h+='</div></li>';
+    });
+    h+='</ul>';
   }
   if(r.matchup){
     h+='<h4>This week\'s categories</h4><div class="season-cats">';
@@ -1185,10 +1201,11 @@ function seasonBodyHtml(){
   h+='</tbody></table></div>';
   if(r.watch.length){
     h+='<h4>Watch list</h4><ul class="season-watch">';
-    r.watch.forEach(function(w){h+='<li>'+esc(w.name)+' <span class="teamtag">'+esc(w.nbaTeam)+'</span> <span class="muted">'+esc((w.positions||[]).filter(function(x){return x!=='Util'&&x!=='IL';}).join('/'))+' · '+(w.availability==='W'?'waivers':'free agent')+' · value '+w.value.toFixed(1)+'</span></li>';});
+    r.watch.forEach(function(w){h+='<li>'+esc(w.name)+' <span class="teamtag">'+esc(w.nbaTeam)+'</span> <span class="muted">'+esc((w.positions||[]).filter(function(x){return x!=='Util'&&x!=='IL';}).join('/'))+' · '+seasonAvailLabel(w.availability)+' · value '+w.value.toFixed(1)+'</span></li>';});
     h+='</ul>';
   }
   h+='<p class="muted">Value is the sum of 2025-26 per-game category z-scores'+(r.cats.length<9?' over '+esc(r.cats.join(', ')):'')+', last season\'s production, not a projection. ~ marks a player with no 2025-26 stats, valued at his draft price. Players drafted in the top '+SeasonCore.PROTECT_RANK+' are never drop suggestions. Out players and those with a future return date are never pickups.'+(r.ignoredCats.length?' Not counted: '+esc(r.ignoredCats.join(', '))+'.':'')+(r.unmatchedAvailable?' '+r.unmatchedAvailable+' available player'+(r.unmatchedAvailable>1?'s are':' is')+' outside Draft Lab\'s pool, so '+(r.unmatchedAvailable>1?'they were':'it was')+' skipped.':'')+(state.puntCats&&state.puntCats.length?' Punting '+esc(state.puntCats.join(' + '))+' from your draft settings.':'')+'</p>';
+  h+='<p class="muted"><button type="button" class="textlink" id="yhdiag">Download Yahoo diagnostics</button> · raw Yahoo stat and ownership samples from this league, for building minutes-based scoring. No sign-in tokens are included.</p>';
   return h;
 }
 function seasonRefresh(){
@@ -1216,18 +1233,31 @@ function seasonCheck(){
     _season.result=SeasonCore.analyze({
       players:PLAYERS,pdata:PDATA,index:yahooPoolIndex,league:j.league,
       mine:j.myTeam.players,opponent:j.opponent?j.opponent.players:null,available:j.available,
+      injured:j.injured||[],previousInjured:seasonPrevInjured(key),
       punts:state.puntCats
     });
+    seasonSaveInjured(key,(j.injured||[]).map(function(p){return p.name;}));
     var n=_season.result.moves.length;
     _season.status=n?n+" suggested move"+(n>1?"s":"")+".":"No clear upgrades on waivers.";
     seasonRefresh();
   }).catch(function(e){_season.busy=false;seasonStatus(e.message||"Yahoo roster check failed.");var b2=el("yhcheck");if(b2)b2.disabled=false;});
+}
+function seasonDiagnostics(){
+  var key=seasonLeague();if(!key)return;
+  seasonStatus("Reading Yahoo diagnostics…");
+  yahooApi("/api/season-diagnostics?league="+encodeURIComponent(key)).then(function(j){
+    var a=document.createElement("a");
+    a.href=URL.createObjectURL(new Blob([JSON.stringify(j,null,2)],{type:"application/json"}));
+    a.download="yahoo-diagnostics-"+key+".json";document.body.appendChild(a);a.click();a.remove();
+    seasonStatus("Saved yahoo-diagnostics-"+key+".json.");
+  }).catch(function(e){seasonStatus(e.message||"Yahoo diagnostics failed.");});
 }
 function wireSeasonPanel(root){
   if(!root||!yahooSession())return;
   var sel=root.querySelector("#yhleague");
   if(sel)sel.addEventListener("change",function(){seasonSetLeague(sel.value);_season.data=null;_season.result=null;seasonCheck();});
   var btn=root.querySelector("#yhcheck");if(btn)btn.addEventListener("click",seasonCheck);
+  var diag=root.querySelector("#yhdiag");if(diag)diag.addEventListener("click",seasonDiagnostics);
   seasonLoadLeagues();
 }
 /* Waiver wires move: coming back to the page re-checks a stale result. */

@@ -554,6 +554,7 @@ const LEAGUE_KEY_RE = /^\d{1,6}\.l\.\d{1,20}$/;
 const PAGE_SIZE = 25;
 const FA_PAGES = 3;
 const WAIVER_PAGES = 2;
+const INJURED_STATUSES = new Set(["O", "INJ", "SUSP"]);
 
 /* Yahoo spreads one record over an array of small objects; merge them. */
 function merged(node) {
@@ -671,11 +672,11 @@ function parseOpponentKey(scoreboardPayload, teamKey) {
   return null;
 }
 
-async function availablePlayers(leagueKey, status, pages, env, fetchImpl, guid) {
+async function availablePlayers(leagueKey, status, pages, env, fetchImpl, guid, sort = "sort=OR") {
   const out = [];
   for (let page = 0; page < pages; page++) {
     const payload = await yahooGet(
-      `/fantasy/v2/league/${encodeURIComponent(leagueKey)}/players;status=${status};sort=OR;start=${page * PAGE_SIZE};count=${PAGE_SIZE}`,
+      `/fantasy/v2/league/${encodeURIComponent(leagueKey)}/players;status=${status};${sort};start=${page * PAGE_SIZE};count=${PAGE_SIZE}`,
       env,
       fetchImpl,
       guid,
@@ -719,18 +720,62 @@ async function seasonCheck(leagueKey, env, fetchImpl, guid) {
   } catch {
     /* Before week 1, or in a roto league, there is no scoreboard matchup. */
   }
-  const [freeAgents, waivers] = await Promise.all([
+  const [freeAgents, waivers, hot] = await Promise.all([
     availablePlayers(leagueKey, "FA", FA_PAGES, env, fetchImpl, guid),
     availablePlayers(leagueKey, "W", WAIVER_PAGES, env, fetchImpl, guid),
+    /* Last week's best available players: backups whose role just grew rank
+       here before they reach the overall-rank lists above. */
+    availablePlayers(leagueKey, "A", 1, env, fetchImpl, guid, "sort=AR;sort_type=lastweek").catch(() => []),
   ]);
+  const available = [...waivers, ...freeAgents];
+  hot.forEach((player) => {
+    const known = available.find((p) => p.playerKey === player.playerKey);
+    if (known) known.hot = true;
+    else available.push({ ...player, hot: true });
+  });
   const team = (t) => (t ? { teamKey: t.teamKey, name: t.name, players: t.players } : null);
   return {
     fetchedAt: new Date().toISOString(),
     league,
     myTeam: team(mine),
     opponent: team(opponent),
-    available: [...waivers, ...freeAgents],
+    available,
+    /* Everyone rostered in the league who is out: the openings for backups. */
+    injured: rosters.flatMap((t) =>
+      t.players
+        .filter((p) => INJURED_STATUSES.has(p.status.toUpperCase()))
+        .map((p) => ({ ...p, fantasyTeam: t.name, mine: t.own })),
+    ),
   };
+}
+
+/* Raw Yahoo samples for the stat, ownership and sort fields the season
+   manager doesn't use yet, so they can be checked against a real league.
+   Read-only, the signed-in user's own league, Yahoo bodies only. */
+const DIAGNOSTIC_LIMIT = 30000;
+async function seasonDiagnostics(leagueKey, env, fetchImpl, guid) {
+  if (!LEAGUE_KEY_RE.test(leagueKey || "")) throw new Error("Enter a Yahoo league key like 466.l.12345.");
+  const players = `/fantasy/v2/league/${encodeURIComponent(leagueKey)}/players;status=A;sort=AR;sort_type=lastweek;count=3`;
+  const paths = [
+    "/fantasy/v2/game/nba/stat_categories",
+    `${players}/stats;type=lastweek`,
+    `${players}/stats;type=lastmonth`,
+    `${players}/stats;type=season`,
+    `${players}/percent_owned`,
+    `${players}/ownership`,
+  ];
+  const samples = await Promise.all(
+    paths.map(async (path) => {
+      try {
+        const body = JSON.stringify(await yahooGet(path, env, fetchImpl, guid));
+        return { path, ok: true, truncated: body.length > DIAGNOSTIC_LIMIT, body: body.slice(0, DIAGNOSTIC_LIMIT) };
+      } catch (error) {
+        if (error instanceof SignedOutError) throw error;
+        return { path, ok: false, error: error.message };
+      }
+    }),
+  );
+  return { fetchedAt: new Date().toISOString(), leagueKey, samples };
 }
 
 export function createWorker(fetchImpl = fetch) {
@@ -786,6 +831,10 @@ export function createWorker(fetchImpl = fetch) {
         if (url.pathname === "/api/season" && request.method === "GET") {
           const check = await seasonCheck(url.searchParams.get("league"), env, fetchImpl, user.guid);
           return json(request, env, 200, { ok: true, ...check });
+        }
+        if (url.pathname === "/api/season-diagnostics" && request.method === "GET") {
+          const report = await seasonDiagnostics(url.searchParams.get("league"), env, fetchImpl, user.guid);
+          return json(request, env, 200, { ok: true, ...report });
         }
         return json(request, env, 404, errorBody("not_found", "Route not found."));
       } catch (error) {

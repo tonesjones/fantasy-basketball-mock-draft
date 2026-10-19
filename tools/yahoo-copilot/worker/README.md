@@ -60,6 +60,7 @@ the Worker deletes that user's record and answers 401.
 | `GET /api/board` | session | Returns the current board for the user's watch. |
 | `GET /api/leagues` | session | Lists the user's NBA leagues this season and their team in each. |
 | `GET /api/season?league=<key>` | session | Returns the user's roster, this week's opponent roster, free agents and waiver players for the season manager. |
+| `GET /api/season-diagnostics?league=<key>` | session | Returns raw Yahoo stat and ownership samples from the league, for building minutes-based scoring. |
 | `POST /api/disconnect` | session | Deletes the user's Yahoo token, watch, and session. |
 
 Requests from any origin except `PAGE_ORIGIN` get 403. Each user has one
@@ -75,7 +76,11 @@ each `GET /api/board` checks again until it is set.
 scoreboard, three pages of free agents (`status=FA`) and two of waiver players
 (`status=W`), both in Yahoo's overall rank order (`sort=OR`). Each player is
 `{ playerKey, name, nbaTeam, positions, status, injuryNote, selectedPosition }`;
-available players also carry `availability` (`FA` or `W`). The opponent is
+available players also carry `availability` (`FA` or `W`). Players from last
+week's best-available list (`sort=AR;sort_type=lastweek`) carry `hot: true`;
+ones not already listed are added with `availability: "A"`. `injured` lists
+every rostered player in the league whose status is `O`, `INJ` or `SUSP`, with
+`fantasyTeam` and `mine`. The opponent is
 `null` when the scoreboard has no matchup for the user. The page does the
 valuing (`season-core.js`); the Worker only reads Yahoo.
 

@@ -159,6 +159,8 @@ After the draft, signed-in users see **Season manager** on the setup screen and 
 - Never dropped: players drafted in the top 100, players with no 2025-26 stats, and players outside the pool.
 - Never picked up: players Yahoo lists as out, and players whose sourced return date is still ahead.
 - At most three moves. Other good pickups go on a watch list.
+- **Opportunity watch:** when a good player anywhere in your league is out, it lists available teammates at his position who may play more, and flags injuries that are new since your last check. It never makes a move on its own.
+- **Download Yahoo diagnostics** saves raw Yahoo stat and ownership samples from your league. It exists to build minutes-based scoring on real data.
 
 Values are 2025-26 per-game category z-scores, the same numbers the draft uses, so they don't reflect this season's games yet. League categories and your draft punts are honored. Points leagues get no suggestions. The logic is in `season-core.js`.
 

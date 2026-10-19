@@ -111,6 +111,13 @@ async function fakeFetch(input, init = {}) {
     for (let i = 0; i < 25; i++) page[i] = yahooPlayer(`478.p.${1000 + start + i}`, `Free Agent ${start + i}`, "BOS", ["SF", "F", "Util"]);
     return jsonResponse(leagueEnvelope(key, "players", page));
   }
+  if (url.includes("/players;status=A;sort=AR;sort_type=lastweek")) {
+    return jsonResponse(leagueEnvelope(key, "players", {
+      0: yahooPlayer("478.p.1000", "Free Agent 0", "BOS", ["SF", "F", "Util"]),
+      1: yahooPlayer("478.p.950", "Backup Center", "UTA", ["C", "Util"]),
+      count: 2,
+    }));
+  }
   if (url.includes("/players;status=W")) {
     /* Yahoo sends an empty collection as a bare array. */
     if (/start=25/.test(url)) return jsonResponse(leagueEnvelope(key, "players", []));
@@ -286,6 +293,21 @@ assert.deepEqual(season.opponent.players.map((p) => p.name), ["Nikola Jokic"]);
 assert.equal(season.available.filter((p) => p.availability === "FA").length, 75, "three pages of free agents");
 assert.deepEqual(season.available.filter((p) => p.availability === "W").map((p) => p.name), ["Waiver Guy"], "waiver paging stops on a short page");
 assert.equal(season.available[0].availability, "W", "waiver players come first");
+
+assert.equal(season.available.find((p) => p.name === "Free Agent 0").hot, true, "last week's hot list flags players already listed");
+const backup = season.available.find((p) => p.name === "Backup Center");
+assert.equal(backup.hot, true, "and adds ones the rank lists missed");
+assert.equal(backup.availability, "A");
+assert.deepEqual(season.injured.map((p) => [p.name, p.fantasyTeam, p.mine]), [["Jusuf Nurkic", "Alice Team", true]], "out players come from every roster");
+
+response = await api("/api/season-diagnostics?league=478.l.111", aliceToken);
+assert.equal(response.status, 200);
+const diagnostics = await response.json();
+assert.equal(diagnostics.samples.length, 6);
+assert.ok(diagnostics.samples.every((sample) => sample.ok && typeof sample.body === "string"));
+assert.ok(!JSON.stringify(diagnostics).includes("access-alice"), "diagnostics carry Yahoo bodies, never tokens");
+response = await api("/api/season-diagnostics?league=478.l.111", bobToken);
+assert.ok(!(await response.json()).samples.some((sample) => sample.ok && sample.path.includes("players")), "another user's league reads fail");
 
 response = await api("/api/season?league=478.l.111", bobToken);
 assert.equal(response.status, 502, "a user can't read another user's league");
