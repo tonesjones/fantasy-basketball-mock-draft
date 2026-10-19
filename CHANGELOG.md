@@ -1,5 +1,73 @@
 # Changelog
 
+## Yahoo season manager: automatic injury news from ESPN and RotoWire (2026-10-19)
+- Worker cron (every 5 minutes) polls RotoWire's NBA news RSS every run and
+  ESPN's injury list when its snapshot is 10+ minutes old. Snapshots live in
+  KV (`news:espn`, `news:rotowire`), written only when content changes or the
+  timestamp is 30 minutes old (at most ~432 writes a day). A failing source
+  keeps its last snapshot and never blocks the other.
+- `GET /api/news` serves both; RotoWire only to Yahoo IDs in the
+  `NEWS_OWNER_GUIDS` secret (copyrighted content). `GET /api/me` now returns
+  your own Yahoo ID so you can set it. Snapshots over 40 minutes old (cron not
+  running) refresh inline.
+- The page turns ESPN "Out" and RotoWire items into the same reports as
+  pasted alerts. Checked on the saved 18 October feeds: 92 ESPN injuries, and
+  of five RotoWire items only Ben Simmons' torn Achilles reads as out.
+- ESPN team codes map to Yahoo's (PHX→PHO, UTAH→UTA, WSH→WAS).
+- Worker news module drafted by Codex (Sol) from a written spec, reviewed and
+  adjusted here: the inline refresh threshold moved from 20 to 40 minutes so a
+  running cron never triggers a 1 MB re-download per page request.
+
+## Yahoo season manager: injury alerts from news (2026-10-19)
+- **Injury alerts** in the season manager: paste an alert from a news
+  account's push notification. `SeasonCore.parseNews` reads full player names
+  and a status per clause (out, doubtful, questionable, starting, available),
+  so "Brunson OUT tonight. McBride will start." is two reports.
+- A reported absence opens the opportunity watch before Yahoo lists it
+  ("reported · not on Yahoo yet"; "Yahoo confirms" once it does). A reported
+  starter moves to the top of the watch. A reported return closes the
+  opening. The latest report per player wins.
+- Alerts stay in the browser for 36 hours and never make a move. An absence
+  re-checks Yahoo if the last check is over five minutes old.
+- `#news=<text>` on the page URL adds an alert, for an iPhone Shortcut.
+
+## Yahoo season manager: opportunity watch and diagnostics (2026-10-19)
+- When a good player (consensus rank 150 or better) on any roster in your
+  league is out (Yahoo `O`, `INJ` or `SUSP`), the season manager lists up to
+  three available teammates at his position or the next one over. Same
+  position first, then last week's hot list, then value. New since your last
+  check is flagged. It's a watch list only: no drop is suggested from it until
+  recent minutes can confirm the bigger role.
+- Worker: `/api/season` also returns `injured` (out players on every roster)
+  and adds last week's best available players (`sort=AR;sort_type=lastweek`),
+  flagged `hot`, including ones outside the overall-rank lists.
+- Worker: `GET /api/season-diagnostics?league=<key>` returns raw Yahoo samples
+  (stat categories; last week, last month and season stats; percent owned;
+  ownership) for three available players. The panel's **Download Yahoo
+  diagnostics** link saves it, so minutes-based scoring can be built on the
+  real field names.
+
+## Yahoo season manager: hold or drop, with a named pickup (2026-10-18)
+After the draft, the Yahoo site can check your league roster against this
+week's opponent and the waiver wire.
+- Worker: `GET /api/leagues` lists your NBA leagues this season.
+  `GET /api/season?league=<key>` returns your roster, this week's opponent
+  (from the scoreboard), up to 75 free agents and 50 waiver players (Yahoo's
+  overall rank order), and the league's categories and roster slots.
+- `season-core.js` calls each rostered player Hold, Drop or IL. A drop needs a
+  named pickup that beats him by at least 1.5 summed category value, helps
+  this week's matchup (close categories weigh 1.5x, runaway ones 0.5x), and
+  keeps every starting slot fillable. Players drafted in the top 100, players
+  with no 2025-26 stats, and players outside the pool are never drop
+  suggestions. Out players, and pool players with a sourced return date still
+  ahead, are never pickups. At most three moves; the rest go on a watch list.
+  League categories and your draft punts are honored. Points leagues get no
+  suggestions.
+- The **Season manager** panel shows on the setup screen and the desktop
+  Draft complete screen when you're signed in with Yahoo. It re-checks when
+  you come back to the page after 15 minutes.
+- Values are 2025-26 per-game z-scores (`cv`), not this season's stats.
+
 ## Pick coach: no positional "reach" for long-term injured players (2026-10-16)
 - A player out for a quarter of the season or more (`retBy`) no longer counts
   as filling an open starting slot, so need can't turn him into a take or

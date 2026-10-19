@@ -1,3 +1,5 @@
+import { loadNews, pollNews } from "./news.mjs";
+
 const YAHOO_API = "https://fantasysports.yahooapis.com";
 const YAHOO_TOKEN_URL = "https://api.login.yahoo.com/oauth2/get_token";
 const OAUTH_STATE_PREFIX = "oauth:state:";
@@ -253,19 +255,35 @@ async function beginOAuth(request, env) {
   auth.searchParams.set("client_id", env.YAHOO_CLIENT_ID);
   auth.searchParams.set("redirect_uri", redirectUri);
   auth.searchParams.set("response_type", "code");
+  /* Yahoo returns the user's GUID only when the openid scope is requested; OpenID Connect requires a nonce with it. */
+  auth.searchParams.set("scope", "openid fspt-r");
+  auth.searchParams.set("nonce", randomToken());
   auth.searchParams.set("state", state);
   return Response.redirect(auth.toString(), 303);
 }
 
+/* Yahoo sends the placeholder "--hidden--" instead of the GUID unless the app has the OpenID Connect Profile permission. */
+const realGuid = (value) => (/^[A-Za-z0-9]+$/.test(String(value || "")) ? String(value) : null);
+
+function idTokenSubject(idToken) {
+  /* The id_token came straight from Yahoo's token endpoint over TLS, so its signature needn't be checked here. */
+  try {
+    return JSON.parse(new TextDecoder().decode(bytesFromBase64(String(idToken).split(".")[1]))).sub;
+  } catch {
+    return null;
+  }
+}
+
 async function yahooGuid(data, env, fetchImpl) {
-  if (data.xoauth_yahoo_guid) return String(data.xoauth_yahoo_guid);
+  const fromToken = realGuid(data.xoauth_yahoo_guid) || realGuid(idTokenSubject(data.id_token));
+  if (fromToken) return fromToken;
   const response = await fetchImpl(`${YAHOO_API}/fantasy/v2/users;use_login=1?format=json`, {
     headers: { Accept: "application/json", Authorization: `Bearer ${data.access_token}` },
   });
   const payload = await response.json().catch(() => ({}));
-  const guid = response.ok ? first(payload.fantasy_content && payload.fantasy_content.users, "guid") : null;
-  if (!guid) throw new Error("Yahoo did not identify the signed-in user.");
-  return String(guid);
+  const guid = response.ok ? realGuid(first(payload.fantasy_content && payload.fantasy_content.users, "guid")) : null;
+  if (!guid) throw new Error("Yahoo did not identify the signed-in user. The Yahoo app needs the OpenID Connect Profile permission.");
+  return guid;
 }
 
 async function finishOAuth(request, env, fetchImpl) {
@@ -547,8 +565,242 @@ async function loadBoard(env, fetchImpl, guid) {
   };
 }
 
+/* ---- In-season roster check ----
+   After the draft: the user's roster, this week's opponent, and the best free
+   agents and waiver players, as names and positions. The page values them. */
+const LEAGUE_KEY_RE = /^\d{1,6}\.l\.\d{1,20}$/;
+const PAGE_SIZE = 25;
+const FA_PAGES = 3;
+const WAIVER_PAGES = 2;
+const INJURED_STATUSES = new Set(["O", "INJ", "SUSP"]);
+
+/* Yahoo spreads one record over an array of small objects; merge them. */
+function merged(node) {
+  const out = {};
+  const walk = (value) => {
+    if (Array.isArray(value)) value.forEach(walk);
+    else if (value && typeof value === "object") Object.assign(out, value);
+  };
+  walk(node);
+  return out;
+}
+
+function parsePlayer(item) {
+  const player = item.player || item;
+  const parts = Array.isArray(player) ? player : [player];
+  const meta = merged(parts[0]);
+  const name = meta.name && typeof meta.name === "object" ? meta.name.full : meta.name;
+  const selected = dicts(parts.slice(1)).find((value) => Object.prototype.hasOwnProperty.call(value, "selected_position"));
+  const eligible = dicts(meta.eligible_positions || [])
+    .map((value) => value.position)
+    .filter((value) => typeof value === "string");
+  return {
+    playerKey: String(meta.player_key || ""),
+    name: name ? String(name) : "",
+    nbaTeam: String(meta.editorial_team_abbr || "").toUpperCase(),
+    positions: eligible.length ? eligible : String(meta.display_position || "").split(",").filter(Boolean),
+    status: String(meta.status || ""),
+    injuryNote: meta.injury_note ? String(meta.injury_note) : "",
+    selectedPosition: selected ? String(first(selected.selected_position, "position") || "") : null,
+  };
+}
+
+function parsePlayers(node) {
+  return numberedValues(node)
+    .map(parsePlayer)
+    .filter((player) => player.name);
+}
+
+/* The signed-in user's NBA leagues this season, with their team in each. */
+function parseUserLeagues(leaguesPayload, teamsPayload) {
+  const teams = dicts(teamsPayload)
+    .filter((value) => Array.isArray(value.team))
+    .map((value) => merged(value.team[0]))
+    .filter((team) => team.team_key);
+  return dicts(leaguesPayload)
+    .filter((value) => Array.isArray(value.league))
+    .map((value) => merged(value.league[0]))
+    .filter((league) => LEAGUE_KEY_RE.test(String(league.league_key || "")))
+    .map((league) => {
+      const team = teams.find((t) => String(t.team_key).startsWith(`${league.league_key}.t.`));
+      return {
+        leagueKey: String(league.league_key),
+        name: String(league.name || league.league_key),
+        teams: Number(league.num_teams) || null,
+        scoringType: String(league.scoring_type || ""),
+        currentWeek: Number(league.current_week) || null,
+        draftStatus: String(league.draft_status || ""),
+        teamKey: team ? String(team.team_key) : null,
+        teamName: team && team.name ? String(team.name) : "",
+      };
+    })
+    .filter((league) => league.teamKey);
+}
+
+function parseSeasonSettings(settingsPayload) {
+  const league = settingsPayload.fantasy_content.league;
+  const meta = merged(Array.isArray(league) ? league[0] : league);
+  const settings = merged(leagueSub(settingsPayload, "settings"));
+  const categories = dicts(settings.stat_categories || [])
+    .filter((value) => value.stat && typeof value.stat === "object")
+    .map((value) => value.stat)
+    .filter((stat) => String(stat.is_only_display_stat || "0") !== "1" && String(stat.enabled ?? "1") !== "0")
+    .map((stat) => String(stat.display_name || stat.name || ""))
+    .filter(Boolean);
+  const positions = dicts(settings.roster_positions || [])
+    .filter((value) => value.roster_position)
+    .map((value) => ({
+      position: String(value.roster_position.position || ""),
+      count: Number(value.roster_position.count) || 1,
+    }));
+  return {
+    leagueKey: String(meta.league_key || ""),
+    name: String(meta.name || ""),
+    scoringType: String(meta.scoring_type || ""),
+    currentWeek: Number(meta.current_week) || null,
+    categories,
+    positions,
+  };
+}
+
+function parseLeagueRosters(rostersPayload) {
+  return numberedValues(leagueSub(rostersPayload, "teams")).map((item) => {
+    const team = item.team || item;
+    const meta = merged(team[0]);
+    const roster = dicts(team.slice(1)).find((value) => Object.prototype.hasOwnProperty.call(value, "roster"));
+    const players = roster ? parsePlayers(first(roster.roster, "players")) : [];
+    return {
+      teamKey: String(meta.team_key || ""),
+      name: String(meta.name || ""),
+      own: String(meta.is_owned_by_current_login || "0") === "1",
+      players,
+    };
+  });
+}
+
+/* This week's opponent's team key, or null (no matchup yet, or a roto league). */
+function parseOpponentKey(scoreboardPayload, teamKey) {
+  for (const value of dicts(scoreboardPayload)) {
+    if (!value.matchup) continue;
+    const keys = dicts(value.matchup)
+      .map((entry) => entry.team_key)
+      .filter((key) => typeof key === "string");
+    if (keys.includes(teamKey)) return keys.find((key) => key !== teamKey) || null;
+  }
+  return null;
+}
+
+async function availablePlayers(leagueKey, status, pages, env, fetchImpl, guid, sort = "sort=OR") {
+  const out = [];
+  for (let page = 0; page < pages; page++) {
+    const payload = await yahooGet(
+      `/fantasy/v2/league/${encodeURIComponent(leagueKey)}/players;status=${status};${sort};start=${page * PAGE_SIZE};count=${PAGE_SIZE}`,
+      env,
+      fetchImpl,
+      guid,
+    );
+    let players = [];
+    try {
+      players = parsePlayers(leagueSub(payload, "players"));
+    } catch {
+      /* Yahoo sends an empty players list as [] with no "players" key. */
+    }
+    out.push(...players.map((player) => ({ ...player, availability: status })));
+    if (players.length < PAGE_SIZE) break;
+  }
+  return out;
+}
+
+async function listLeagues(env, fetchImpl, guid) {
+  const [leagues, teams] = await Promise.all([
+    yahooGet("/fantasy/v2/users;use_login=1/games;game_keys=nba/leagues", env, fetchImpl, guid),
+    yahooGet("/fantasy/v2/users;use_login=1/games;game_keys=nba/teams", env, fetchImpl, guid),
+  ]);
+  return parseUserLeagues(leagues, teams);
+}
+
+async function seasonCheck(leagueKey, env, fetchImpl, guid) {
+  if (!LEAGUE_KEY_RE.test(leagueKey || "")) throw new Error("Enter a Yahoo league key like 466.l.12345.");
+  const encoded = encodeURIComponent(leagueKey);
+  const [settingsPayload, rostersPayload] = await Promise.all([
+    yahooGet(`/fantasy/v2/league/${encoded}/settings`, env, fetchImpl, guid),
+    yahooGet(`/fantasy/v2/league/${encoded}/teams/roster`, env, fetchImpl, guid),
+  ]);
+  const league = parseSeasonSettings(settingsPayload);
+  const rosters = parseLeagueRosters(rostersPayload);
+  const mine = rosters.find((team) => team.own);
+  if (!mine) throw new Error("Your Yahoo account has no team in this league.");
+  let opponent = null;
+  try {
+    const scoreboard = await yahooGet(`/fantasy/v2/league/${encoded}/scoreboard`, env, fetchImpl, guid);
+    const opponentKey = parseOpponentKey(scoreboard, mine.teamKey);
+    opponent = rosters.find((team) => team.teamKey === opponentKey) || null;
+  } catch {
+    /* Before week 1, or in a roto league, there is no scoreboard matchup. */
+  }
+  const [freeAgents, waivers, hot] = await Promise.all([
+    availablePlayers(leagueKey, "FA", FA_PAGES, env, fetchImpl, guid),
+    availablePlayers(leagueKey, "W", WAIVER_PAGES, env, fetchImpl, guid),
+    /* Last week's best available players: backups whose role just grew rank
+       here before they reach the overall-rank lists above. */
+    availablePlayers(leagueKey, "A", 1, env, fetchImpl, guid, "sort=AR;sort_type=lastweek").catch(() => []),
+  ]);
+  const available = [...waivers, ...freeAgents];
+  hot.forEach((player) => {
+    const known = available.find((p) => p.playerKey === player.playerKey);
+    if (known) known.hot = true;
+    else available.push({ ...player, hot: true });
+  });
+  const team = (t) => (t ? { teamKey: t.teamKey, name: t.name, players: t.players } : null);
+  return {
+    fetchedAt: new Date().toISOString(),
+    league,
+    myTeam: team(mine),
+    opponent: team(opponent),
+    available,
+    /* Everyone rostered in the league who is out: the openings for backups. */
+    injured: rosters.flatMap((t) =>
+      t.players
+        .filter((p) => INJURED_STATUSES.has(p.status.toUpperCase()))
+        .map((p) => ({ ...p, fantasyTeam: t.name, mine: t.own })),
+    ),
+  };
+}
+
+/* Raw Yahoo samples for the stat, ownership and sort fields the season
+   manager doesn't use yet, so they can be checked against a real league.
+   Read-only, the signed-in user's own league, Yahoo bodies only. */
+const DIAGNOSTIC_LIMIT = 30000;
+async function seasonDiagnostics(leagueKey, env, fetchImpl, guid) {
+  if (!LEAGUE_KEY_RE.test(leagueKey || "")) throw new Error("Enter a Yahoo league key like 466.l.12345.");
+  const players = `/fantasy/v2/league/${encodeURIComponent(leagueKey)}/players;status=A;sort=AR;sort_type=lastweek;count=3`;
+  const paths = [
+    "/fantasy/v2/game/nba/stat_categories",
+    `${players}/stats;type=lastweek`,
+    `${players}/stats;type=lastmonth`,
+    `${players}/stats;type=season`,
+    `${players}/percent_owned`,
+    `${players}/ownership`,
+  ];
+  const samples = await Promise.all(
+    paths.map(async (path) => {
+      try {
+        const body = JSON.stringify(await yahooGet(path, env, fetchImpl, guid));
+        return { path, ok: true, truncated: body.length > DIAGNOSTIC_LIMIT, body: body.slice(0, DIAGNOSTIC_LIMIT) };
+      } catch (error) {
+        if (error instanceof SignedOutError) throw error;
+        return { path, ok: false, error: error.message };
+      }
+    }),
+  );
+  return { fetchedAt: new Date().toISOString(), leagueKey, samples };
+}
+
 export function createWorker(fetchImpl = fetch) {
   return {
+    async scheduled(event, env, ctx) {
+      await pollNews(env, fetchImpl);
+    },
     async fetch(request, env) {
       const url = new URL(request.url);
       if (url.pathname === "/oauth/start" && request.method === "GET") return beginOAuth(request, env);
@@ -577,7 +829,7 @@ export function createWorker(fetchImpl = fetch) {
       if (!user) return rejectUnauthorized(request, env);
       try {
         if (url.pathname === "/api/me" && request.method === "GET") {
-          return json(request, env, 200, { ok: true, signedIn: true });
+          return json(request, env, 200, { ok: true, signedIn: true, guid: user.guid });
         }
         if (url.pathname === "/api/disconnect" && request.method === "POST") {
           await disconnect(env, user);
@@ -594,17 +846,43 @@ export function createWorker(fetchImpl = fetch) {
           if (!board) return json(request, env, 404, errorBody("no_watch", "Start a Yahoo watch session first."));
           return json(request, env, 200, { ok: true, ...board });
         }
+        if (url.pathname === "/api/news" && request.method === "GET") {
+          return json(request, env, 200, { ok: true, ...await loadNews(env, fetchImpl, user.guid) });
+        }
+        if (url.pathname === "/api/leagues" && request.method === "GET") {
+          return json(request, env, 200, { ok: true, leagues: await listLeagues(env, fetchImpl, user.guid) });
+        }
+        if (url.pathname === "/api/season" && request.method === "GET") {
+          const check = await seasonCheck(url.searchParams.get("league"), env, fetchImpl, user.guid);
+          return json(request, env, 200, { ok: true, ...check });
+        }
+        if (url.pathname === "/api/season-diagnostics" && request.method === "GET") {
+          const report = await seasonDiagnostics(url.searchParams.get("league"), env, fetchImpl, user.guid);
+          return json(request, env, 200, { ok: true, ...report });
+        }
         return json(request, env, 404, errorBody("not_found", "Route not found."));
       } catch (error) {
         if (error instanceof SignedOutError) return json(request, env, 401, errorBody("signed_out", error.message));
         const message = error instanceof Error ? error.message : "Request failed.";
-        const badInput = /Enter a Yahoo|must use|does not contain|no team in this draft|Auction/.test(message);
+        const badInput = /Enter a Yahoo|must use|does not contain|no team in this (draft|league)|Auction/.test(message);
         return json(request, env, badInput ? 400 : 502, errorBody(badInput ? "invalid_request" : "upstream_error", message));
       }
     },
   };
 }
 
-export { mlidFromInput, parseWatchInput, parseDraftOrder, parseDraftResults, parseLeagueInfo, sha256 };
+export {
+  mlidFromInput,
+  parseWatchInput,
+  parseDraftOrder,
+  parseDraftResults,
+  parseLeagueInfo,
+  parsePlayer,
+  parseUserLeagues,
+  parseSeasonSettings,
+  parseLeagueRosters,
+  parseOpponentKey,
+  sha256,
+};
 
 export default createWorker();

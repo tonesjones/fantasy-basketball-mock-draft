@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { webcrypto } from "node:crypto";
-import { createWorker, mlidFromInput, parseWatchInput } from "./src/index.mjs";
+import { createWorker, mlidFromInput, parsePlayer, parseWatchInput } from "./src/index.mjs";
 
 class MemoryKV {
   constructor() { this.values = new Map(); this.ttl = new Map(); }
@@ -13,14 +13,31 @@ class MemoryKV {
 /* Two Yahoo users. Each OAuth code and token maps to one of them. */
 const USERS = {
   alice: { guid: "GUIDALICE", code: "code-alice", refresh: "refresh-alice", access: "access-alice", league: "111", position: 3, team: "Alice Team", metaTeams: 10 },
-  bob: { guid: "GUIDBOB", code: "code-bob", refresh: "refresh-bob", access: "access-bob", league: "222", position: null, team: "Bob Team" },
+  bob: { guid: "GUIDBOB", code: "code-bob", refresh: "refresh-bob", access: "access-bob", league: "222", position: null, team: "Bob Team", guidVia: "idToken" },
 };
-const byCode = (code) => Object.values(USERS).find((u) => u.code === code);
-const byRefresh = (token) => Object.values(USERS).find((u) => u.refresh === token);
-const byAccess = (token) => Object.values(USERS).find((u) => u.access === token);
+/* Users whose GUID only the Fantasy users API reveals, or nothing does. */
+const HIDDEN = {
+  carol: { guid: "GUIDCAROL", code: "code-carol", refresh: "refresh-carol", access: "access-carol", league: "333", team: "Carol Team", guidVia: "usersApi" },
+  dave: { guid: "GUIDDAVE", code: "code-dave", refresh: "refresh-dave", access: "access-dave", league: "444", team: "Dave Team", guidVia: "none" },
+};
+const everyone = () => [...Object.values(USERS), ...Object.values(HIDDEN)];
+const byCode = (code) => everyone().find((u) => u.code === code);
+const byRefresh = (token) => everyone().find((u) => u.refresh === token);
+const byAccess = (token) => everyone().find((u) => u.access === token);
+const shownGuid = (user, via) => ((user.guidVia || "token") === via ? user.guid : "--hidden--");
+const idToken = (sub) => ["header", Buffer.from(JSON.stringify({ sub })).toString("base64url"), "signature"].join(".");
 
 function leagueEnvelope(key, resource, value) {
   return { fantasy_content: { league: [{ league_key: key, num_teams: 12 }, { [resource]: value }] } };
+}
+
+function yahooPlayer(playerKey, full, team, eligible, selected, extra = {}) {
+  const meta = [{ player_key: playerKey }, { name: { full } }, { editorial_team_abbr: team }, { display_position: eligible.join(",") },
+    { eligible_positions: eligible.map((position) => ({ position })) }];
+  Object.entries(extra).forEach(([k, v]) => meta.push({ [k]: v }));
+  const player = [meta];
+  if (selected) player.push({ selected_position: [{ coverage_type: "date" }, { position: selected }] });
+  return { player };
 }
 
 function jsonResponse(body, status = 200) {
@@ -37,7 +54,9 @@ async function fakeFetch(input, init = {}) {
     const body = new URLSearchParams(String(init.body));
     if (body.get("grant_type") === "authorization_code") {
       const user = byCode(body.get("code"));
-      return jsonResponse({ access_token: user.access, refresh_token: user.refresh, expires_in: 3600, xoauth_yahoo_guid: user.guid });
+      /* Yahoo hides the GUID as "--hidden--" in places the app has no permission for. */
+      return jsonResponse({ access_token: user.access, refresh_token: user.refresh, expires_in: 3600,
+        xoauth_yahoo_guid: shownGuid(user, "token"), ...(user.guidVia === "idToken" ? { id_token: idToken(user.guid) } : {}) });
     }
     const user = byRefresh(body.get("refresh_token"));
     if (!user || revoked) return jsonResponse({ error: "invalid_grant" }, 400);
@@ -48,13 +67,72 @@ async function fakeFetch(input, init = {}) {
   const league = (/league\/478\.l\.(\d+)/.exec(url) || [])[1];
   const key = `478.l.${league}`;
   if (url.includes("/fantasy/v2/game/nba")) return jsonResponse({ fantasy_content: { game: [{ game_key: "478" }] } });
+  if (url.includes("/users;use_login=1?")) return jsonResponse({ fantasy_content: { users: { 0: { user: [{ guid: shownGuid(user, "usersApi") }] }, count: 1 } } });
+  if (url.includes("/users;use_login=1/games;game_keys=nba/leagues")) {
+    return jsonResponse({ fantasy_content: { users: { 0: { user: [{ guid: user.guid }, { games: { 0: { game: [{ game_key: "478" }, { leagues: {
+      0: { league: [{ league_key: `478.l.${user.league}`, name: `${user.team} League`, num_teams: 12, scoring_type: "head", current_week: 1, draft_status: "postdraft" }] },
+      1: { league: [{ league_key: "478.l.999", name: "Watched league", num_teams: 10, scoring_type: "head" }] },
+      count: 2,
+    } }] }, count: 1 } }] }, count: 1 } } });
+  }
+  if (url.includes("/users;use_login=1/games;game_keys=nba/teams")) {
+    return jsonResponse({ fantasy_content: { users: { 0: { user: [{ guid: user.guid }, { games: { 0: { game: [{ game_key: "478" }, { teams: {
+      0: { team: [[{ team_key: `478.l.${user.league}.t.2` }, { team_id: "2" }, { name: user.team }]] },
+      count: 1,
+    } }] }, count: 1 } }] }, count: 1 } } });
+  }
   if (league !== user.league) return jsonResponse({ error: { description: "You are not allowed to view this page." } }, 403);
   if (url.includes("/settings")) {
     return jsonResponse(leagueEnvelope(key, "settings", [{ is_auction_draft: "0", roster_positions: [
       { roster_position: { position: "PG", count: 1 } },
       { roster_position: { position: "C", count: 1 } },
       { roster_position: { position: "BN", count: 1 } },
-    ] }]));
+      { roster_position: { position: "IL", count: 1 } },
+    ], stat_categories: { stats: [
+      { stat: { stat_id: 9004003, display_name: "FGM/A", is_only_display_stat: "1" } },
+      { stat: { stat_id: 5, display_name: "FG%" } },
+      { stat: { stat_id: 12, display_name: "PTS" } },
+      { stat: { stat_id: 19, display_name: "TO" } },
+    ] } }]));
+  }
+  if (url.includes("/teams/roster")) {
+    return jsonResponse(leagueEnvelope(key, "teams", {
+      0: { team: [[{ team_key: `${key}.t.1` }, { name: "Rival" }], { roster: { coverage_type: "date", 0: { players: {
+        0: yahooPlayer("478.p.1", "Nikola Jokic", "DEN", ["C", "Util"], "C"),
+        count: 1,
+      } } } }] },
+      1: { team: [[{ team_key: `${key}.t.2` }, { name: user.team }, { is_owned_by_current_login: 1 }], { roster: { coverage_type: "date", 0: { players: {
+        0: yahooPlayer("478.p.2", "Tyrese Maxey", "PHI", ["PG", "G", "Util"], "PG"),
+        1: yahooPlayer("478.p.3", "Jusuf Nurkic", "UTA", ["C", "Util", "IL"], "IL", { status: "INJ", injury_note: "Toe" }),
+        count: 2,
+      } } } }] },
+      count: 2,
+    }));
+  }
+  if (url.includes("/scoreboard")) {
+    return jsonResponse(leagueEnvelope(key, "scoreboard", { week: "1", 0: { matchups: { 0: { matchup: { week: "1", 0: { teams: {
+      0: { team: [[{ team_key: `${key}.t.2` }]] },
+      1: { team: [[{ team_key: `${key}.t.1` }]] },
+      count: 2,
+    } } } }, count: 1 } } }));
+  }
+  if (url.includes("/players;status=FA")) {
+    const start = Number((/start=(\d+)/.exec(url) || [])[1]);
+    const page = { count: 25 };
+    for (let i = 0; i < 25; i++) page[i] = yahooPlayer(`478.p.${1000 + start + i}`, `Free Agent ${start + i}`, "BOS", ["SF", "F", "Util"]);
+    return jsonResponse(leagueEnvelope(key, "players", page));
+  }
+  if (url.includes("/players;status=A;sort=AR;sort_type=lastweek")) {
+    return jsonResponse(leagueEnvelope(key, "players", {
+      0: yahooPlayer("478.p.1000", "Free Agent 0", "BOS", ["SF", "F", "Util"]),
+      1: yahooPlayer("478.p.950", "Backup Center", "UTA", ["C", "Util"]),
+      count: 2,
+    }));
+  }
+  if (url.includes("/players;status=W")) {
+    /* Yahoo sends an empty collection as a bare array. */
+    if (/start=25/.test(url)) return jsonResponse(leagueEnvelope(key, "players", []));
+    return jsonResponse(leagueEnvelope(key, "players", { 0: yahooPlayer("478.p.900", "Waiver Guy", "NY", ["PF", "F", "Util"]), count: 1 }));
   }
   if (url.includes("/teams")) {
     return jsonResponse(leagueEnvelope(key, "teams", {
@@ -111,6 +189,8 @@ async function signIn(user) {
   const authorizationUrl = new URL(response.headers.get("Location"));
   assert.equal(authorizationUrl.hostname, "api.login.yahoo.com");
   assert.equal(authorizationUrl.searchParams.get("redirect_uri"), "https://worker.example/oauth/callback");
+  assert.equal(authorizationUrl.searchParams.get("scope"), "openid fspt-r", "sign-in asks for the GUID and Fantasy read access");
+  assert.ok(authorizationUrl.searchParams.get("nonce"));
   const state = authorizationUrl.searchParams.get("state");
 
   response = await worker.fetch(new Request(`https://worker.example/oauth/callback?code=${user.code}&state=${state}`), env);
@@ -150,6 +230,17 @@ for (const user of Object.values(USERS)) {
   assert.ok(stored, "each user gets their own stored record");
   assert.ok(!stored.includes(user.refresh), "refresh tokens are encrypted at rest");
 }
+
+await signIn(HIDDEN.carol);
+assert.ok(await kv.get(`user:${HIDDEN.carol.guid}`), "the users API supplies a GUID the token response hid");
+{
+  const start = await worker.fetch(new Request("https://worker.example/oauth/start"), env);
+  const state = new URL(start.headers.get("Location")).searchParams.get("state");
+  const response = await worker.fetch(new Request(`https://worker.example/oauth/callback?code=${HIDDEN.dave.code}&state=${state}`), env);
+  assert.equal(response.status, 502, "sign-in fails when Yahoo hides the GUID everywhere");
+  assert.match(await response.text(), /OpenID Connect Profile/);
+}
+assert.equal(await kv.get("user:--hidden--"), null, "Yahoo's hidden-GUID placeholder is never used as a user key");
 for (const key of kv.keys("session:")) {
   const stored = await kv.get(key);
   assert.ok(!stored.includes(aliceToken) && !stored.includes(bobToken), "session tokens are stored only as hashes");
@@ -198,6 +289,54 @@ const draftCalls = calls.filter((call) => call.url.includes("/draftresults"));
 assert.ok(draftCalls.some((call) => call.url.includes("478.l.111") && call.auth === "Bearer access-alice"));
 assert.ok(draftCalls.some((call) => call.url.includes("478.l.222") && call.auth === "Bearer access-bob"));
 assert.ok(!draftCalls.some((call) => call.url.includes("478.l.222") && call.auth === "Bearer access-alice"), "each user reads Yahoo with their own token");
+
+/* In-season roster check. */
+response = await api("/api/leagues", aliceToken);
+assert.equal(response.status, 200);
+const { leagues } = await response.json();
+assert.deepEqual(leagues.map((l) => l.leagueKey), ["478.l.111"], "only leagues where the user has a team are listed");
+assert.equal(leagues[0].teamKey, "478.l.111.t.2");
+assert.equal(leagues[0].teamName, "Alice Team");
+
+response = await api("/api/season?league=not-a-key", aliceToken);
+assert.equal(response.status, 400, "a malformed league key is rejected");
+
+response = await api("/api/season?league=478.l.111", aliceToken);
+assert.equal(response.status, 200);
+const season = await response.json();
+assert.deepEqual(season.league.categories, ["FG%", "PTS", "TO"], "display-only stats are left out");
+assert.ok(season.league.positions.some((p) => p.position === "IL"));
+assert.equal(season.myTeam.name, "Alice Team");
+assert.deepEqual(season.myTeam.players.map((p) => p.name), ["Tyrese Maxey", "Jusuf Nurkic"]);
+const nurkic = season.myTeam.players[1];
+assert.equal(nurkic.selectedPosition, "IL");
+assert.equal(nurkic.status, "INJ");
+assert.deepEqual(nurkic.positions, ["C", "Util", "IL"]);
+assert.equal(season.opponent.name, "Rival", "the opponent comes from this week's scoreboard");
+assert.deepEqual(season.opponent.players.map((p) => p.name), ["Nikola Jokic"]);
+assert.equal(season.available.filter((p) => p.availability === "FA").length, 75, "three pages of free agents");
+assert.deepEqual(season.available.filter((p) => p.availability === "W").map((p) => p.name), ["Waiver Guy"], "waiver paging stops on a short page");
+assert.equal(season.available[0].availability, "W", "waiver players come first");
+
+assert.equal(season.available.find((p) => p.name === "Free Agent 0").hot, true, "last week's hot list flags players already listed");
+const backup = season.available.find((p) => p.name === "Backup Center");
+assert.equal(backup.hot, true, "and adds ones the rank lists missed");
+assert.equal(backup.availability, "A");
+assert.deepEqual(season.injured.map((p) => [p.name, p.fantasyTeam, p.mine]), [["Jusuf Nurkic", "Alice Team", true]], "out players come from every roster");
+
+response = await api("/api/season-diagnostics?league=478.l.111", aliceToken);
+assert.equal(response.status, 200);
+const diagnostics = await response.json();
+assert.equal(diagnostics.samples.length, 6);
+assert.ok(diagnostics.samples.every((sample) => sample.ok && typeof sample.body === "string"));
+assert.ok(!JSON.stringify(diagnostics).includes("access-alice"), "diagnostics carry Yahoo bodies, never tokens");
+response = await api("/api/season-diagnostics?league=478.l.111", bobToken);
+assert.ok(!(await response.json()).samples.some((sample) => sample.ok && sample.path.includes("players")), "another user's league reads fail");
+
+response = await api("/api/season?league=478.l.111", bobToken);
+assert.equal(response.status, 502, "a user can't read another user's league");
+
+assert.equal(parsePlayer(yahooPlayer("478.p.5", "No Positions", "LAL", [])).positions.length, 0);
 
 response = await api("/api/board", aliceToken, { headers: { Origin: "https://evil.example" } });
 assert.equal(response.status, 403, "other sites are refused");
