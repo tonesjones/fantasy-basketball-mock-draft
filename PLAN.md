@@ -37,8 +37,10 @@ Acceptance:
 callback for whoever clicks it. Sign-in is open: no invite code or watch
 token.
 
-- The Worker identifies the user by the `xoauth_yahoo_guid` in Yahoo's token
-  response.
+- The Worker identifies the user by their Yahoo GUID. It requests
+  `scope=openid fspt-r`, and the Yahoo app needs the OpenID Connect Profile
+  permission; without it Yahoo sends `--hidden--` instead of the GUID and
+  sign-in fails (#52).
 - Each user's refresh token is stored in KV under their Yahoo ID, encrypted
   with AES-GCM using `TOKEN_ENC_KEY`.
 - The page and Worker are on different sites, so a cookie would be
@@ -118,3 +120,23 @@ Not planned: traded picks and keeper leagues.
 
 ## Ported from main (#39)
 Injury `status`/`reviewedAt` (coach auto-passes only `season-out`), stricter ADP import, role arrows as labels only, shared `historicalRank`, and 7-day freshness warnings.
+
+## Season manager (#52)
+
+Merged 18 October. Signed-in users pick a Yahoo league and get hold/drop
+calls with a named pickup, an opportunity watch for injury openings, and
+injury alerts (pasted, or from the Worker's 5-minute ESPN/RotoWire cron).
+RotoWire items go only to GUIDs in the `NEWS_OWNER_GUIDS` Worker secret,
+which holds the owner's GUID.
+
+- Done: Worker deployed with the cron; both news keys fill; the owner signed
+  in under a real GUID after the sign-in fix (new Yahoo app with OpenID
+  Connect Profile, secrets updated).
+- Next: owner deletes the old Yahoo "Draft Lab" app (its client secret was
+  exposed in a chat screenshot, and it lists an unneeded
+  `agent.meta.ai` redirect URI).
+- Next: owner downloads Yahoo diagnostics from the Season manager. Then
+  build the "backup's minutes went up" check that turns an opportunity-watch
+  entry into an add/drop suggestion. Acceptance: the check uses real Yahoo
+  stat fields from the diagnostics, has a test, and never suggests a drop
+  without a named pickup.
