@@ -38,7 +38,7 @@ callback for whoever clicks it. Sign-in is open: no invite code or watch
 token.
 
 - The Worker identifies the user by their Yahoo GUID. It requests
-  `scope=openid fspt-r`, and the Yahoo app needs the OpenID Connect Profile
+  `scope=openid,fspt-r`, and the Yahoo app needs the OpenID Connect Profile
   permission; without it Yahoo sends `--hidden--` instead of the GUID and
   sign-in fails (#52).
 - Each user's refresh token is stored in KV under their Yahoo ID, encrypted
