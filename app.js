@@ -1015,7 +1015,7 @@ function yahooFinishSignIn(code){
   }).catch(function(e){render();liveSyncStatus(e.message);});
 }
 function yahooDisconnect(){
-  var done=function(){yahooSetSession("");_yahooAwaitingOrder=false;_season={leagues:null,busy:false,status:"",data:null,result:null,at:0};liveSyncEnsure();render();liveSyncStatus("Disconnected from Yahoo.");};
+  var done=function(){yahooSetSession("");_yahooAwaitingOrder=false;_season={leagues:null,busy:false,status:"",data:null,result:null,at:0,feed:null,feedBusy:false};liveSyncEnsure();render();liveSyncStatus("Disconnected from Yahoo.");};
   yahooApi("/api/disconnect",{method:"POST",body:{}}).then(done,done);
 }
 function yahooHandleBoard(j){
@@ -1133,7 +1133,7 @@ function yahooAdvice(){
    player. A drop is shown only with a named pickup that is a clear upgrade. */
 var YAHOO_LEAGUE_KEY="draft-lab.yahoo-league";
 var SEASON_RECHECK_MS=15*60*1000;
-var _season={leagues:null,busy:false,status:"",data:null,result:null,at:0};
+var _season={leagues:null,busy:false,status:"",data:null,result:null,at:0,feed:null,feedBusy:false};
 function seasonLeague(){try{return localStorage.getItem(YAHOO_LEAGUE_KEY)||"";}catch(e){return "";}}
 function seasonSetLeague(key){try{localStorage.setItem(YAHOO_LEAGUE_KEY,key);}catch(e){}}
 /* Who was out at the last check, per league, so a new injury can be flagged. */
@@ -1176,7 +1176,7 @@ function seasonBodyHtml(){
   if(r.openings&&r.openings.length){
     h+='<h4>Opportunity watch</h4><p class="muted">A good player is out, so these available teammates may play more. Watch them: Draft Lab won\'t suggest the move until recent minutes confirm the bigger role.</p><ul class="season-moves">';
     r.openings.forEach(function(o){
-      h+='<li>'+(o.isNew?'<span class="season-call il">New</span> ':'')+'<b>'+esc(o.injured)+'</b> <span class="teamtag">'+esc(o.nbaTeam)+'</span> <span class="season-status" title="'+esc(o.injuryNote||o.status)+'">'+esc(o.status)+'</span> <span class="season-src">'+(o.source==='news'?'reported · not on Yahoo yet':o.source==='both'?'reported · Yahoo confirms':'')+(o.source!=='news'?(o.source==='both'?' · ':'')+(o.mine?'your team':esc(o.fantasyTeam)):'')+'</span>'+(o.injuryNote?'<div class="muted">'+esc(o.injuryNote)+'</div>':'');
+      h+='<li>'+(o.isNew?'<span class="season-call il">New</span> ':'')+'<b>'+esc(o.injured)+'</b> <span class="teamtag">'+esc(o.nbaTeam)+'</span> <span class="season-status" title="'+esc(o.injuryNote||o.status)+'">'+esc(o.status)+'</span> <span class="season-src">'+(o.source==='news'?'reported'+(o.reportSource?' by '+esc(o.reportSource):'')+' · not on Yahoo yet':o.source==='both'?'reported'+(o.reportSource?' by '+esc(o.reportSource):'')+' · Yahoo confirms':'')+(o.source!=='news'?(o.source==='both'?' · ':'')+(o.mine?'your team':esc(o.fantasyTeam)):'')+'</span>'+(o.injuryNote?'<div class="muted">'+esc(o.injuryNote)+'</div>':'');
       h+='<div class="season-benef">';
       o.beneficiaries.forEach(function(b){
         h+='<div><span class="season-call add">Watch</span> '+esc(b.name)+' <span class="muted">'+esc((b.positions||[]).filter(function(x){return x!=='Util'&&x!=='IL';}).join('/'))+' · '+seasonAvailLabel(b.availability)+(b.hot?' · hot last week':'')+(b.value!=null?' · value '+b.value.toFixed(1):' · no 2025-26 value')+(b.samePosition?'':' · next position over')+(b.reportedStart?' · <b>reported starting</b>':'')+'</span></div>';
@@ -1229,7 +1229,7 @@ function seasonAnalyze(){
   _season.result=SeasonCore.analyze({
     players:PLAYERS,pdata:PDATA,index:yahooPoolIndex,league:j.league,
     mine:j.myTeam.players,opponent:j.opponent?j.opponent.players:null,available:j.available,
-    injured:j.injured||[],previousInjured:_season.prevInjured,reports:seasonReports(),
+    injured:j.injured||[],previousInjured:_season.prevInjured,reports:seasonReports().concat(seasonFeedReports()),
     punts:state.puntCats
   });
 }
@@ -1243,6 +1243,59 @@ function seasonReports(){
     return Array.isArray(v)?v.filter(function(r){return r&&r.name&&Date.now()-r.at<NEWS_TTL_MS;}):[];}catch(e){return [];}
 }
 function seasonSaveReports(list){try{localStorage.setItem(YAHOO_NEWS_KEY,JSON.stringify(list.slice(-40)));}catch(e){}}
+/* ---- Automatic alerts ----
+   The Worker polls ESPN's injury list and RotoWire's news feed (RotoWire for
+   the site owner only) and serves both at /api/news. ESPN "Out" becomes an
+   out report; RotoWire items go through the same reader as pasted alerts. */
+var FEED_MAX_AGE_MS=5*60*1000,FEED_WINDOW_MS=36*60*60*1000;
+function seasonLoadFeed(force){
+  var f=_season.feed;
+  if(!yahooSession()||_season.feedBusy||(!force&&f&&Date.now()-f.loadedAt<FEED_MAX_AGE_MS))return;
+  /* An older Worker has no /api/news: don't retry on every render. */
+  if(!force&&_season.feedFailedAt&&Date.now()-_season.feedFailedAt<FEED_MAX_AGE_MS)return;
+  _season.feedBusy=true;
+  yahooApi("/api/news").then(function(j){
+    _season.feedBusy=false;
+    _season.feed={espn:j.espn||null,rotowire:j.rotowire||null,rotowireAllowed:!!j.rotowireAllowed,loadedAt:Date.now()};
+    seasonAnalyze();seasonRefresh();
+  }).catch(function(){_season.feedBusy=false;_season.feedFailedAt=Date.now();});
+}
+function seasonFeedReports(){
+  var f=_season.feed,out=[],now=Date.now();
+  if(!f)return out;
+  ((f.espn&&f.espn.players)||[]).forEach(function(p){
+    var st=String(p.status||"").toLowerCase(),at=Date.parse(p.date||"")||0;
+    var status=st==="out"?"out":st==="doubtful"?"doubtful":null;
+    if(status&&p.name)out.push({name:p.name,status:status,at:at,text:p.comment||"",source:"ESPN"});
+  });
+  var names=null;
+  ((f.rotowire&&f.rotowire.items)||[]).forEach(function(it){
+    var at=Date.parse(it.at||"")||0;
+    if(!it.player||now-at>FEED_WINDOW_MS)return;
+    names=names||seasonNewsNames();
+    var text=it.player+": "+(it.headline||"")+". "+(it.text||"");
+    SeasonCore.parseNews(text,names.concat([it.player])).forEach(function(r){out.push({name:r.name,status:r.status,at:at,text:it.headline||"",source:"RotoWire"});});
+  });
+  return out;
+}
+function seasonFeedHtml(){
+  var f=_season.feed;
+  if(!f)return '<p class="muted">Automatic alerts load from ESPN'+(_season.feedBusy?'…':' when you check your roster.')+'</p>';
+  var parts=[];
+  if(f.espn){var mins=Math.max(0,Math.round((Date.now()-(Date.parse(f.espn.fetchedAt)||Date.now()))/60000));parts.push('ESPN injury list, updated '+(mins<1?'just now':mins+' min ago'));}
+  else parts.push('ESPN injury list unavailable');
+  if(f.rotowireAllowed)parts.push(f.rotowire?'RotoWire news, '+((f.rotowire.items||[]).length)+' recent items':'RotoWire news unavailable');
+  var h='<p class="muted">Automatic: '+esc(parts.join(' · '))+'.</p>';
+  var recent=seasonFeedReports().filter(function(r){return r.source==="RotoWire"||Date.now()-r.at<24*60*60*1000;})
+    .filter(function(r){return r.status!=="questionable";}).sort(function(a,b){return b.at-a.at;}).slice(0,6);
+  if(recent.length){
+    h+='<ul class="season-watch">';
+    recent.forEach(function(r){var mins=Math.max(1,Math.round((Date.now()-r.at)/60000));
+      h+='<li><b>'+esc(r.name)+'</b> <span class="season-status">'+esc(r.status)+'</span> <span class="muted">'+esc(r.source)+' · '+(mins<60?mins+' min':Math.round(mins/60)+' h')+' ago'+(r.text?' · '+esc(r.text.length>90?r.text.slice(0,90)+'…':r.text):'')+'</span></li>';});
+    h+='</ul>';
+  }
+  return h;
+}
 function seasonNewsNames(){
   var names=PLAYERS.map(function(p){return p.n;}),d=_season.data;
   if(d){[d.myTeam&&d.myTeam.players,d.opponent&&d.opponent.players,d.available,d.injured].forEach(function(list){(list||[]).forEach(function(p){names.push(p.name);});});}
@@ -1275,8 +1328,9 @@ function seasonRemoveNews(at,name){
 }
 function seasonNewsHtml(){
   var list=seasonReports().slice().reverse();
-  var h='<details class="setup-details season-news"'+(list.length?' open':'')+'><summary><b>Injury alerts</b> <span class="muted">'+(list.length?list.length+' active':'paste from your news notifications')+'</span></summary>';
-  h+='<p class="muted">Paste an alert from a news account. Draft Lab reads full player names and words like out, doubtful, questionable, starting or available, then updates the opportunity watch before Yahoo catches up. Alerts never make a move on their own and expire after 36 hours.</p>';
+  var h='<details class="setup-details season-news"'+(list.length?' open':'')+'><summary><b>Injury alerts</b> <span class="muted">'+(list.length?list.length+' pasted · ':'')+'ESPN'+(_season.feed&&_season.feed.rotowireAllowed?' + RotoWire':'')+' automatic</span></summary>';
+  h+='<p class="muted">Anything the feeds miss: paste an alert from a news account. Draft Lab reads full player names and words like out, doubtful, questionable, starting or available, then updates the opportunity watch before Yahoo catches up. Alerts never make a move on their own and expire after 36 hours.</p>';
+  h+=seasonFeedHtml();
   h+='<div class="yhrow"><textarea id="yhnews" aria-label="Injury alert text" placeholder="Jalen Brunson (ankle) is OUT tonight. Miles McBride will start."></textarea><button class="ghostbtn" id="yhnewsadd">Add alert</button></div>';
   if(list.length){
     h+='<ul class="season-watch">';
@@ -1293,6 +1347,7 @@ function seasonCheck(){
   if(!key||_season.busy)return;
   _season.busy=true;seasonStatus("Checking your roster and the waiver wire…");
   var b=el("yhcheck");if(b)b.disabled=true;
+  seasonLoadFeed(true);
   yahooApi("/api/season?league="+encodeURIComponent(key)).then(function(j){
     _season.busy=false;_season.data=j;_season.at=Date.now();_season.prevInjured=seasonPrevInjured(key);
     seasonAnalyze();
@@ -1321,6 +1376,7 @@ function wireSeasonPanel(root){
   var na=root.querySelector("#yhnewsadd");if(na)na.addEventListener("click",seasonNewsSubmit);
   root.querySelectorAll("[data-newsat]").forEach(function(b){b.addEventListener("click",function(){seasonRemoveNews(Number(b.getAttribute("data-newsat")),b.getAttribute("data-newsname"));});});
   seasonLoadLeagues();
+  seasonLoadFeed(false);
 }
 /* Waiver wires move: coming back to the page re-checks a stale result. */
 function seasonRecheck(){if(!document.hidden&&_season.result&&el("yhseasonbody")&&Date.now()-_season.at>SEASON_RECHECK_MS)seasonCheck();}

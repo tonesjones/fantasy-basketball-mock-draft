@@ -214,6 +214,8 @@ assert.deepEqual(read("OG Anunoby has been upgraded to available and will play t
 assert.deepEqual(read("Brunson is out tonight."), [], "a last name alone is too ambiguous");
 assert.deepEqual(read("Great game from Josh Hart last night."), [], "no status, no report");
 assert.deepEqual(read("Jalen Brunson OUT"), [["Jalen Brunson", "out"]]);
+assert.deepEqual(read("Coach said Josh Hart has not been ruled out for Friday."), [["Josh Hart", "questionable"]], "negated ruled out is a maybe");
+assert.deepEqual(read("The Knicks didn't rule out Josh Hart"), [["Josh Hart", "questionable"]]);
 
 /* Reports feed the opportunity watch before Yahoo catches up. */
 const reported = Season.analyze({
@@ -226,12 +228,13 @@ const reported = Season.analyze({
   injured: [],
   previousInjured: [],
   reports: [
-    { name: "Star", status: "out", at: 1 },
+    { name: "Star", status: "out", at: 1, source: "ESPN" },
     { name: "Small Upgrade", status: "starting", at: 2 },
   ],
 });
 assert.equal(reported.openings.length, 1, "a reported absence opens minutes before Yahoo lists it");
 assert.equal(reported.openings[0].source, "news");
+assert.equal(reported.openings[0].reportSource, "ESPN", "the opening names who reported it");
 assert.equal(reported.openings[0].status, "Reported out");
 assert.equal(reported.openings[0].isNew, true);
 assert.equal(reported.openings[0].beneficiaries[0].name, "Small Upgrade", "a reported starter jumps to the top");

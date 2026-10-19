@@ -247,6 +247,11 @@
      notification. Only full names count, and each name takes the status from
      its own clause, so "Brunson out, McBride to start" reads as two reports. */
   var NEWS_STATUSES = [
+    /* "Not ruled out" is a maybe, not an absence; checked before "ruled out". */
+    [
+      "questionable",
+      /\b(not (been )?ruled out|(won'?t|didn'?t|did not|will not) rule (him |her )?out)\b/,
+    ],
     [
       "available",
       /\b(upgraded to available|will play|is available|cleared to play|will return|returns? tonight|set to return|active tonight)\b/,
@@ -332,6 +337,7 @@
       r.fantasyTeam = p.fantasyTeam || "";
       r.mine = !!p.mine;
       r.source = rep && (rep.status === "out" || rep.status === "doubtful") ? "both" : "yahoo";
+      r.reportSource = r.source === "both" ? rep.source || "" : "";
       rows.push(r);
     });
     Object.keys(latest).forEach(function (name) {
@@ -359,6 +365,7 @@
       r.fantasyTeam = "";
       r.mine = false;
       r.source = "news";
+      r.reportSource = rep.source || "";
       rows.push(r);
     });
     return { injured: rows, starting: starting };
@@ -414,6 +421,7 @@
           rank: r.rank,
           isNew: (!!previous || r.source !== "yahoo") && !seen[r.name],
           source: r.source,
+          reportSource: r.reportSource || "",
           beneficiaries: beneficiaries,
         };
       })
@@ -430,7 +438,7 @@
      ({ categories, positions, scoringType }), mine, opponent, available
      (Yahoo player lists from the Worker), injured (out players on every
      roster), previousInjured (names out at the last check, or null), reports
-     (news alerts: [{ name, status, at }] from parseNews), punts
+     (news alerts: [{ name, status, at, source }] from parseNews or a feed), punts
      (category names), now (ms) } */
   function analyze(opts) {
     var league = opts.league || {};
