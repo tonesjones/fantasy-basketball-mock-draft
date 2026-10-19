@@ -259,16 +259,28 @@ async function beginOAuth(request, env) {
   return Response.redirect(auth.toString(), 303);
 }
 
+/* Yahoo sends the placeholder "--hidden--" instead of the GUID unless the app has the OpenID Connect Profile permission. */
+const realGuid = (value) => (/^[A-Za-z0-9]+$/.test(String(value || "")) ? String(value) : null);
+
+function idTokenSubject(idToken) {
+  /* The id_token came straight from Yahoo's token endpoint over TLS, so its signature needn't be checked here. */
+  try {
+    return JSON.parse(new TextDecoder().decode(bytesFromBase64(String(idToken).split(".")[1]))).sub;
+  } catch {
+    return null;
+  }
+}
+
 async function yahooGuid(data, env, fetchImpl) {
-  /* Yahoo may send the placeholder "--hidden--" instead of the GUID. */
-  if (/^[A-Za-z0-9]+$/.test(data.xoauth_yahoo_guid || "")) return data.xoauth_yahoo_guid;
+  const fromToken = realGuid(data.xoauth_yahoo_guid) || realGuid(idTokenSubject(data.id_token));
+  if (fromToken) return fromToken;
   const response = await fetchImpl(`${YAHOO_API}/fantasy/v2/users;use_login=1?format=json`, {
     headers: { Accept: "application/json", Authorization: `Bearer ${data.access_token}` },
   });
   const payload = await response.json().catch(() => ({}));
-  const guid = response.ok ? first(payload.fantasy_content && payload.fantasy_content.users, "guid") : null;
-  if (!guid) throw new Error("Yahoo did not identify the signed-in user.");
-  return String(guid);
+  const guid = response.ok ? realGuid(first(payload.fantasy_content && payload.fantasy_content.users, "guid")) : null;
+  if (!guid) throw new Error("Yahoo did not identify the signed-in user. The Yahoo app needs the OpenID Connect Profile permission.");
+  return guid;
 }
 
 async function finishOAuth(request, env, fetchImpl) {

@@ -13,11 +13,19 @@ class MemoryKV {
 /* Two Yahoo users. Each OAuth code and token maps to one of them. */
 const USERS = {
   alice: { guid: "GUIDALICE", code: "code-alice", refresh: "refresh-alice", access: "access-alice", league: "111", position: 3, team: "Alice Team", metaTeams: 10 },
-  bob: { guid: "GUIDBOB", code: "code-bob", refresh: "refresh-bob", access: "access-bob", league: "222", position: null, team: "Bob Team", hideGuid: true },
+  bob: { guid: "GUIDBOB", code: "code-bob", refresh: "refresh-bob", access: "access-bob", league: "222", position: null, team: "Bob Team", guidVia: "idToken" },
 };
-const byCode = (code) => Object.values(USERS).find((u) => u.code === code);
-const byRefresh = (token) => Object.values(USERS).find((u) => u.refresh === token);
-const byAccess = (token) => Object.values(USERS).find((u) => u.access === token);
+/* Users whose GUID only the Fantasy users API reveals, or nothing does. */
+const HIDDEN = {
+  carol: { guid: "GUIDCAROL", code: "code-carol", refresh: "refresh-carol", access: "access-carol", league: "333", team: "Carol Team", guidVia: "usersApi" },
+  dave: { guid: "GUIDDAVE", code: "code-dave", refresh: "refresh-dave", access: "access-dave", league: "444", team: "Dave Team", guidVia: "none" },
+};
+const everyone = () => [...Object.values(USERS), ...Object.values(HIDDEN)];
+const byCode = (code) => everyone().find((u) => u.code === code);
+const byRefresh = (token) => everyone().find((u) => u.refresh === token);
+const byAccess = (token) => everyone().find((u) => u.access === token);
+const shownGuid = (user, via) => ((user.guidVia || "token") === via ? user.guid : "--hidden--");
+const idToken = (sub) => ["header", Buffer.from(JSON.stringify({ sub })).toString("base64url"), "signature"].join(".");
 
 function leagueEnvelope(key, resource, value) {
   return { fantasy_content: { league: [{ league_key: key, num_teams: 12 }, { [resource]: value }] } };
@@ -46,8 +54,9 @@ async function fakeFetch(input, init = {}) {
     const body = new URLSearchParams(String(init.body));
     if (body.get("grant_type") === "authorization_code") {
       const user = byCode(body.get("code"));
-      /* Yahoo sometimes hides the GUID in the token response; the Worker must then ask the users API. */
-      return jsonResponse({ access_token: user.access, refresh_token: user.refresh, expires_in: 3600, xoauth_yahoo_guid: user.hideGuid ? "--hidden--" : user.guid });
+      /* Yahoo hides the GUID as "--hidden--" in places the app has no permission for. */
+      return jsonResponse({ access_token: user.access, refresh_token: user.refresh, expires_in: 3600,
+        xoauth_yahoo_guid: shownGuid(user, "token"), ...(user.guidVia === "idToken" ? { id_token: idToken(user.guid) } : {}) });
     }
     const user = byRefresh(body.get("refresh_token"));
     if (!user || revoked) return jsonResponse({ error: "invalid_grant" }, 400);
@@ -58,7 +67,7 @@ async function fakeFetch(input, init = {}) {
   const league = (/league\/478\.l\.(\d+)/.exec(url) || [])[1];
   const key = `478.l.${league}`;
   if (url.includes("/fantasy/v2/game/nba")) return jsonResponse({ fantasy_content: { game: [{ game_key: "478" }] } });
-  if (url.includes("/users;use_login=1?")) return jsonResponse({ fantasy_content: { users: { 0: { user: [{ guid: user.guid }] }, count: 1 } } });
+  if (url.includes("/users;use_login=1?")) return jsonResponse({ fantasy_content: { users: { 0: { user: [{ guid: shownGuid(user, "usersApi") }] }, count: 1 } } });
   if (url.includes("/users;use_login=1/games;game_keys=nba/leagues")) {
     return jsonResponse({ fantasy_content: { users: { 0: { user: [{ guid: user.guid }, { games: { 0: { game: [{ game_key: "478" }, { leagues: {
       0: { league: [{ league_key: `478.l.${user.league}`, name: `${user.team} League`, num_teams: 12, scoring_type: "head", current_week: 1, draft_status: "postdraft" }] },
@@ -218,6 +227,16 @@ for (const user of Object.values(USERS)) {
   const stored = await kv.get(`user:${user.guid}`);
   assert.ok(stored, "each user gets their own stored record");
   assert.ok(!stored.includes(user.refresh), "refresh tokens are encrypted at rest");
+}
+
+await signIn(HIDDEN.carol);
+assert.ok(await kv.get(`user:${HIDDEN.carol.guid}`), "the users API supplies a GUID the token response hid");
+{
+  const start = await worker.fetch(new Request("https://worker.example/oauth/start"), env);
+  const state = new URL(start.headers.get("Location")).searchParams.get("state");
+  const response = await worker.fetch(new Request(`https://worker.example/oauth/callback?code=${HIDDEN.dave.code}&state=${state}`), env);
+  assert.equal(response.status, 502, "sign-in fails when Yahoo hides the GUID everywhere");
+  assert.match(await response.text(), /OpenID Connect Profile/);
 }
 assert.equal(await kv.get("user:--hidden--"), null, "Yahoo's hidden-GUID placeholder is never used as a user key");
 for (const key of kv.keys("session:")) {

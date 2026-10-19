@@ -28,14 +28,15 @@ longer decrypt.
 
 The Yahoo app's redirect URI is
 `https://yahoo-draft-copilot.tonyjaysales.workers.dev/oauth/callback`. Give
-the app Fantasy Sports read access only.
+the app Fantasy Sports read access and the OpenID Connect Profile permission.
+Without Profile, Yahoo hides the user's GUID as `--hidden--` and sign-in
+fails.
 
 ## How sign-in works
 
 1. The page links to `/oauth/start`. The Worker redirects to Yahoo.
 2. Yahoo returns to `/oauth/callback`. The Worker exchanges the code,
-   identifies the user by `xoauth_yahoo_guid` (or, when Yahoo sends the
-   `--hidden--` placeholder, by the Fantasy users API), and stores the encrypted
+   identifies the user by their Yahoo GUID, and stores the encrypted
    refresh token under `user:<guid>`.
 3. The Worker redirects to the page with `#yhlogin=<code>`. The code works
    once and expires after 60 seconds.
