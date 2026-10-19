@@ -217,9 +217,19 @@ function cacheAccessToken(guid, data) {
   });
 }
 
+/* Parallel Yahoo calls share one refresh: a second refresh can invalidate the first access token. */
+const refreshing = new Map();
+
 async function getAccessToken(env, fetchImpl, guid, force = false) {
   const cached = tokenCache.get(guid);
   if (!force && cached && cached.expiresAt > Date.now() + 60_000) return cached.value;
+  if (!refreshing.has(guid)) {
+    refreshing.set(guid, refreshAccessToken(env, fetchImpl, guid).finally(() => refreshing.delete(guid)));
+  }
+  return refreshing.get(guid);
+}
+
+async function refreshAccessToken(env, fetchImpl, guid) {
   if (!env.YAHOO_CLIENT_ID || !env.YAHOO_CLIENT_SECRET) throw new Error("Yahoo OAuth secrets are not configured.");
   const raw = await env.YAHOO_SESSIONS.get(`${USER_PREFIX}${guid}`);
   if (!raw) throw new SignedOutError("Sign in with Yahoo to continue.");

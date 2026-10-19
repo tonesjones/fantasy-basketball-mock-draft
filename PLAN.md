@@ -132,9 +132,18 @@ which holds the owner's GUID.
 - Done: Worker deployed with the cron; both news keys fill; the owner signed
   in under a real GUID after the sign-in fix (new Yahoo app with OpenID
   Connect Profile, secrets updated).
-- Next: owner deletes the old Yahoo "Draft Lab" app (its client secret was
-  exposed in a chat screenshot, and it lists an unneeded
-  `agent.meta.ai` redirect URI).
+- Done: old Yahoo "Draft Lab" app deleted (its secret was exposed).
+- Blocker (18 October): Yahoo answers the Season manager's Fantasy calls
+  with HTTP 403 "This application is not authorized to perform this
+  action", intermittently. The same token and the same endpoints sometimes
+  succeed, even with one request in flight, which suggests Yahoo is still
+  rolling out the new app's permissions. Not caused by scope encoding
+  (`openid,fspt-r` is `invalid_scope`; `openid fspt-r` is accepted) or by
+  parallel token refreshes (fixed anyway in #53).
+- Next: reload the Yahoo site on 19 October. If the league list loads
+  consistently, carry on below. If it still fails, try Read/Write Fantasy
+  permission on the app or ask Yahoo; temporary logging of token fields
+  and API errors is on branch `claude/yahoo-scope-diagnostics`.
 - Next: owner downloads Yahoo diagnostics from the Season manager. Then
   build the "backup's minutes went up" check that turns an opportunity-watch
   entry into an add/drop suggestion. Acceptance: the check uses real Yahoo
