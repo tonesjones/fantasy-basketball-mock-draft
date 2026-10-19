@@ -1156,6 +1156,7 @@ function seasonBodyHtml(){
     h+='<div class="muted">No Yahoo NBA leagues with a team of yours this season. Mock drafts don\'t count.</div>';
   }
   h+='<div class="muted" id="yhseasonstatus" role="status">'+esc(_season.status)+'</div>';
+  h+=seasonNewsHtml();
   var r=_season.result,d=_season.data;
   if(!r||!d)return h;
   var when=new Date(d.fetchedAt||_season.at);
@@ -1175,10 +1176,10 @@ function seasonBodyHtml(){
   if(r.openings&&r.openings.length){
     h+='<h4>Opportunity watch</h4><p class="muted">A good player is out, so these available teammates may play more. Watch them: Draft Lab won\'t suggest the move until recent minutes confirm the bigger role.</p><ul class="season-moves">';
     r.openings.forEach(function(o){
-      h+='<li>'+(o.isNew?'<span class="season-call il">New</span> ':'')+'<b>'+esc(o.injured)+'</b> <span class="teamtag">'+esc(o.nbaTeam)+'</span> <span class="season-status" title="'+esc(o.injuryNote||o.status)+'">'+esc(o.status)+'</span> <span class="season-src">'+(o.mine?'your team':esc(o.fantasyTeam))+'</span>'+(o.injuryNote?'<div class="muted">'+esc(o.injuryNote)+'</div>':'');
+      h+='<li>'+(o.isNew?'<span class="season-call il">New</span> ':'')+'<b>'+esc(o.injured)+'</b> <span class="teamtag">'+esc(o.nbaTeam)+'</span> <span class="season-status" title="'+esc(o.injuryNote||o.status)+'">'+esc(o.status)+'</span> <span class="season-src">'+(o.source==='news'?'reported · not on Yahoo yet':o.source==='both'?'reported · Yahoo confirms':'')+(o.source!=='news'?(o.source==='both'?' · ':'')+(o.mine?'your team':esc(o.fantasyTeam)):'')+'</span>'+(o.injuryNote?'<div class="muted">'+esc(o.injuryNote)+'</div>':'');
       h+='<div class="season-benef">';
       o.beneficiaries.forEach(function(b){
-        h+='<div><span class="season-call add">Watch</span> '+esc(b.name)+' <span class="muted">'+esc((b.positions||[]).filter(function(x){return x!=='Util'&&x!=='IL';}).join('/'))+' · '+seasonAvailLabel(b.availability)+(b.hot?' · hot last week':'')+(b.value!=null?' · value '+b.value.toFixed(1):' · no 2025-26 value')+(b.samePosition?'':' · next position over')+'</span></div>';
+        h+='<div><span class="season-call add">Watch</span> '+esc(b.name)+' <span class="muted">'+esc((b.positions||[]).filter(function(x){return x!=='Util'&&x!=='IL';}).join('/'))+' · '+seasonAvailLabel(b.availability)+(b.hot?' · hot last week':'')+(b.value!=null?' · value '+b.value.toFixed(1):' · no 2025-26 value')+(b.samePosition?'':' · next position over')+(b.reportedStart?' · <b>reported starting</b>':'')+'</span></div>';
       });
       h+='</div></li>';
     });
@@ -1220,8 +1221,72 @@ function seasonLoadLeagues(){
   yahooApi("/api/leagues").then(function(j){
     _season.busy=false;_season.leagues=j.leagues||[];
     if(_season.leagues.length&&!_season.leagues.some(function(l){return l.leagueKey===seasonLeague();}))seasonSetLeague(_season.leagues[0].leagueKey);
-    _season.status="";seasonRefresh();
+    seasonRefresh();
   }).catch(function(e){_season.busy=false;seasonStatus(e.message||"Could not load your Yahoo leagues.");});
+}
+function seasonAnalyze(){
+  var j=_season.data;if(!j)return;
+  _season.result=SeasonCore.analyze({
+    players:PLAYERS,pdata:PDATA,index:yahooPoolIndex,league:j.league,
+    mine:j.myTeam.players,opponent:j.opponent?j.opponent.players:null,available:j.available,
+    injured:j.injured||[],previousInjured:_season.prevInjured,reports:seasonReports(),
+    punts:state.puntCats
+  });
+}
+/* ---- Injury alerts ----
+   Alerts pasted from a news account's push notifications, or sent with a
+   #news= link (an iPhone Shortcut on the share sheet can open one). Kept in
+   this browser for 36 hours. They feed the opportunity watch only. */
+var YAHOO_NEWS_KEY="draft-lab.yahoo-news",NEWS_TTL_MS=36*60*60*1000;
+function seasonReports(){
+  try{var v=JSON.parse(localStorage.getItem(YAHOO_NEWS_KEY)||"[]");
+    return Array.isArray(v)?v.filter(function(r){return r&&r.name&&Date.now()-r.at<NEWS_TTL_MS;}):[];}catch(e){return [];}
+}
+function seasonSaveReports(list){try{localStorage.setItem(YAHOO_NEWS_KEY,JSON.stringify(list.slice(-40)));}catch(e){}}
+function seasonNewsNames(){
+  var names=PLAYERS.map(function(p){return p.n;}),d=_season.data;
+  if(d){[d.myTeam&&d.myTeam.players,d.opponent&&d.opponent.players,d.available,d.injured].forEach(function(list){(list||[]).forEach(function(p){names.push(p.name);});});}
+  return names;
+}
+/* Returns the reports read from the text; [] if it named no one with a status. */
+function seasonAddNews(text){
+  var found=SeasonCore.parseNews(text,seasonNewsNames());
+  if(!found.length)return found;
+  var now=Date.now(),list=seasonReports();
+  found.forEach(function(f){list.push({name:f.name,status:f.status,text:String(text).slice(0,280),at:now});});
+  seasonSaveReports(list);
+  seasonAnalyze();
+  return found;
+}
+function seasonNewsSubmit(){
+  var box=el("yhnews"),text=box?box.value.trim():"";
+  if(!text)return;
+  var found=seasonAddNews(text);
+  if(!found.length){seasonStatus("No player with a status found. Alerts need a full player name and a word like out, doubtful, questionable, starting or available.");return;}
+  box.value="";
+  _season.status="Read: "+found.map(function(f){return f.name+" "+f.status;}).join(", ")+".";
+  seasonRefresh();
+  /* A new absence: fetch Yahoo's latest lists if the last check is a few minutes old. */
+  if(found.some(function(f){return f.status==="out"||f.status==="doubtful";})&&_season.data&&Date.now()-_season.at>5*60*1000)seasonCheck();
+}
+function seasonRemoveNews(at,name){
+  seasonSaveReports(seasonReports().filter(function(r){return !(r.at===at&&r.name===name);}));
+  seasonAnalyze();seasonRefresh();
+}
+function seasonNewsHtml(){
+  var list=seasonReports().slice().reverse();
+  var h='<details class="setup-details season-news"'+(list.length?' open':'')+'><summary><b>Injury alerts</b> <span class="muted">'+(list.length?list.length+' active':'paste from your news notifications')+'</span></summary>';
+  h+='<p class="muted">Paste an alert from a news account. Draft Lab reads full player names and words like out, doubtful, questionable, starting or available, then updates the opportunity watch before Yahoo catches up. Alerts never make a move on their own and expire after 36 hours.</p>';
+  h+='<div class="yhrow"><textarea id="yhnews" aria-label="Injury alert text" placeholder="Jalen Brunson (ankle) is OUT tonight. Miles McBride will start."></textarea><button class="ghostbtn" id="yhnewsadd">Add alert</button></div>';
+  if(list.length){
+    h+='<ul class="season-watch">';
+    list.forEach(function(r){
+      var mins=Math.max(1,Math.round((Date.now()-r.at)/60000));
+      h+='<li><b>'+esc(r.name)+'</b> <span class="season-status">'+esc(r.status)+'</span> <span class="muted">'+(mins<60?mins+' min':Math.round(mins/60)+' h')+' ago · '+esc(r.text.length>90?r.text.slice(0,90)+'…':r.text)+'</span> <button type="button" class="textlink" data-newsat="'+r.at+'" data-newsname="'+esc(r.name)+'" aria-label="Remove alert for '+esc(r.name)+'">Remove</button></li>';
+    });
+    h+='</ul>';
+  }
+  return h+'</details>';
 }
 function seasonCheck(){
   var key=seasonLeague();
@@ -1229,13 +1294,8 @@ function seasonCheck(){
   _season.busy=true;seasonStatus("Checking your roster and the waiver wire…");
   var b=el("yhcheck");if(b)b.disabled=true;
   yahooApi("/api/season?league="+encodeURIComponent(key)).then(function(j){
-    _season.busy=false;_season.data=j;_season.at=Date.now();
-    _season.result=SeasonCore.analyze({
-      players:PLAYERS,pdata:PDATA,index:yahooPoolIndex,league:j.league,
-      mine:j.myTeam.players,opponent:j.opponent?j.opponent.players:null,available:j.available,
-      injured:j.injured||[],previousInjured:seasonPrevInjured(key),
-      punts:state.puntCats
-    });
+    _season.busy=false;_season.data=j;_season.at=Date.now();_season.prevInjured=seasonPrevInjured(key);
+    seasonAnalyze();
     seasonSaveInjured(key,(j.injured||[]).map(function(p){return p.name;}));
     var n=_season.result.moves.length;
     _season.status=n?n+" suggested move"+(n>1?"s":"")+".":"No clear upgrades on waivers.";
@@ -1258,6 +1318,8 @@ function wireSeasonPanel(root){
   if(sel)sel.addEventListener("change",function(){seasonSetLeague(sel.value);_season.data=null;_season.result=null;seasonCheck();});
   var btn=root.querySelector("#yhcheck");if(btn)btn.addEventListener("click",seasonCheck);
   var diag=root.querySelector("#yhdiag");if(diag)diag.addEventListener("click",seasonDiagnostics);
+  var na=root.querySelector("#yhnewsadd");if(na)na.addEventListener("click",seasonNewsSubmit);
+  root.querySelectorAll("[data-newsat]").forEach(function(b){b.addEventListener("click",function(){seasonRemoveNews(Number(b.getAttribute("data-newsat")),b.getAttribute("data-newsname"));});});
   seasonLoadLeagues();
 }
 /* Waiver wires move: coming back to the page re-checks a stale result. */
@@ -1947,6 +2009,15 @@ function render(){
 }
 render();
 var _yhLogin=/^#yhlogin=([A-Za-z0-9_-]+)$/.exec(location.hash||"");
+var _yhNews=/^#news=(.+)$/.exec(location.hash||"");
 if(_yhLogin)yahooFinishSignIn(_yhLogin[1]);
+else if(_yhNews){
+  history.replaceState(null,"",location.pathname+location.search);
+  var _newsText="";try{_newsText=decodeURIComponent(_yhNews[1].replace(/\+/g," "));}catch(e){}
+  var _newsFound=_newsText?seasonAddNews(_newsText):[];
+  _season.status=_newsFound.length?"Alert saved: "+_newsFound.map(function(f){return f.name+" "+f.status;}).join(", ")+". Check your roster to see the openings.":"That alert named no player with a status.";
+  render();
+  if(yahooSession())yahooApi("/api/me").catch(function(){});
+}
 else if(yahooSession())yahooApi("/api/me").catch(function(){}); /* a 401 clears a stale session */
 })();

@@ -9,7 +9,7 @@ function cv(total, cat) {
   return v;
 }
 const players = [
-  { n: "Star", adp: 5, adpF: 5 },
+  { n: "Star", adp: 5, adpF: 5, t: "BOS", p: ["PG", "SG"] },
   { n: "Early Slump", adp: 60, adpF: 60, last: 200 },
   { n: "Bench Guy", adp: 140, adpF: 150 },
   { n: "Big Man", adp: 130, adpF: 140 },
@@ -198,5 +198,52 @@ assert.equal(Season.positionFit(["PG"], ["SG", "G"]), 1);
 assert.equal(Season.positionFit(["PF", "C"], ["C"]), 2);
 assert.equal(Season.positionFit(["PG"], ["C"]), 0);
 assert.equal(Season.positionFit(["Util"], ["Util"]), 0, "Util and IL aren't real positions");
+
+/* News alerts, as pasted from a push notification. */
+const names = ["Jalen Brunson", "Miles McBride", "Josh Hart", "Mitchell Robinson", "OG Anunoby"];
+const read = (text) => Season.parseNews(text, names).map((r) => [r.name, r.status]);
+assert.deepEqual(read("Jalen Brunson (ankle) has been ruled out for Friday's game vs. Boston."), [["Jalen Brunson", "out"]]);
+assert.deepEqual(read("Knicks say Jalen Brunson is OUT tonight. Miles McBride will start in his place."), [
+  ["Jalen Brunson", "out"],
+  ["Miles McBride", "starting"],
+], "each player takes the status of his own sentence");
+assert.deepEqual(read("Jalen Brunson out, Miles McBride starting"), [["Jalen Brunson", "out"], ["Miles McBride", "starting"]]);
+assert.deepEqual(read("Josh Hart (knee) is questionable for Wednesday."), [["Josh Hart", "questionable"]]);
+assert.deepEqual(read("Mitchell Robinson doubtful vs MIA"), [["Mitchell Robinson", "doubtful"]]);
+assert.deepEqual(read("OG Anunoby has been upgraded to available and will play tonight."), [["OG Anunoby", "available"]]);
+assert.deepEqual(read("Brunson is out tonight."), [], "a last name alone is too ambiguous");
+assert.deepEqual(read("Great game from Josh Hart last night."), [], "no status, no report");
+assert.deepEqual(read("Jalen Brunson OUT"), [["Jalen Brunson", "out"]]);
+
+/* Reports feed the opportunity watch before Yahoo catches up. */
+const reported = Season.analyze({
+  players,
+  pdata,
+  index,
+  league,
+  mine: [],
+  available: pool,
+  injured: [],
+  previousInjured: [],
+  reports: [
+    { name: "Star", status: "out", at: 1 },
+    { name: "Small Upgrade", status: "starting", at: 2 },
+  ],
+});
+assert.equal(reported.openings.length, 1, "a reported absence opens minutes before Yahoo lists it");
+assert.equal(reported.openings[0].source, "news");
+assert.equal(reported.openings[0].status, "Reported out");
+assert.equal(reported.openings[0].isNew, true);
+assert.equal(reported.openings[0].beneficiaries[0].name, "Small Upgrade", "a reported starter jumps to the top");
+assert.equal(reported.openings[0].beneficiaries[0].reportedStart, true);
+assert.equal(reported.moves.length, 0, "news never makes a move on its own");
+
+const both = Season.analyze({ players, pdata, index, league, mine: [], available: pool, injured, reports: [{ name: "Star", status: "out", at: 1 }] });
+assert.equal(both.openings[0].source, "both", "Yahoo confirms the report");
+const back = Season.analyze({ players, pdata, index, league, mine: [], available: pool, injured, reports: [
+  { name: "Star", status: "out", at: 1 },
+  { name: "Star", status: "available", at: 2 },
+] });
+assert.equal(back.openings.length, 0, "the latest report wins: a reported return closes the opening");
 
 console.log("season core tests passed");

@@ -242,7 +242,129 @@
     return fit;
   }
 
-  function opportunities(injured, avail, previous) {
+  /* ---- Injury alerts pasted from news ----
+     Reads player names and a status from free text such as a push
+     notification. Only full names count, and each name takes the status from
+     its own clause, so "Brunson out, McBride to start" reads as two reports. */
+  var NEWS_STATUSES = [
+    [
+      "available",
+      /\b(upgraded to available|will play|is available|cleared to play|will return|returns? tonight|set to return|active tonight)\b/,
+    ],
+    [
+      "out",
+      /\b(ruled out|will miss|won'?t play|will not play|out for|out indefinitely|out tonight|is out|remains out|sidelined|season-ending|torn|tore|fracture[sd]?|surgery|will not return|won'?t return)\b/,
+    ],
+    ["doubtful", /\bdoubtful\b/],
+    ["questionable", /\b(questionable|game-time decision|gtd)\b/],
+    [
+      "starting",
+      /\b(will start|to start|starting|gets the start|draws the start|in the starting lineup)\b/,
+    ],
+    /* A bare "OUT" is how many alerts say it; checked last. */
+    ["out", /\bout\b/],
+  ];
+
+  function norm(s) {
+    return String(s || "")
+      .normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9 ]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function newsStatus(text) {
+    var t = String(text).toLowerCase();
+    for (var i = 0; i < NEWS_STATUSES.length; i++)
+      if (NEWS_STATUSES[i][1].test(t)) return NEWS_STATUSES[i][0];
+    return null;
+  }
+
+  /* Returns [{ name, status }] for each candidate named in the text. */
+  function parseNews(text, candidates) {
+    var clauses = String(text || "").split(/[.;!?\n]+|,\s+|\s+(?:and|while|with)\s+/i);
+    var whole = " " + norm(text) + " ";
+    var found = [];
+    (candidates || []).forEach(function (name) {
+      var key = norm(name);
+      if (!key || key.indexOf(" ") < 0 || whole.indexOf(" " + key + " ") < 0) return;
+      if (
+        found.some(function (f) {
+          return f.name === name;
+        })
+      )
+        return;
+      found.push({ name: name, key: key });
+    });
+    return found
+      .map(function (f) {
+        var own = clauses.filter(function (c) {
+          return (" " + norm(c) + " ").indexOf(" " + f.key + " ") >= 0;
+        });
+        var status = null;
+        own.forEach(function (c) {
+          status = status || newsStatus(c);
+        });
+        if (!status && found.length === 1) status = newsStatus(text);
+        return { name: f.name, status: status };
+      })
+      .filter(function (r) {
+        return r.status;
+      });
+  }
+
+  /* Yahoo's out list plus news reports. A reported absence Yahoo hasn't
+     posted yet becomes an opening; one Yahoo also lists is "both"; a reported
+     return closes the opening. */
+  function mergeReports(injured, reports, ctx) {
+    var latest = {};
+    reports.forEach(function (r) {
+      if (!latest[r.name] || r.at >= latest[r.name].at) latest[r.name] = r;
+    });
+    var starting = {},
+      rows = [];
+    injured.forEach(function (p) {
+      var rep = latest[p.name];
+      if (rep && rep.status === "available") return;
+      var r = describe(p, ctx);
+      r.fantasyTeam = p.fantasyTeam || "";
+      r.mine = !!p.mine;
+      r.source = rep && (rep.status === "out" || rep.status === "doubtful") ? "both" : "yahoo";
+      rows.push(r);
+    });
+    Object.keys(latest).forEach(function (name) {
+      var rep = latest[name];
+      if (rep.status === "starting") starting[name] = true;
+      if (rep.status !== "out" && rep.status !== "doubtful") return;
+      if (
+        injured.some(function (p) {
+          return p.name === name;
+        })
+      )
+        return;
+      var pi = ctx.index(name);
+      if (pi < 0) return;
+      var p = ctx.players[pi];
+      var r = describe(
+        {
+          name: name,
+          nbaTeam: p.t,
+          positions: p.p,
+          status: rep.status === "out" ? "Reported out" : "Doubtful",
+        },
+        ctx
+      );
+      r.fantasyTeam = "";
+      r.mine = false;
+      r.source = "news";
+      rows.push(r);
+    });
+    return { injured: rows, starting: starting };
+  }
+
+  function opportunities(injured, avail, previous, starting) {
     var seen = {};
     (previous || []).forEach(function (name) {
       seen[name] = true;
@@ -263,6 +385,7 @@
           })
           .sort(function (x, y) {
             return (
+              (starting[y.row.name] ? 1 : 0) - (starting[x.row.name] ? 1 : 0) ||
               y.fit - x.fit ||
               (y.row.hot ? 1 : 0) - (x.row.hot ? 1 : 0) ||
               (y.row.value == null ? -1e9 : y.row.value) -
@@ -278,6 +401,7 @@
               hot: b.row.hot,
               value: b.row.rated ? b.row.value : null,
               samePosition: b.fit === 2,
+              reportedStart: !!starting[b.row.name],
             };
           });
         return {
@@ -288,7 +412,8 @@
           fantasyTeam: r.fantasyTeam,
           mine: r.mine,
           rank: r.rank,
-          isNew: !!previous && !seen[r.name],
+          isNew: (!!previous || r.source !== "yahoo") && !seen[r.name],
+          source: r.source,
           beneficiaries: beneficiaries,
         };
       })
@@ -304,7 +429,8 @@
   /* opts: { players, pdata, index(name) -> pool index or -1, league
      ({ categories, positions, scoringType }), mine, opponent, available
      (Yahoo player lists from the Worker), injured (out players on every
-     roster), previousInjured (names out at the last check, or null), punts
+     roster), previousInjured (names out at the last check, or null), reports
+     (news alerts: [{ name, status, at }] from parseNews), punts
      (category names), now (ms) } */
   function analyze(opts) {
     var league = opts.league || {};
@@ -334,6 +460,8 @@
     avail.forEach(function (r) {
       r.value = value(r, idx);
     });
+
+    var news = mergeReports(opts.injured || [], opts.reports || [], ctx);
 
     var matchup = null;
     if (opp) {
@@ -485,16 +613,7 @@
       moves: moves,
       roster: rosterRows,
       watch: watch,
-      openings: opportunities(
-        (opts.injured || []).map(function (p) {
-          var r = describe(p, ctx);
-          r.fantasyTeam = p.fantasyTeam || "";
-          r.mine = !!p.mine;
-          return r;
-        }),
-        avail,
-        opts.previousInjured
-      ),
+      openings: opportunities(news.injured, avail, opts.previousInjured, news.starting),
       unmatchedAvailable: avail.filter(function (r) {
         return r.pi < 0;
       }).length,
@@ -508,6 +627,7 @@
     MAX_MOVES: MAX_MOVES,
     activeCats: activeCats,
     positionFit: positionFit,
+    parseNews: parseNews,
     fillsStarters: fillsStarters,
     analyze: analyze,
   };

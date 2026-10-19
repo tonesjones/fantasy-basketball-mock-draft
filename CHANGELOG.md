@@ -1,5 +1,18 @@
 # Changelog
 
+## Yahoo season manager: injury alerts from news (2026-10-19)
+- **Injury alerts** in the season manager: paste an alert from a news
+  account's push notification. `SeasonCore.parseNews` reads full player names
+  and a status per clause (out, doubtful, questionable, starting, available),
+  so "Brunson OUT tonight. McBride will start." is two reports.
+- A reported absence opens the opportunity watch before Yahoo lists it
+  ("reported · not on Yahoo yet"; "Yahoo confirms" once it does). A reported
+  starter moves to the top of the watch. A reported return closes the
+  opening. The latest report per player wins.
+- Alerts stay in the browser for 36 hours and never make a move. An absence
+  re-checks Yahoo if the last check is over five minutes old.
+- `#news=<text>` on the page URL adds an alert, for an iPhone Shortcut.
+
 ## Yahoo season manager: opportunity watch and diagnostics (2026-10-19)
 - When a good player (consensus rank 150 or better) on any roster in your
   league is out (Yahoo `O`, `INJ` or `SUSP`), the season manager lists up to
