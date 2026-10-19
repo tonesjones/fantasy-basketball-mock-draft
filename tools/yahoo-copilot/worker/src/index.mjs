@@ -730,10 +730,8 @@ async function availablePlayers(leagueKey, status, pages, env, fetchImpl, guid, 
 }
 
 async function listLeagues(env, fetchImpl, guid) {
-  const [leagues, teams] = await Promise.all([
-    yahooGet("/fantasy/v2/users;use_login=1/games;game_keys=nba/leagues", env, fetchImpl, guid),
-    yahooGet("/fantasy/v2/users;use_login=1/games;game_keys=nba/teams", env, fetchImpl, guid),
-  ]);
+  const leagues = await yahooGet("/fantasy/v2/users;use_login=1/games;game_keys=nba/leagues", env, fetchImpl, guid);
+  const teams = await yahooGet("/fantasy/v2/users;use_login=1/games;game_keys=nba/teams", env, fetchImpl, guid);
   return parseUserLeagues(leagues, teams);
 }
 
