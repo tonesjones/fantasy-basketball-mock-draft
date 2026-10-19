@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node test-worker.mjs",
+    "test": "node test-worker.mjs && node test-news.mjs",
     "check": "npx --yes wrangler deploy --dry-run"
   }
 }

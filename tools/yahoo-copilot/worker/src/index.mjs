@@ -1,3 +1,5 @@
+import { loadNews, pollNews } from "./news.mjs";
+
 const YAHOO_API = "https://fantasysports.yahooapis.com";
 const YAHOO_TOKEN_URL = "https://api.login.yahoo.com/oauth2/get_token";
 const OAUTH_STATE_PREFIX = "oauth:state:";
@@ -780,6 +782,9 @@ async function seasonDiagnostics(leagueKey, env, fetchImpl, guid) {
 
 export function createWorker(fetchImpl = fetch) {
   return {
+    async scheduled(event, env, ctx) {
+      await pollNews(env, fetchImpl);
+    },
     async fetch(request, env) {
       const url = new URL(request.url);
       if (url.pathname === "/oauth/start" && request.method === "GET") return beginOAuth(request, env);
@@ -808,7 +813,7 @@ export function createWorker(fetchImpl = fetch) {
       if (!user) return rejectUnauthorized(request, env);
       try {
         if (url.pathname === "/api/me" && request.method === "GET") {
-          return json(request, env, 200, { ok: true, signedIn: true });
+          return json(request, env, 200, { ok: true, signedIn: true, guid: user.guid });
         }
         if (url.pathname === "/api/disconnect" && request.method === "POST") {
           await disconnect(env, user);
@@ -824,6 +829,9 @@ export function createWorker(fetchImpl = fetch) {
           const board = await loadBoard(env, fetchImpl, user.guid);
           if (!board) return json(request, env, 404, errorBody("no_watch", "Start a Yahoo watch session first."));
           return json(request, env, 200, { ok: true, ...board });
+        }
+        if (url.pathname === "/api/news" && request.method === "GET") {
+          return json(request, env, 200, { ok: true, ...await loadNews(env, fetchImpl, user.guid) });
         }
         if (url.pathname === "/api/leagues" && request.method === "GET") {
           return json(request, env, 200, { ok: true, leagues: await listLeagues(env, fetchImpl, user.guid) });

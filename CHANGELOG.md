@@ -1,5 +1,23 @@
 # Changelog
 
+## Yahoo season manager: automatic injury news from ESPN and RotoWire (2026-10-19)
+- Worker cron (every 5 minutes) polls RotoWire's NBA news RSS every run and
+  ESPN's injury list when its snapshot is 10+ minutes old. Snapshots live in
+  KV (`news:espn`, `news:rotowire`), written only when content changes or the
+  timestamp is 30 minutes old (at most ~432 writes a day). A failing source
+  keeps its last snapshot and never blocks the other.
+- `GET /api/news` serves both; RotoWire only to Yahoo IDs in the
+  `NEWS_OWNER_GUIDS` secret (copyrighted content). `GET /api/me` now returns
+  your own Yahoo ID so you can set it. Snapshots over 40 minutes old (cron not
+  running) refresh inline.
+- The page turns ESPN "Out" and RotoWire items into the same reports as
+  pasted alerts. Checked on the saved 18 October feeds: 92 ESPN injuries, and
+  of five RotoWire items only Ben Simmons' torn Achilles reads as out.
+- ESPN team codes map to Yahoo's (PHX→PHO, UTAH→UTA, WSH→WAS).
+- Worker news module drafted by Codex (Sol) from a written spec, reviewed and
+  adjusted here: the inline refresh threshold moved from 20 to 40 minutes so a
+  running cron never triggers a 1 MB re-download per page request.
+
 ## Yahoo season manager: injury alerts from news (2026-10-19)
 - **Injury alerts** in the season manager: paste an alert from a news
   account's push notification. `SeasonCore.parseNews` reads full player names

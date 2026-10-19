@@ -100,3 +100,30 @@ npx wrangler deploy
 Deploy the Worker at the same time as the page change that uses it. The
 current page sends a session token, and an older Worker expects the retired
 watch token.
+
+## Injury news
+
+`GET /api/news` requires the same bearer session as `/api/leagues` and returns
+`{ ok: true, espn, rotowire, rotowireAllowed }`. Missing snapshots are `null`.
+ESPN injuries are available to all signed-in users. RotoWire RSS content is
+returned only to Yahoo GUIDs in `NEWS_OWNER_GUIDS`, a comma-separated Worker
+environment variable (empty by default). Set it through the Cloudflare Worker
+settings. `GET /api/me` now includes the caller's own `guid` alongside `ok` and
+`signedIn`, so the owner can find their value. Other users receive
+`rotowire: null` and `rotowireAllowed: false`.
+
+The `*/5 * * * *` cron polls RotoWire every five minutes and ESPN when its stored
+snapshot is at least ten minutes old. The existing `YAHOO_SESSIONS` KV stores
+`news:espn` (`fetchedAt`, `players`) and `news:rotowire` (`fetchedAt`, `items`).
+RotoWire items merge by GUID, newest first, keeping at most 150 from the last
+48 hours. ESPN comments are limited to 280 characters.
+
+Unchanged content is not written again until its `fetchedAt` is at least
+30 minutes old; timestamps reflect persisted successful refreshes. At the
+configured cron frequency, even changing content requires at most 432 news
+writes per day (288 RotoWire and 144 ESPN), excluding inline refreshes and
+other application writes. The endpoint refreshes missing or 40-minute-old
+snapshots inline, fetching RotoWire only for allowed owners. Each source keeps
+its previous snapshot on failure and logs a warning. Requests use a ten-second
+timeout and reject bodies larger than 5 MB. Tests use synthetic fixtures and
+never contact either source.
