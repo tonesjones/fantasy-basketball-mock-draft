@@ -255,6 +255,9 @@ async function beginOAuth(request, env) {
   auth.searchParams.set("client_id", env.YAHOO_CLIENT_ID);
   auth.searchParams.set("redirect_uri", redirectUri);
   auth.searchParams.set("response_type", "code");
+  /* Yahoo returns the user's GUID only when the openid scope is requested; OpenID Connect requires a nonce with it. */
+  auth.searchParams.set("scope", "openid fspt-r");
+  auth.searchParams.set("nonce", randomToken());
   auth.searchParams.set("state", state);
   return Response.redirect(auth.toString(), 303);
 }

@@ -189,6 +189,8 @@ async function signIn(user) {
   const authorizationUrl = new URL(response.headers.get("Location"));
   assert.equal(authorizationUrl.hostname, "api.login.yahoo.com");
   assert.equal(authorizationUrl.searchParams.get("redirect_uri"), "https://worker.example/oauth/callback");
+  assert.equal(authorizationUrl.searchParams.get("scope"), "openid fspt-r", "sign-in asks for the GUID and Fantasy read access");
+  assert.ok(authorizationUrl.searchParams.get("nonce"));
   const state = authorizationUrl.searchParams.get("state");
 
   response = await worker.fetch(new Request(`https://worker.example/oauth/callback?code=${user.code}&state=${state}`), env);
